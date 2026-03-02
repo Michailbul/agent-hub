@@ -1,15 +1,10 @@
-import { useRef, useEffect, useCallback, useState } from 'react'
-import { EditorState } from '@codemirror/state'
-import { EditorView, keymap, lineNumbers, highlightActiveLine, highlightActiveLineGutter } from '@codemirror/view'
-import { defaultKeymap, history, historyKeymap } from '@codemirror/commands'
-import { markdown } from '@codemirror/lang-markdown'
-import { bracketMatching } from '@codemirror/language'
-import { brandTheme } from '@/lib/cmTheme'
+import { useCallback, useState } from 'react'
 import { usePanesStore } from '@/store/panes'
 import { useUIStore } from '@/store/ui'
 import { saveFile } from '@/lib/api'
 import { PaneHeader } from './PaneHeader'
 import { PaneStatus } from './PaneStatus'
+import { CMEditor } from './CMEditor'
 import type { PaneState } from '@/types'
 
 interface PaneProps {
@@ -18,122 +13,52 @@ interface PaneProps {
 }
 
 export function Pane({ pane, isActive }: PaneProps) {
-  const cmRef = useRef<HTMLDivElement>(null)
-  const viewRef = useRef<EditorView | null>(null)
-  const paneRef = useRef(pane)
-  paneRef.current = pane
-  const externalUpdate = useRef(false)
-
-  const { updateContent, setDirty, closePane, setActivePane, openFileInPane, insertPaneAfter } = usePanesStore()
+  const { closePane, setActivePane, openFileInPane, insertPaneAfter, setDirty } = usePanesStore()
   const { flashSaved, toast } = useUIStore()
-
   const [cursorLine, setCursorLine] = useState(1)
-  const [cursorCol, setCursorCol] = useState(1)
+  const [cursorCol, setCursorCol]   = useState(1)
 
   const doSave = useCallback(async () => {
-    const p = paneRef.current
-    if (!p.path || p.isLocal) return
-    const view = viewRef.current
-    if (!view) return
+    if (!pane.path || pane.isLocal) return
     try {
-      await saveFile(p.path, view.state.doc.toString())
-      setDirty(p.id, false)
+      // Get latest content directly from store (CMEditor keeps it in sync)
+      const content = usePanesStore.getState().panes.find(p => p.id === pane.id)?.content ?? ''
+      await saveFile(pane.path, content)
+      setDirty(pane.id, false)
       flashSaved()
       toast('Saved', 'success')
     } catch {
       toast('Save failed', 'error')
     }
-  }, [setDirty, flashSaved, toast])
+  }, [pane.id, pane.path, pane.isLocal, setDirty, flashSaved, toast])
 
-  // Initialize CodeMirror
-  useEffect(() => {
-    if (!cmRef.current) return
-    const saveKeymap = keymap.of([
-      {
-        key: 'Mod-s',
-        run: () => {
-          void doSave()
-          return true
-        },
-      },
-    ])
-
-    const updateListener = EditorView.updateListener.of(update => {
-      if (update.docChanged && !externalUpdate.current) {
-        updateContent(pane.id, update.state.doc.toString())
-      }
-      if (update.selectionSet || update.docChanged) {
-        const pos = update.state.selection.main.head
-        const line = update.state.doc.lineAt(pos)
-        setCursorLine(line.number)
-        setCursorCol(pos - line.from + 1)
-      }
-    })
-
-    const state = EditorState.create({
-      doc: pane.content,
-      extensions: [
-        lineNumbers(),
-        highlightActiveLine(),
-        highlightActiveLineGutter(),
-        history(),
-        bracketMatching(),
-        ...brandTheme,
-        markdown(),
-        keymap.of([...defaultKeymap, ...historyKeymap]),
-        saveKeymap,
-        updateListener,
-        EditorView.lineWrapping,
-      ],
-    })
-
-    const view = new EditorView({ state, parent: cmRef.current })
-    viewRef.current = view
-
-    return () => {
-      view.destroy()
-      viewRef.current = null
-    }
-    // Only init once per mount — content updates handled separately
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pane.id])
-
-  // Sync content from external changes (file load)
-  const prevContentRef = useRef(pane.content)
-  useEffect(() => {
-    const view = viewRef.current
-    if (!view) return
-    // Only update if content changed externally (not from editor typing)
-    if (pane.content !== prevContentRef.current && pane.content !== view.state.doc.toString()) {
-      externalUpdate.current = true
-      view.dispatch({
-        changes: { from: 0, to: view.state.doc.length, insert: pane.content },
-      })
-      externalUpdate.current = false
-    }
-    prevContentRef.current = pane.content
-  }, [pane.content])
-
-  const handleClose = useCallback(() => closePane(pane.id), [closePane, pane.id])
+  const handleClose     = useCallback(() => closePane(pane.id),    [closePane, pane.id])
   const handleMouseDown = useCallback(() => setActivePane(pane.id), [setActivePane, pane.id])
+  const handleCursor    = useCallback((l: number, c: number) => { setCursorLine(l); setCursorCol(c) }, [])
 
-  const handleHeaderDrop = useCallback(
-    async (data: { path: string; label: string }) => {
-      const newId = insertPaneAfter(pane.id)
-      if (!newId) {
-        toast('Max 4 panes', 'error')
-        return
-      }
-      try {
+  const handleHeaderDrop = useCallback(async (data: { path: string; label: string }) => {
+    const newId = insertPaneAfter(pane.id)
+    if (!newId) { toast('Max 4 panes', 'error'); return }
+    try {
+      const r = await fetch('/api/file?path=' + encodeURIComponent(data.path))
+      const content = r.ok ? await r.text() : ''
+      openFileInPane(newId, data.path, data.label, content)
+    } catch { toast('Failed to load file', 'error') }
+  }, [pane.id, insertPaneAfter, openFileInPane, toast])
+
+  const handleContentDrop = useCallback(async (e: React.DragEvent) => {
+    e.preventDefault()
+    e.currentTarget.closest('.pane')?.classList.remove('drag-target')
+    try {
+      const data = JSON.parse(e.dataTransfer.getData('text/plain'))
+      if (data.path) {
+        setActivePane(pane.id)
         const r = await fetch('/api/file?path=' + encodeURIComponent(data.path))
         const content = r.ok ? await r.text() : ''
-        openFileInPane(newId, data.path, data.label, content)
-      } catch {
-        toast('Failed to load file', 'error')
+        openFileInPane(pane.id, data.path, data.label, content)
       }
-    },
-    [pane.id, insertPaneAfter, openFileInPane, toast],
-  )
+    } catch { /* ignore */ }
+  }, [pane.id, setActivePane, openFileInPane])
 
   const handleContentDragOver = useCallback((e: React.DragEvent) => {
     if (e.dataTransfer.types.includes('text/plain')) {
@@ -145,25 +70,6 @@ export function Pane({ pane, isActive }: PaneProps) {
   const handleContentDragLeave = useCallback((e: React.DragEvent) => {
     e.currentTarget.closest('.pane')?.classList.remove('drag-target')
   }, [])
-
-  const handleContentDrop = useCallback(
-    async (e: React.DragEvent) => {
-      e.preventDefault()
-      e.currentTarget.closest('.pane')?.classList.remove('drag-target')
-      try {
-        const data = JSON.parse(e.dataTransfer.getData('text/plain'))
-        if (data.path) {
-          setActivePane(pane.id)
-          const r = await fetch('/api/file?path=' + encodeURIComponent(data.path))
-          const content = r.ok ? await r.text() : ''
-          openFileInPane(pane.id, data.path, data.label, content)
-        }
-      } catch {
-        // ignore
-      }
-    },
-    [pane.id, setActivePane, openFileInPane],
-  )
 
   const lines = pane.content.split('\n').length
   const words = pane.content.trim() ? pane.content.trim().split(/\s+/).length : 0
@@ -184,15 +90,17 @@ export function Pane({ pane, isActive }: PaneProps) {
         onClose={handleClose}
         onHeaderDrop={handleHeaderDrop}
       />
+
       <div
         className="pane-cm"
         onDragOver={handleContentDragOver}
         onDragLeave={handleContentDragLeave}
         onDrop={handleContentDrop}
       >
+        {/* Empty state — shown when no file is open */}
         {!pane.path && (
-          <div className={`pane-empty${pane.path ? ' hidden' : ''}`}>
-            <div className="pe-icon">{'\uD83D\uDCC4'}</div>
+          <div className="pane-empty">
+            <div className="pe-icon">📄</div>
             <div className="pe-title">Empty pane</div>
             <div className="pe-sub">
               Click a file to open here<br />
@@ -201,9 +109,26 @@ export function Pane({ pane, isActive }: PaneProps) {
             </div>
           </div>
         )}
-        <div ref={cmRef} style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }} />
+
+        {/* CodeMirror — keyed by path so it remounts cleanly on file change */}
+        {pane.path && (
+          <CMEditor
+            key={pane.path}
+            paneId={pane.id}
+            initialContent={pane.content}
+            filePath={pane.path}
+            isLocal={pane.isLocal}
+            onCursorChange={handleCursor}
+          />
+        )}
       </div>
-      <PaneStatus lines={lines} words={words} cursorLine={cursorLine} cursorCol={cursorCol} />
+
+      <PaneStatus
+        lines={lines}
+        words={words}
+        cursorLine={cursorLine}
+        cursorCol={cursorCol}
+      />
     </div>
   )
 }
