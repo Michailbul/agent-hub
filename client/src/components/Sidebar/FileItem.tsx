@@ -30,6 +30,12 @@ export function FileItem({ file, activePath, agents = [] }: FileItemProps) {
     [activePaneId, file.path, file.label, openFileInPane, readFile],
   )
 
+  const handleDoubleClick = useCallback((e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setCtx({ x: e.clientX, y: e.clientY })
+  }, [])
+
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
@@ -62,6 +68,7 @@ export function FileItem({ file, activePath, agents = [] }: FileItemProps) {
         data-source={file.source || ''}
         draggable
         onClick={handleClick}
+        onDoubleClick={handleDoubleClick}
         onContextMenu={handleContextMenu}
         onDragStart={handleDragStart}
       >

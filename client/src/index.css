@@ -124,7 +124,7 @@ body{font-family:'Inter',system-ui,sans-serif;color:var(--t1);
 .pane.drag-target::after{content:'Drop here';position:absolute;inset:0;background:rgba(255,122,100,.08);border:2px dashed var(--coral);border-radius:var(--r);display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:500;color:var(--coral);pointer-events:none;z-index:10}
 .pane-header{display:flex;align-items:center;gap:6px;padding:0 12px;height:36px;background:var(--s1);border-bottom:1px solid var(--bs);flex-shrink:0;position:relative;transition:background var(--fast)}
 .pane-header.drop-target{background:var(--cdim);outline:2px dashed var(--coral);outline-offset:-2px}
-.pane.active-pane .pane-header{border-bottom:2px solid var(--coral);background:var(--cdim)}
+.pane.active-pane .pane-header{border-bottom:2px solid #4f46e5;background:rgba(79,70,229,.05)}
 .pane-tab{flex:1;min-width:0;display:flex;align-items:center;gap:5px;overflow:hidden}
 .pane-name{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:500;color:var(--t2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pane-dirty{width:6px;height:6px;border-radius:50%;background:var(--coral);flex-shrink:0;display:none}

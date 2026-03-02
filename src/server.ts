@@ -202,6 +202,16 @@ app.post('/api/login', (req, res) => {
 
 app.post('/api/logout', (req, res) => { res.clearCookie('agent_hub_auth'); res.json({ ok: true }); });
 
+// Rescan agents and skills without restarting
+app.post('/api/refresh', auth, (_req, res) => {
+  try {
+    initAgents();
+    res.json({ ok: true, agents: AGENTS.length, libs: SKILL_LIBRARIES.length });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.get('/api/tree', auth, (req, res) => {
   const agents = AGENTS.map(agent => ({
     id: agent.id, label: agent.label, emoji: agent.emoji, role: agent.role, type: 'agent',
