@@ -217,3 +217,9 @@ body{font-family:'Inter',system-ui,sans-serif;color:var(--t1);
 .ctx-submenu-trigger{user-select:none}
 .ctx-submenu-trigger.open{background:var(--s2)}
 .ctx-sub{position:absolute;left:calc(100% + 4px);top:-5px;background:#fff;border:1px solid rgba(0,0,0,.1);border-radius:10px;box-shadow:0 8px 30px rgba(0,0,0,.14);min-width:180px;padding:5px;z-index:10000;animation:ctx-in .1s ease}
+
+/* REFRESH BUTTON */
+.btn-refresh{display:inline-flex;align-items:center;gap:5px}
+.refresh-icon{display:inline-block;font-size:14px;line-height:1;transition:transform .3s}
+.refresh-icon.spin{animation:spin .7s linear infinite}
+@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}

@@ -65,40 +65,42 @@ const AGENTS_SKILLS_ROOT = process.env.AGENTS_SKILLS_ROOT
 
 const OPENCLAW_SKILLS_ROOT = path.join(OPENCLAW_ROOT, 'skills');
 
-let AGENTS, SKILL_LIBRARIES, STUDIO;
-
-if (CONFIG && CONFIG.agents) {
-  // Full manual config
-  AGENTS = CONFIG.agents.map(a => ({ ...a, root: expandPath(a.root), skillsRoot: a.skillsRoot ? expandPath(a.skillsRoot) : null }));
-  SKILL_LIBRARIES = (CONFIG.skillLibraries || []).map(l => ({ ...l, root: expandPath(l.root) }));
-  STUDIO = CONFIG.studio ? { ...CONFIG.studio, root: expandPath(CONFIG.studio.root) } : null;
-} else {
-  // Auto-discovery
-  AGENTS = discoverAgents(OPENCLAW_ROOT);
-  SKILL_LIBRARIES = [
-    { id:'skills-agents',   label:'Custom Skills',  emoji:'🧩', root: AGENTS_SKILLS_ROOT },
-    { id:'skills-openclaw', label:'System Skills',  emoji:'🔧', root: OPENCLAW_SKILLS_ROOT },
-  ].filter(l => fs.existsSync(l.root));
-  STUDIO = null; // no studio unless configured
-}
+let AGENTS, SKILL_LIBRARIES, STUDIO, ALLOWED_ROOTS;
 
 function expandPath(p) {
   if (!p) return p;
   return p.replace(/^~/, process.env.HOME || '/root');
 }
 
-const ALLOWED_ROOTS = [
-  ...AGENTS.map(a => a.root),
-  ...AGENTS.filter(a => a.skillsRoot).map(a => a.skillsRoot),
-  ...SKILL_LIBRARIES.map(s => s.root),
-  ...(STUDIO ? [STUDIO.root] : []),
-  AGENTS_SKILLS_ROOT,
-  OPENCLAW_SKILLS_ROOT,
-].filter(Boolean);
+function initAgents() {
+  if (CONFIG && CONFIG.agents) {
+    AGENTS = CONFIG.agents.map(a => ({ ...a, root: expandPath(a.root), skillsRoot: a.skillsRoot ? expandPath(a.skillsRoot) : null }));
+    SKILL_LIBRARIES = (CONFIG.skillLibraries || []).map(l => ({ ...l, root: expandPath(l.root) }));
+    STUDIO = CONFIG.studio ? { ...CONFIG.studio, root: expandPath(CONFIG.studio.root) } : null;
+  } else {
+    AGENTS = discoverAgents(OPENCLAW_ROOT);
+    SKILL_LIBRARIES = [
+      { id:'skills-agents',   label:'Custom Skills',  emoji:'🧩', root: AGENTS_SKILLS_ROOT },
+      { id:'skills-openclaw', label:'System Skills',  emoji:'🔧', root: OPENCLAW_SKILLS_ROOT },
+    ].filter(l => fs.existsSync(l.root));
+    STUDIO = null;
+  }
 
-console.log('Agents:', AGENTS.map(a => a.label).join(', '));
-console.log('Skill libs:', SKILL_LIBRARIES.map(l => l.label).join(', '));
-console.log('Allowed roots:', ALLOWED_ROOTS.length);
+  ALLOWED_ROOTS = [
+    ...AGENTS.map(a => a.root),
+    ...AGENTS.filter(a => a.skillsRoot).map(a => a.skillsRoot),
+    ...SKILL_LIBRARIES.map(s => s.root),
+    ...(STUDIO ? [STUDIO.root] : []),
+    AGENTS_SKILLS_ROOT,
+    OPENCLAW_SKILLS_ROOT,
+  ].filter(Boolean);
+
+  console.log('Agents:', AGENTS.map(a => a.label).join(', '));
+  console.log('Skill libs:', SKILL_LIBRARIES.map(l => l.label).join(', '));
+  console.log('Allowed roots:', ALLOWED_ROOTS.length);
+}
+
+initAgents();
 
 // ── HELPERS ────────────────────────────────────────────────
 

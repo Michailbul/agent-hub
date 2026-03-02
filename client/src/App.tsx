@@ -15,7 +15,7 @@ import { Toast } from '@/components/Toast'
 export function App() {
   const { isAuthenticated, isChecking, check } = useAuthStore()
   const { needsSetup, checking: setupChecking } = useSetup()
-  const { data: tree } = useTree()
+  const { data: tree, refetch: refetchTree } = useTree()
   const addPane = usePanesStore(s => s.addPane)
   const panes = usePanesStore(s => s.panes)
   const activePaneId = usePanesStore(s => s.activePaneId)
@@ -138,7 +138,7 @@ export function App() {
 
   return (
     <div className="app">
-      <TopBar />
+      <TopBar onRefresh={refetchTree} />
       <div className="layout">
         <Sidebar tree={tree} />
         <div
