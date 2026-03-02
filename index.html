@@ -389,7 +389,7 @@ async function checkSetup() {
     const badge = document.getElementById('cli-status');
     if (d.cli === 'claude') badge.innerHTML = '✓ Claude Code detected';
     else if (d.cli === 'codex') badge.innerHTML = '✓ Codex CLI detected';
-    else { badge.innerHTML = '⚠️ No CLI found — install claude or codex first'; badge.style.color='var(--coral)'; document.getElementById('scan-btn').disabled=true; }
+    else { badge.innerHTML = '⚠️ No CLI found on this machine — manual config required'; badge.style.color='var(--coral)'; }
     return true;
   } catch(e) { return false; }
 }

@@ -284,11 +284,15 @@ app.post('/api/skill/delete', auth, (req, res) => {
 
 app.get('/api/setup/status', (req, res) => {
   const cli = detectCLI();
+  // needsSetup = false if: config file exists, OR env vars are set (VPS mode), OR agents were auto-discovered
   const hasConfig = fs.existsSync(CONFIG_PATH);
-  res.json({ needsSetup: !hasConfig, cli, configPath: CONFIG_PATH });
+  const hasEnvConfig = !!(process.env.OPENCLAW_ROOT || process.env.AGENTS_SKILLS_ROOT);
+  const hasAgents = AGENTS.length > 0;
+  const needsSetup = !hasConfig && !hasEnvConfig && !hasAgents;
+  res.json({ needsSetup, cli, configPath: CONFIG_PATH });
 });
 
-app.get('/api/setup/run', auth, (req, res) => {
+app.get('/api/setup/run', (req, res) => {
   runSetupAgent(res, CONFIG_PATH);
 });
 
