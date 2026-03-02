@@ -41,7 +41,7 @@ function discoverAgents(openclawRoot) {
       const emojiMatch = content.match(/\*\*Emoji:\*\*\s*(.+)/);
       const roleMatch = content.match(/\*\*Role:\*\*\s*(.+)/);
       if (nameMatch) label = nameMatch[1].trim();
-      if (emojiMatch) emoji = emojiMatch[1].trim();
+      if (emojiMatch) { const e = emojiMatch[1].trim(); emoji = e.length <= 4 ? e : '🤖'; }
       if (roleMatch) role = roleMatch[1].trim();
     }
     // Default instruction files (whichever exist)
