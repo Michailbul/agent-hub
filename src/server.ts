@@ -53,15 +53,72 @@ function discoverAgents(openclawRoot) {
   return agents;
 }
 
-// ── RESOLVE CONFIG ─────────────────────────────────────────
+// ── RESOLVE CONFIG — with auto-heal path scanning ──────────
 
-const OPENCLAW_ROOT = process.env.OPENCLAW_ROOT
-  || (CONFIG && CONFIG.openclawRoot)
-  || '/data/openclaw';
+function resolveOpenclawRoot(): string {
+  // 1. Explicit env var / config always wins
+  const explicit = process.env.OPENCLAW_ROOT || (CONFIG && CONFIG.openclawRoot);
+  if (explicit && fs.existsSync(explicit)) return explicit;
 
-const AGENTS_SKILLS_ROOT = process.env.AGENTS_SKILLS_ROOT
-  || (CONFIG && CONFIG.agentsSkillsRoot)
-  || '/data/agents/skills';
+  // 2. Scan common locations in order
+  const home = process.env.HOME || '/root';
+  const candidates = [
+    explicit,                              // configured but might be wrong
+    `${home}/.openclaw`,                   // standard user install
+    '/root/.openclaw',                     // root install
+    '/data/openclaw',                      // Docker default
+    '/home/user/.openclaw',                // linux user
+    `${home}/openclaw`,                    // alternative
+  ].filter(Boolean) as string[];
+
+  for (const candidate of candidates) {
+    if (candidate && fs.existsSync(candidate)) {
+      const hasWorkspace = fs.readdirSync(candidate)
+        .some(d => d.startsWith('workspace'));
+      if (hasWorkspace) {
+        if (candidate !== explicit) {
+          console.log(`[auto-heal] OPENCLAW_ROOT not found at "${explicit}", using "${candidate}"`);
+        }
+        return candidate;
+      }
+    }
+  }
+
+  // 3. Last resort: return first candidate that exists even without workspaces
+  for (const candidate of candidates) {
+    if (candidate && fs.existsSync(candidate)) return candidate;
+  }
+
+  console.warn('[auto-heal] Could not find ~/.openclaw — agents will be empty');
+  return explicit || '/data/openclaw';
+}
+
+function resolveAgentsSkillsRoot(openclawRoot: string): string {
+  const explicit = process.env.AGENTS_SKILLS_ROOT || (CONFIG && CONFIG.agentsSkillsRoot);
+  if (explicit && fs.existsSync(explicit)) return explicit;
+
+  const home = process.env.HOME || '/root';
+  const candidates = [
+    explicit,
+    `${home}/.agents/skills`,
+    '/root/.agents/skills',
+    '/data/agents/skills',
+    `${openclawRoot}/agent-skills`,
+  ].filter(Boolean) as string[];
+
+  for (const candidate of candidates) {
+    if (candidate && fs.existsSync(candidate)) {
+      if (candidate !== explicit) {
+        console.log(`[auto-heal] AGENTS_SKILLS_ROOT not found at "${explicit}", using "${candidate}"`);
+      }
+      return candidate;
+    }
+  }
+  return explicit || '/data/agents/skills';
+}
+
+const OPENCLAW_ROOT = resolveOpenclawRoot();
+const AGENTS_SKILLS_ROOT = resolveAgentsSkillsRoot(OPENCLAW_ROOT);
 
 const OPENCLAW_SKILLS_ROOT = path.join(OPENCLAW_ROOT, 'skills');
 
