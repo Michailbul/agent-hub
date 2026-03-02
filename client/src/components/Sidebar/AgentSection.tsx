@@ -39,7 +39,7 @@ function SubSection({
         <span className="sub-ico">{icon}</span>
         <span className="sub-lbl">{label}</span>
         <span className="sub-cnt">{visibleFiles.length}</span>
-        <span className={`sub-arr${open ? ' dn' : ''}`}>\u25BE</span>
+        <span className={`sub-arr${open ? ' dn' : ''}`}>▾</span>
       </div>
       <div className={`sub-files${open ? '' : ' hidden'}`}>
         {visibleFiles.map(f => (
@@ -72,7 +72,7 @@ export function AgentSection({ agent, isOpen, onToggle, agents }: AgentSectionPr
           <div className="a-role">{agent.role}</div>
         </div>
         <span className="a-badge">{total}</span>
-        <span className={`arr${isOpen ? ' dn' : ''}`}>\u25BE</span>
+        <span className={`arr${isOpen ? ' dn' : ''}`}>▾</span>
       </div>
       <div className={`agent-body${isOpen ? ' open' : ''}`}>
         {agent.instructions.length > 0 && (

@@ -55,11 +55,11 @@ export function PaneHeader({ label, isDirty, hasFile, isLocal, onSave, onClose, 
       <div className="pane-actions">
         {hasFile && !isLocal && (
           <button className="pane-save show" onClick={onSave}>
-            \u2191 Save
+            ↑ Save
           </button>
         )}
         <button className="pane-close" onClick={onClose} title="Close pane">
-          \u2715
+          ✕
         </button>
       </div>
     </div>

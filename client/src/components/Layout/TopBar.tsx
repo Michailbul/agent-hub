@@ -21,7 +21,7 @@ export function TopBar() {
   return (
     <div className="topbar">
       <div className="brand">
-        <div className="brand-ic">{'\u2699\uFE0F'}</div>
+        <div className="brand-ic">{'⚙️'}</div>
         <div>
           <div className="brand-n">
             Agent <span>Hub</span>
@@ -32,7 +32,7 @@ export function TopBar() {
       <div className="tsep" />
       <BreadcrumbPath />
       <div className="tr">
-        <span className={`ss${showSaved ? ' show' : ''}`}>Saved \u2713</span>
+        <span className={`ss${showSaved ? ' show' : ''}`}>Saved ✓</span>
         <button
           className="btn-o"
           onClick={handleAddPane}

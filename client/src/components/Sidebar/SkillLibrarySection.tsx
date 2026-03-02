@@ -32,7 +32,7 @@ export function SkillLibrarySection({ library }: SkillLibrarySectionProps) {
           <div className="lib-sub">{visibleFiles.length} skills</div>
         </div>
         <span className="arr" style={{ marginLeft: 'auto' }}>
-          {open ? '' : ''}\u25BE
+          {open ? '' : ''}▾
         </span>
       </div>
       <div className={`lib-files${open ? '' : ' hidden'}`}>
@@ -68,7 +68,7 @@ export function StudioSectionComponent({ studio }: StudioSectionProps) {
             <div className="lib-nm">{studio.label}</div>
             <div className="lib-sub">HQ context</div>
           </div>
-          <span className="arr" style={{ marginLeft: 'auto' }}>\u25BE</span>
+          <span className="arr" style={{ marginLeft: 'auto' }}>▾</span>
         </div>
         <div className={`studio-files${open ? '' : ' hidden'}`}>
           {studio.files.map(f => (

@@ -12,15 +12,15 @@ export function SetupOverlay() {
   }, [lines])
 
   const cliBadge = () => {
-    if (cli === 'claude') return '\u2713 Claude Code detected'
-    if (cli === 'codex') return '\u2713 Codex CLI detected'
-    return '\u26A0\uFE0F No CLI found on this machine \u2014 manual config required'
+    if (cli === 'claude') return '✓ Claude Code detected'
+    if (cli === 'codex') return '✓ Codex CLI detected'
+    return '\u26A0\uFE0F No CLI found on this machine — manual config required'
   }
 
   return (
     <div className="setup-overlay">
       <div className="setup-card">
-        <div className="setup-eyebrow">\u2699\uFE0F Agent Hub \u00B7 First Run</div>
+        <div className="setup-eyebrow">⚙️ Agent Hub · First Run</div>
         <h1 className="setup-title">
           Set up your <span>workspace</span>
         </h1>
@@ -46,7 +46,7 @@ export function SetupOverlay() {
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           <button className="btn-p" onClick={startSetup} disabled={scanning || done}>
-            {scanning ? '\u23F3 Scanning...' : done ? '\u2713 Done' : '\u26A1 Scan my workspace'}
+            {scanning ? '⏳ Scanning...' : done ? '✓ Done' : '⚡ Scan my workspace'}
           </button>
           {done && (
             <button
@@ -54,7 +54,7 @@ export function SetupOverlay() {
               style={{ background: 'var(--coral)', borderColor: 'var(--coral)' }}
               onClick={() => location.reload()}
             >
-              \uD83D\uDE80 Launch Hub \u2192
+              🚀 Launch Hub →
             </button>
           )}
         </div>
