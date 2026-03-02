@@ -83,7 +83,7 @@ body{font-family:'Inter',system-ui,sans-serif;color:var(--t1);
 #layout{display:flex;flex:1;overflow:hidden}
 
 /* ━━━ SIDEBAR ━━━ */
-#sidebar{width:var(--sw);background:var(--s1);border-right:1px solid var(--bs);overflow-y:auto;overflow-x:hidden;flex-shrink:0;display:flex;flex-direction:column;padding:8px 6px 24px;min-height:0}
+#sidebar{width:var(--sw);background:var(--s1);border-right:1px solid var(--bs);overflow-y:auto;overflow-x:hidden;flex-shrink:0;display:flex;flex-direction:column;padding:8px 6px 24px;min-height:0;position:relative;z-index:10}
 .grp-lbl{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:500;text-transform:uppercase;letter-spacing:.22em;color:var(--tg);padding:14px 10px 5px}
 .sb-div{height:1px;background:var(--bs);margin:10px 8px 4px}
 .agent-card{border:1px solid transparent;border-radius:var(--rl);margin-bottom:2px;transition:border-color var(--fast)}
@@ -92,7 +92,7 @@ body{font-family:'Inter',system-ui,sans-serif;color:var(--t1);
 .agent-hdr:hover{background:var(--s2)}.agent-hdr.is-open{background:var(--cdim)}
 .av{width:30px;height:30px;border-radius:8px;background:var(--inv);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;transition:background var(--fast),box-shadow var(--fast),transform var(--fast);box-shadow:var(--sh-sm)}
 .agent-hdr.is-open .av{background:var(--coral);box-shadow:var(--sh-ba);transform:translate(-1px,-1px)}
-.a-info{flex:1;min-width:0}.a-name{font-size:12px;font-weight:700;color:var(--t1);line-height:1.2}.a-role{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--tg);text-transform:uppercase;letter-spacing:.1em}
+.a-info{flex:1;min-width:0}.a-name{font-size:12px;font-weight:700;color:var(--t1);line-height:1.2}.a-role{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--tg);text-transform:uppercase;letter-spacing:.1em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px}
 .a-badge{font-family:'JetBrains Mono',monospace;font-size:9px;background:var(--s3);color:var(--t3);border-radius:20px;padding:1px 6px;flex-shrink:0;transition:background var(--fast),color var(--fast)}
 .agent-hdr.is-open .a-badge{background:var(--coral);color:#fff}
 .arr{font-size:9px;color:var(--tg);transition:transform var(--norm) var(--ease);margin-left:2px}

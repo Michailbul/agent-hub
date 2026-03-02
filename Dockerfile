@@ -1,8 +1,7 @@
 FROM node:22-alpine
 WORKDIR /app
 COPY package*.json ./
-RUN npm install
-COPY . .
-RUN npm install -g tsup typescript && npm run build
+RUN npm install --production
+COPY server.js index.html ./
 EXPOSE 4001
-CMD ["node", "dist/cli.js", "--no-open"]
+CMD ["node", "server.js"]
