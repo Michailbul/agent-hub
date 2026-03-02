@@ -1,9 +1,25 @@
 {
-  "name": "agent-hub",
-  "version": "1.0.0",
-  "main": "server.js",
+  "name": "@laniameda/agent-hub",
+  "version": "0.2.0",
+  "main": "dist/server.js",
   "dependencies": {
+    "cookie-parser": "^1.4.6",
     "express": "^4.18.2",
-    "cookie-parser": "^1.4.6"
+    "open": "^11.0.0"
+  },
+  "devDependencies": {
+    "@types/cookie-parser": "^1.4.10",
+    "@types/express": "^5.0.6",
+    "@types/node": "^25.3.3",
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.3"
+  },
+  "bin": {
+    "agent-hub": "dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsup src/cli.ts src/server.ts --format cjs --target node18 --clean",
+    "dev": "tsup src/cli.ts src/server.ts --format cjs --target node18 --watch",
+    "start": "node dist/cli.js"
   }
 }
