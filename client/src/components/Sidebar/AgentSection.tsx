@@ -76,10 +76,10 @@ export function AgentSection({ agent, isOpen, onToggle, agents }: AgentSectionPr
       </div>
       <div className={`agent-body${isOpen ? ' open' : ''}`}>
         {agent.instructions.length > 0 && (
-          <SubSection icon="\uD83D\uDCCB" label="Instructions" files={agent.instructions} activePath={activePath} agents={agents} />
+          <SubSection icon="📋" label="Instructions" files={agent.instructions} activePath={activePath} agents={agents} />
         )}
         {agent.skills.length > 0 && (
-          <SubSection icon="\uD83E\uDDE0" label="Skills" files={agent.skills} activePath={activePath} agents={agents} />
+          <SubSection icon="🧠" label="Skills" files={agent.skills} activePath={activePath} agents={agents} />
         )}
       </div>
     </div>
