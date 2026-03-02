@@ -176,7 +176,19 @@ function auth(req, res, next) {
 
 // ── ROUTES ─────────────────────────────────────────────────
 
-app.get('/login', (req, res) => res.sendFile(path.join(__dirname, '..', 'index.html')));
+// Serve React SPA static files
+const CLIENT_DIST = path.join(__dirname, '..', 'dist-client');
+const CLIENT_INDEX = path.join(CLIENT_DIST, 'index.html');
+const hasClientBuild = fs.existsSync(CLIENT_INDEX);
+
+if (hasClientBuild) {
+  app.use(express.static(CLIENT_DIST));
+  app.get('/login', (_req, res) => res.sendFile(CLIENT_INDEX));
+} else {
+  // Fallback to legacy index.html for development
+  const LEGACY_HTML = path.join(__dirname, '..', 'index.html');
+  app.get('/login', (_req, res) => res.sendFile(LEGACY_HTML));
+}
 
 app.post('/api/login', (req, res) => {
   if (req.body.password === PASSWORD) {
@@ -296,5 +308,12 @@ app.get('/api/setup/run', (req, res) => {
   runSetupAgent(res, CONFIG_PATH);
 });
 
-app.get('*', auth, (req, res) => res.sendFile(path.join(__dirname, '..', 'index.html')));
+// Catch-all: serve React SPA or legacy HTML
+app.get('*', auth, (_req, res) => {
+  if (hasClientBuild) {
+    res.sendFile(CLIENT_INDEX);
+  } else {
+    res.sendFile(path.join(__dirname, '..', 'index.html'));
+  }
+});
 app.listen(PORT, () => console.log(`Agent Hub :${PORT}`));

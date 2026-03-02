@@ -11,6 +11,7 @@
     "@types/cookie-parser": "^1.4.10",
     "@types/express": "^5.0.6",
     "@types/node": "^25.3.3",
+    "concurrently": "^9.2.1",
     "tsup": "^8.5.1",
     "typescript": "^5.9.3"
   },
@@ -18,12 +19,14 @@
     "agent-hub": "dist/cli.js"
   },
   "scripts": {
-    "build": "tsup src/cli.ts src/server.ts --format cjs --target node18 --clean",
-    "dev": "tsup src/cli.ts src/server.ts --format cjs --target node18 --watch",
+    "dev": "concurrently \"npm run server:dev\" \"npm run client:dev\"",
+    "server:dev": "tsup src/cli.ts src/server.ts --format cjs --target node18 --watch & node dist/cli.js --no-open",
+    "client:dev": "cd client && npm run dev",
+    "build": "tsup src/cli.ts src/server.ts --format cjs --target node18 --clean && cd client && npm run build",
     "start": "node dist/cli.js",
     "prepublishOnly": "npm run build"
   },
-  "description": "Self-hosted web editor for AI agent workspaces \u2014 SOUL.md, skills, MEMORY.md and more",
+  "description": "Self-hosted web editor for AI agent workspaces — SOUL.md, skills, MEMORY.md and more",
   "license": "MIT",
   "keywords": [
     "ai",
