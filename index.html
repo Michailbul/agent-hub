@@ -83,7 +83,7 @@ body{font-family:'Inter',system-ui,sans-serif;color:var(--t1);
 #layout{display:flex;flex:1;overflow:hidden}
 
 /* ━━━ SIDEBAR ━━━ */
-#sidebar{width:var(--sw);background:var(--s1);border-right:1px solid var(--bs);overflow-y:auto;overflow-x:hidden;flex-shrink:0;display:flex;flex-direction:column;padding:8px 6px 24px;min-height:0;position:relative;z-index:10}
+#sidebar{width:var(--sw);background:var(--s1);border-right:1px solid var(--bs);overflow-y:auto;overflow-x:hidden;flex-shrink:0;display:flex;flex-direction:column;padding:8px 6px 24px;min-height:0;position:relative;z-index:10;isolation:isolate}
 .grp-lbl{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:500;text-transform:uppercase;letter-spacing:.22em;color:var(--tg);padding:14px 10px 5px}
 .sb-div{height:1px;background:var(--bs);margin:10px 8px 4px}
 .agent-card{border:1px solid transparent;border-radius:var(--rl);margin-bottom:2px;transition:border-color var(--fast)}
@@ -123,7 +123,7 @@ body{font-family:'Inter',system-ui,sans-serif;color:var(--t1);
 .lib-files,.studio-files{padding:2px 0 5px}.lib-files.hidden,.studio-files.hidden{display:none}
 
 /* ━━━ EDITOR AREA ━━━ */
-#editor-area{flex:1;display:flex;overflow:hidden;position:relative}
+#editor-area{flex:1;display:flex;overflow:hidden;position:relative;isolation:isolate}
 
 /* Drop overlay for local files */
 #drop-overlay{display:none;position:absolute;inset:0;z-index:50;background:rgba(255,250,245,.92);backdrop-filter:blur(4px);border:3px dashed var(--coral);border-radius:var(--r);margin:8px;pointer-events:none;flex-direction:column;align-items:center;justify-content:center;gap:12px}
@@ -133,7 +133,7 @@ body{font-family:'Inter',system-ui,sans-serif;color:var(--t1);
 .do-sub{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--t3);letter-spacing:.04em}
 
 /* PANE */
-.pane{display:flex;flex-direction:column;overflow:hidden;min-width:200px;flex:1;position:relative;transition:flex-basis var(--fast)}
+.pane{display:flex;flex-direction:column;overflow:hidden;min-width:200px;flex:1;position:relative;transition:flex-basis var(--fast);isolation:isolate}
 .pane.drag-target::after{content:'Drop here';position:absolute;inset:0;background:rgba(255,122,100,.08);border:2px dashed var(--coral);border-radius:var(--r);display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:500;color:var(--coral);pointer-events:none;z-index:10}
 .pane-header{display:flex;align-items:center;gap:6px;padding:0 10px;height:34px;background:var(--s1);border-bottom:1px solid var(--bs);flex-shrink:0;position:relative;transition:background var(--fast)}
 .pane-header.drop-target{background:var(--cdim);outline:2px dashed var(--coral);outline-offset:-2px}
@@ -152,7 +152,7 @@ body{font-family:'Inter',system-ui,sans-serif;color:var(--t1);
 .pane-assign:hover{background:#4b35d0;border-color:#4b35d0}
 .pane-close{width:20px;height:20px;border-radius:4px;border:none;background:transparent;cursor:pointer;color:var(--tg);font-size:12px;display:flex;align-items:center;justify-content:center;transition:all var(--fast);flex-shrink:0}
 .pane-close:hover{background:var(--s3);color:var(--t1)}
-.pane-cm{flex:1;overflow:hidden;position:relative}
+.pane-cm{flex:1;overflow:hidden;position:relative;isolation:isolate}
 .pane-empty{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;pointer-events:none}
 .pane-empty.hidden{display:none}
 .pe-icon{font-size:28px;opacity:.3}.pe-title{font-size:13px;font-weight:600;color:var(--tg)}.pe-sub{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--tg);text-align:center;max-width:180px;line-height:1.7;letter-spacing:.02em}
