@@ -3,7 +3,8 @@ import { EditorState } from '@codemirror/state'
 import { EditorView, keymap, lineNumbers, highlightActiveLine, highlightActiveLineGutter } from '@codemirror/view'
 import { defaultKeymap, history, historyKeymap } from '@codemirror/commands'
 import { markdown } from '@codemirror/lang-markdown'
-import { syntaxHighlighting, defaultHighlightStyle, bracketMatching } from '@codemirror/language'
+import { bracketMatching } from '@codemirror/language'
+import { brandTheme } from '@/lib/cmTheme'
 import { usePanesStore } from '@/store/panes'
 import { useUIStore } from '@/store/ui'
 import { saveFile } from '@/lib/api'
@@ -77,7 +78,7 @@ export function Pane({ pane, isActive }: PaneProps) {
         highlightActiveLineGutter(),
         history(),
         bracketMatching(),
-        syntaxHighlighting(defaultHighlightStyle),
+        ...brandTheme,
         markdown(),
         keymap.of([...defaultKeymap, ...historyKeymap]),
         saveKeymap,
