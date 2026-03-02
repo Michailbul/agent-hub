@@ -20,6 +20,33 @@
   "scripts": {
     "build": "tsup src/cli.ts src/server.ts --format cjs --target node18 --clean",
     "dev": "tsup src/cli.ts src/server.ts --format cjs --target node18 --watch",
-    "start": "node dist/cli.js"
-  }
+    "start": "node dist/cli.js",
+    "prepublishOnly": "npm run build"
+  },
+  "description": "Self-hosted web editor for AI agent workspaces \u2014 SOUL.md, skills, MEMORY.md and more",
+  "license": "MIT",
+  "keywords": [
+    "ai",
+    "agents",
+    "claude",
+    "openai",
+    "codex",
+    "openclaw",
+    "editor",
+    "self-hosted"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Michailbul/agent-hub"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "files": [
+    "dist/",
+    "index.html",
+    "README.md",
+    "agent-hub.config.example.json",
+    "docker-compose.example.yml"
+  ]
 }

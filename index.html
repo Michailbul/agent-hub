@@ -194,6 +194,14 @@ body{font-family:'Inter',system-ui,sans-serif;color:var(--t1);
 .ad-custom button:hover{background:var(--coral)}
 
 /* FOCUS OVERLAY */
+#setup-overlay{display:none;position:fixed;inset:0;z-index:500;background:var(--p);align-items:center;justify-content:center}
+.setup-card{background:var(--s1);border:2px solid var(--ink);box-shadow:var(--sh-b);padding:40px 48px;max-width:520px;width:90%;display:flex;flex-direction:column;gap:20px}
+.setup-eyebrow{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.18em;color:var(--coral)}
+.setup-title{font-family:'Inter',sans-serif;font-size:28px;font-weight:800;color:var(--ink);letter-spacing:-.03em;line-height:1.2;margin:0}
+.setup-title span{color:var(--coral)}
+.setup-cli-badge{display:inline-flex;align-items:center;gap:8px;font-family:'JetBrains Mono',monospace;font-size:11px;padding:6px 12px;border:1.5px solid var(--bd);background:var(--p);color:var(--t2);width:fit-content}
+.setup-term{background:#0f0f0f;color:#e8e8e8;font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.7;padding:16px;height:220px;overflow-y:auto;border:1px solid rgba(255,255,255,.08);white-space:pre-wrap;word-break:break-all}
+.setup-term .t-coral{color:#ff7a64}.setup-term .t-green{color:#50fa7b}.setup-term .t-dim{color:#6b7280}
 #focus-overlay{display:none;position:fixed;inset:0;z-index:100;background:rgba(32,23,16,.92);backdrop-filter:blur(4px);flex-direction:column;align-items:center;justify-content:center}
 #focus-overlay.show{display:flex;animation:fo-in .22s var(--ease)}
 @keyframes fo-in{from{opacity:0}to{opacity:1}}
@@ -369,7 +377,55 @@ async function logout() { await fetch('/api/logout', { method:'POST' }); locatio
 /* ════════════════════════════════════
    INIT
 ════════════════════════════════════ */
+async function checkSetup() {
+  try {
+    const r = await fetch('/api/setup/status');
+    const d = await r.json();
+    if (!d.needsSetup) return false;
+    const ov = document.getElementById('setup-overlay');
+    ov.style.display = 'flex';
+    document.getElementById('login-page').style.display = 'none';
+    document.getElementById('app').style.display = 'none';
+    const badge = document.getElementById('cli-status');
+    if (d.cli === 'claude') badge.innerHTML = '✓ Claude Code detected';
+    else if (d.cli === 'codex') badge.innerHTML = '✓ Codex CLI detected';
+    else { badge.innerHTML = '⚠️ No CLI found — install claude or codex first'; badge.style.color='var(--coral)'; document.getElementById('scan-btn').disabled=true; }
+    return true;
+  } catch(e) { return false; }
+}
+
+function startSetup() {
+  const btn = document.getElementById('scan-btn');
+  btn.disabled = true; btn.textContent = '⏳ Scanning...';
+  const term = document.getElementById('setup-term');
+  term.innerHTML = '';
+  const es = new EventSource('/api/setup/run');
+  es.onmessage = (e) => {
+    try {
+      const d = JSON.parse(e.data);
+      if (d.type === 'text' || d.type === 'info') {
+        const txt = d.text || d.message || '';
+        const line = document.createElement('div');
+        line.className = txt.startsWith('✓') || txt.startsWith('→') ? 't-green' : txt.startsWith('⚠') || txt.startsWith('✗') ? 't-coral' : '';
+        line.textContent = txt;
+        term.appendChild(line);
+        term.scrollTop = term.scrollHeight;
+        if (txt.includes('AGENT_HUB_SETUP_COMPLETE')) {
+          es.close(); btn.textContent = '✓ Done';
+          document.getElementById('setup-done').style.display = 'block';
+        }
+      } else if (d.type === 'done' || d.type === 'error') {
+        es.close();
+        if (d.type === 'error') { const el=document.createElement('div'); el.className='t-coral'; el.textContent='Error: '+(d.message||'unknown'); term.appendChild(el); }
+      }
+    } catch(_) {}
+  };
+  es.onerror = () => { es.close(); btn.disabled=false; btn.textContent='⚡ Retry'; };
+}
+
 async function init() {
+  const needsSetup = await checkSetup();
+  if (needsSetup) return;
   if (!logged()) {
     document.getElementById('login-page').style.display = 'flex';
     setTimeout(() => document.getElementById('pw').focus(), 80);
@@ -1059,5 +1115,21 @@ window.addEventListener('keydown', e => { if(e.key==='Escape') closeCtxMenu(); i
 
 init();
 </script>
+
+<div id="setup-overlay">
+  <div class="setup-card">
+    <div class="setup-eyebrow">⚙️ Agent Hub · First Run</div>
+    <h1 class="setup-title">Set up your <span>workspace</span></h1>
+    <div id="cli-status" class="setup-cli-badge">🔍 Detecting CLI...</div>
+    <p style="font-size:13px;color:var(--t3);margin:0;line-height:1.6">Agent Hub will scan your machine for OpenClaw workspaces, agents, and skills — then write a config file automatically.</p>
+    <div id="setup-term" class="setup-term"><span class="t-dim">// Ready to scan. Click the button to start.</span></div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <button id="scan-btn" class="btn-p" onclick="startSetup()">⚡ Scan my workspace</button>
+      <div id="setup-done" style="display:none">
+        <button class="btn-p" style="background:var(--coral);border-color:var(--coral)" onclick="location.reload()">🚀 Launch Hub →</button>
+      </div>
+    </div>
+  </div>
+</div>
 </body>
 </html>

@@ -1,7 +1,8 @@
 FROM node:22-alpine
 WORKDIR /app
 COPY package*.json ./
-RUN npm install --production
-COPY server.js index.html ./
+RUN npm install
+COPY . .
+RUN npm run build
 EXPOSE 4001
-CMD ["node", "server.js"]
+CMD ["node", "dist/cli.js", "--no-open"]

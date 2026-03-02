@@ -176,7 +176,7 @@ function auth(req, res, next) {
 
 // ── ROUTES ─────────────────────────────────────────────────
 
-app.get('/login', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
+app.get('/login', (req, res) => res.sendFile(path.join(__dirname, '..', 'index.html')));
 
 app.post('/api/login', (req, res) => {
   if (req.body.password === PASSWORD) {
@@ -292,5 +292,5 @@ app.get('/api/setup/run', auth, (req, res) => {
   runSetupAgent(res, CONFIG_PATH);
 });
 
-app.get('*', auth, (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
+app.get('*', auth, (req, res) => res.sendFile(path.join(__dirname, '..', 'index.html')));
 app.listen(PORT, () => console.log(`Agent Hub :${PORT}`));
