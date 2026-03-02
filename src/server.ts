@@ -378,6 +378,73 @@ app.get('/api/setup/run', (req, res) => {
 });
 
 // Catch-all: serve React SPA or legacy HTML
+// ── CRON JOBS API ─────────────────────────────────────────────
+
+const CRON_JOBS_PATH = path.join(OPENCLAW_ROOT, 'cron', 'jobs.json');
+
+function readCronJobs() {
+  if (!fs.existsSync(CRON_JOBS_PATH)) return { version: 1, jobs: [] };
+  try { return JSON.parse(fs.readFileSync(CRON_JOBS_PATH, 'utf8')); }
+  catch { return { version: 1, jobs: [] }; }
+}
+
+function writeCronJobs(data: any) {
+  fs.mkdirSync(path.dirname(CRON_JOBS_PATH), { recursive: true });
+  // Backup first
+  if (fs.existsSync(CRON_JOBS_PATH)) {
+    fs.copyFileSync(CRON_JOBS_PATH, CRON_JOBS_PATH + '.bak');
+  }
+  fs.writeFileSync(CRON_JOBS_PATH, JSON.stringify(data, null, 2));
+}
+
+// GET all cron jobs
+app.get('/api/crons', auth, (_req, res) => {
+  try { res.json(readCronJobs()); }
+  catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// POST create new cron job
+app.post('/api/crons', auth, (req, res) => {
+  try {
+    const data = readCronJobs();
+    const now = Date.now();
+    const job = {
+      id: crypto.randomUUID(),
+      ...req.body,
+      createdAtMs: now,
+      updatedAtMs: now,
+      state: {},
+    };
+    data.jobs.push(job);
+    writeCronJobs(data);
+    res.json({ ok: true, job });
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// PATCH update cron job
+app.patch('/api/crons/:id', auth, (req, res) => {
+  try {
+    const data = readCronJobs();
+    const idx = data.jobs.findIndex((j: any) => j.id === req.params.id);
+    if (idx === -1) return res.status(404).json({ error: 'Job not found' });
+    data.jobs[idx] = { ...data.jobs[idx], ...req.body, updatedAtMs: Date.now() };
+    writeCronJobs(data);
+    res.json({ ok: true, job: data.jobs[idx] });
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// DELETE cron job
+app.delete('/api/crons/:id', auth, (req, res) => {
+  try {
+    const data = readCronJobs();
+    const before = data.jobs.length;
+    data.jobs = data.jobs.filter((j: any) => j.id !== req.params.id);
+    if (data.jobs.length === before) return res.status(404).json({ error: 'Job not found' });
+    writeCronJobs(data);
+    res.json({ ok: true });
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
 app.get('*', auth, (_req, res) => {
   if (hasClientBuild) {
     res.sendFile(CLIENT_INDEX);
@@ -386,3 +453,4 @@ app.get('*', auth, (_req, res) => {
   }
 });
 app.listen(PORT, () => console.log(`Agent Hub :${PORT}`));
+

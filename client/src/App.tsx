@@ -11,6 +11,7 @@ import { TopBar } from '@/components/Layout/TopBar'
 import { Sidebar } from '@/components/Sidebar/Sidebar'
 import { PaneManager } from '@/components/Editor/PaneManager'
 import { Toast } from '@/components/Toast'
+import { CronsPanel } from '@/components/Crons/CronsPanel'
 
 export function App() {
   const { isAuthenticated, isChecking, check } = useAuthStore()
@@ -18,6 +19,7 @@ export function App() {
   const { data: tree, refetch: refetchTree } = useTree()
   const addPane = usePanesStore(s => s.addPane)
   const panes = usePanesStore(s => s.panes)
+  const [activeView, setActiveView] = useState<'editor' | 'crons'>('editor')
   const activePaneId = usePanesStore(s => s.activePaneId)
   const { flashSaved, toast } = useUIStore()
   const [dropVisible, setDropVisible] = useState(false)
@@ -140,6 +142,18 @@ export function App() {
     <div className="app">
       <TopBar onRefresh={refetchTree} />
       <div className="layout">
+        <div className="main-nav">
+        <button
+          className={`nav-tab${activeView === 'editor' ? ' nav-tab-active' : ''}`}
+          onClick={() => setActiveView('editor')}
+        >📄 Editor</button>
+        <button
+          className={`nav-tab${activeView === 'crons' ? ' nav-tab-active' : ''}`}
+          onClick={() => setActiveView('crons')}
+        >⏰ Crons</button>
+      </div>
+      {activeView === 'crons' && <CronsPanel />}
+      {activeView === 'editor' && <>
         <Sidebar tree={tree} />
         <div
           className="editor-area"
@@ -155,6 +169,8 @@ export function App() {
           </div>
           <PaneManager />
         </div>
+      </>
+      }
       </div>
       <Toast />
     </div>
