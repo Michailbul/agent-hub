@@ -1,0 +1,19 @@
+# Example: self-hosted setup for OpenClaw users
+# Copy to docker-compose.yml and adjust paths for your machine
+
+services:
+  agent-hub:
+    image: ghcr.io/laniameda/agent-hub:latest
+    ports:
+      - "4001:4001"
+    restart: unless-stopped
+    environment:
+      HUB_PASSWORD: "your-secure-password"
+      OPENCLAW_ROOT: "/data/openclaw"
+      AGENTS_SKILLS_ROOT: "/data/agents/skills"
+    volumes:
+      # Map your local OpenClaw dir into the container
+      - ~/.openclaw:/data/openclaw
+      - ~/.agents:/data/agents
+      # Optional: map a studio/HQ context directory
+      # - ~/work/my-studio:/data/studio

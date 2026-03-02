@@ -1,0 +1,25 @@
+{
+  "_comment": "Copy to agent-hub.config.json and customize. If not provided, auto-discovery from OPENCLAW_ROOT is used.",
+  "openclawRoot": "/data/openclaw",
+  "agentsSkillsRoot": "/data/agents/skills",
+  "agents": [
+    {
+      "id": "myagent",
+      "label": "My Agent",
+      "emoji": "🤖",
+      "role": "Assistant",
+      "root": "/data/openclaw/workspace-myagent",
+      "files": ["SOUL.md", "MISSION.md", "MEMORY.md", "AGENTS.md"],
+      "skillsRoot": "/data/openclaw/workspace-myagent/skills"
+    }
+  ],
+  "skillLibraries": [
+    { "id": "custom", "label": "Custom Skills", "emoji": "🧩", "root": "/data/agents/skills" },
+    { "id": "system", "label": "System Skills",  "emoji": "🔧", "root": "/data/openclaw/skills" }
+  ],
+  "studio": {
+    "id": "studio", "label": "Studio HQ", "emoji": "🏢",
+    "root": "/data/studio",
+    "files": ["vision.md", "projects.md"]
+  }
+}

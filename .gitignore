@@ -1,0 +1,5 @@
+node_modules/
+agent-hub.config.json
+docker-compose.yml
+.env
+*.log
