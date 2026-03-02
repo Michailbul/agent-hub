@@ -15,11 +15,13 @@ function SubSection({
   label,
   files,
   activePath,
+  agents,
 }: {
   icon: string
   label: string
   files: Agent['instructions']
   activePath: string | null
+  agents: Agent[]
 }) {
   const [open, setOpen] = useState(true)
   const filter = useUIStore(s => s.filter)
@@ -41,14 +43,15 @@ function SubSection({
       </div>
       <div className={`sub-files${open ? '' : ' hidden'}`}>
         {visibleFiles.map(f => (
-          <FileItem key={f.path} file={f} activePath={activePath} />
+          <FileItem key={f.path} file={f} activePath={activePath} agents={agents} />
         ))}
       </div>
     </div>
   )
 }
 
-export function AgentSection({ agent, isOpen, onToggle }: AgentSectionProps) {
+interface AgentSectionProps2 extends AgentSectionProps { agents: Agent[] }
+export function AgentSection({ agent, isOpen, onToggle, agents }: AgentSectionProps2) {
   const activePath = usePanesStore(s => {
     const p = s.panes.find(p => p.id === s.activePaneId)
     return p?.path ?? null
@@ -73,10 +76,10 @@ export function AgentSection({ agent, isOpen, onToggle }: AgentSectionProps) {
       </div>
       <div className={`agent-body${isOpen ? ' open' : ''}`}>
         {agent.instructions.length > 0 && (
-          <SubSection icon="\uD83D\uDCCB" label="Instructions" files={agent.instructions} activePath={activePath} />
+          <SubSection icon="\uD83D\uDCCB" label="Instructions" files={agent.instructions} activePath={activePath} agents={agents} />
         )}
         {agent.skills.length > 0 && (
-          <SubSection icon="\uD83E\uDDE0" label="Skills" files={agent.skills} activePath={activePath} />
+          <SubSection icon="\uD83E\uDDE0" label="Skills" files={agent.skills} activePath={activePath} agents={agents} />
         )}
       </div>
     </div>

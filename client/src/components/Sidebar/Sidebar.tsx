@@ -30,6 +30,7 @@ export function Sidebar({ tree }: SidebarProps) {
           agent={agent}
           isOpen={openAgentId === agent.id}
           onToggle={() => handleToggle(agent.id)}
+          agents={tree.agents}
         />
       ))}
       <div className="sb-div" />
