@@ -21,6 +21,7 @@ export function Pane({ pane, isActive }: PaneProps) {
   const viewRef = useRef<EditorView | null>(null)
   const paneRef = useRef(pane)
   paneRef.current = pane
+  const externalUpdate = useRef(false)
 
   const { updateContent, setDirty, closePane, setActivePane, openFileInPane, insertPaneAfter } = usePanesStore()
   const { flashSaved, toast } = useUIStore()
@@ -57,7 +58,7 @@ export function Pane({ pane, isActive }: PaneProps) {
     ])
 
     const updateListener = EditorView.updateListener.of(update => {
-      if (update.docChanged) {
+      if (update.docChanged && !externalUpdate.current) {
         updateContent(pane.id, update.state.doc.toString())
       }
       if (update.selectionSet || update.docChanged) {
@@ -103,9 +104,11 @@ export function Pane({ pane, isActive }: PaneProps) {
     if (!view) return
     // Only update if content changed externally (not from editor typing)
     if (pane.content !== prevContentRef.current && pane.content !== view.state.doc.toString()) {
+      externalUpdate.current = true
       view.dispatch({
         changes: { from: 0, to: view.state.doc.length, insert: pane.content },
       })
+      externalUpdate.current = false
     }
     prevContentRef.current = pane.content
   }, [pane.content])
@@ -197,7 +200,7 @@ export function Pane({ pane, isActive }: PaneProps) {
             </div>
           </div>
         )}
-        <div ref={cmRef} style={{ height: '100%' }} />
+        <div ref={cmRef} style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }} />
       </div>
       <PaneStatus lines={lines} words={words} cursorLine={cursorLine} cursorCol={cursorCol} />
     </div>
