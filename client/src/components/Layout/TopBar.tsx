@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react'
 import { usePanesStore } from '@/store/panes'
-import { useAuthStore } from '@/store/auth'
 import { useUIStore } from '@/store/ui'
+import { saveFile } from '@/lib/api'
 import { BreadcrumbPath } from './BreadcrumbPath'
 
 interface TopBarProps {
@@ -9,15 +9,12 @@ interface TopBarProps {
 }
 
 export function TopBar({ onRefresh }: TopBarProps) {
-  const addPane = usePanesStore(s => s.addPane)
-  const paneCount = usePanesStore(s => s.panes.length)
-  const logoutFn = useAuthStore(s => s.logout)
-  const showSaved = useUIStore(s => s.showSaved)
-  const { toast } = useUIStore()
+  const panes = usePanesStore(s => s.panes)
+  const activePaneId = usePanesStore(s => s.activePaneId)
+  const { flashSaved, toast } = useUIStore()
   const [refreshing, setRefreshing] = useState(false)
 
-  const handleAddPane = useCallback(() => addPane(), [addPane])
-  const handleLogout = useCallback(async () => { await logoutFn() }, [logoutFn])
+  const activePane = panes.find(p => p.id === activePaneId)
 
   const handleRefresh = useCallback(async () => {
     if (refreshing) return
@@ -35,38 +32,40 @@ export function TopBar({ onRefresh }: TopBarProps) {
     }
   }, [refreshing, onRefresh, toast])
 
+  const handleSave = useCallback(async () => {
+    if (!activePane?.path || activePane.isLocal) return
+    try {
+      await saveFile(activePane.path, activePane.content)
+      usePanesStore.getState().setDirty(activePane.id, false)
+      flashSaved()
+      toast('Saved', 'success')
+    } catch {
+      toast('Save failed', 'error')
+    }
+  }, [activePane, flashSaved, toast])
+
   return (
     <div className="topbar">
-      <div className="brand">
-        <div className="brand-ic">⚙️</div>
-        <div>
-          <div className="brand-n">Agent <span>Hub</span></div>
-          <div className="brand-s">Laniameda &middot; Studio</div>
-        </div>
+      <div className="topbar-brand">
+        <span className="topbar-brand-icon">⚙️</span>
+        Agent Hub
       </div>
-      <div className="tsep" />
-      <BreadcrumbPath />
-      <div className="tr">
-        <span className={`ss${showSaved ? ' show' : ''}`}>Saved ✓</span>
+      <div className="topbar-center">
+        <BreadcrumbPath />
+      </div>
+      <div className="topbar-actions">
         <button
-          className="btn-o btn-refresh"
+          className="tb-btn-ghost"
           onClick={handleRefresh}
           disabled={refreshing}
-          title="Rescan agents and skills — preserves open files"
+          title="Rescan agents and skills"
         >
           <span className={`refresh-icon${refreshing ? ' spin' : ''}`}>↻</span>
           {refreshing ? 'Scanning…' : 'Refresh'}
         </button>
-        <button
-          className="btn-o"
-          onClick={handleAddPane}
-          disabled={paneCount >= 4}
-          style={{ opacity: paneCount >= 4 ? 0.4 : 1 }}
-          title="Add empty pane — drag a file into it"
-        >
-          + Pane
-        </button>
-        <button className="btn-o" onClick={handleLogout}>Sign out</button>
+        {activePane?.isDirty && !activePane.isLocal && (
+          <button className="tb-btn-save" onClick={handleSave}>Save</button>
+        )}
       </div>
     </div>
   )

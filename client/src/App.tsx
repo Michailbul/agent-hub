@@ -8,6 +8,7 @@ import { saveFile } from '@/lib/api'
 import { LoginForm } from '@/components/Auth/LoginForm'
 import { SetupOverlay } from '@/components/Setup/SetupOverlay'
 import { TopBar } from '@/components/Layout/TopBar'
+import { ActivityBar } from '@/components/Layout/ActivityBar'
 import { Sidebar } from '@/components/Sidebar/Sidebar'
 import { PaneManager } from '@/components/Editor/PaneManager'
 import { Toast } from '@/components/Toast'
@@ -141,36 +142,28 @@ export function App() {
   return (
     <div className="app">
       <TopBar onRefresh={refetchTree} />
-      <div className="layout">
-        <div className="main-nav">
-        <button
-          className={`nav-tab${activeView === 'editor' ? ' nav-tab-active' : ''}`}
-          onClick={() => setActiveView('editor')}
-        >📄 Editor</button>
-        <button
-          className={`nav-tab${activeView === 'crons' ? ' nav-tab-active' : ''}`}
-          onClick={() => setActiveView('crons')}
-        >⏰ Crons</button>
-      </div>
-      {activeView === 'crons' && <CronsPanel />}
-      {activeView === 'editor' && <>
-        <Sidebar tree={tree} />
-        <div
-          className="editor-area"
-          onDragEnter={handleDragEnter}
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onDrop={handleDrop}
-        >
-          <div className={`drop-overlay${dropVisible ? ' show' : ''}`}>
-            <div className="do-icon">{'\uD83D\uDCC4'}</div>
-            <div className="do-title">Drop Markdown File</div>
-            <div className="do-sub">Release to open in a new pane</div>
-          </div>
-          <PaneManager />
-        </div>
-      </>
-      }
+      <div className="app-body">
+        <ActivityBar activeView={activeView} onSwitch={setActiveView} />
+        {activeView === 'crons'
+          ? <CronsPanel />
+          : <>
+              <Sidebar tree={tree} />
+              <div
+                className="editor-area"
+                onDragEnter={handleDragEnter}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+              >
+                <div className={`drop-overlay${dropVisible ? ' show' : ''}`}>
+                  <div className="do-icon">{'\uD83D\uDCC4'}</div>
+                  <div className="do-title">Drop Markdown File</div>
+                  <div className="do-sub">Release to open in a new pane</div>
+                </div>
+                <PaneManager />
+              </div>
+            </>
+        }
       </div>
       <Toast />
     </div>

@@ -117,20 +117,21 @@ body{font-family:'Inter',var(--font-sans);color:var(--text-primary);
 .app{display:flex;height:100vh;flex-direction:column}
 
 /* ═══════════════════════════════════════════
-   TOPBAR — 44px, warm glass
+   TOPBAR — 40px, warm glass
    ═══════════════════════════════════════════ */
-.topbar{height:var(--th);background:rgba(255,250,245,.82);backdrop-filter:blur(20px) saturate(120%);
+.topbar{height:40px;background:rgba(255,250,245,.82);backdrop-filter:blur(20px) saturate(120%);
   -webkit-backdrop-filter:blur(20px) saturate(120%);border-bottom:1px solid var(--border-subtle);
   display:flex;align-items:center;padding:0 14px;gap:8px;flex-shrink:0;z-index:20}
-.brand{display:flex;align-items:center;gap:7px;flex-shrink:0}
-.brand-ic{width:26px;height:26px;background:var(--inv);display:flex;align-items:center;justify-content:center;font-size:13px}
-.brand-n{font-size:13px;font-weight:800;letter-spacing:-.2px;color:var(--text-primary);line-height:1;font-family:'JetBrains Mono',monospace}.brand-n span{color:var(--coral)}
-.brand-s{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--text-ghost);line-height:1;margin-top:2px}
-.tsep{width:1px;height:16px;background:var(--border-default);flex-shrink:0}
+.topbar-brand{display:flex;align-items:center;gap:6px;font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--ink);padding-right:12px;border-right:1px solid var(--border-subtle);flex-shrink:0}
+.topbar-brand-icon{font-size:16px}
+.topbar-center{flex:1;display:flex;align-items:center;padding:0 12px;min-width:0}
+.topbar-actions{display:flex;align-items:center;gap:6px;padding-left:12px;border-left:1px solid var(--border-subtle);flex-shrink:0}
+.tb-btn-ghost{height:28px;padding:0 8px;border:none;background:none;border-radius:6px;font-size:11px;font-weight:600;color:var(--text-tertiary);cursor:pointer;display:flex;align-items:center;gap:4px;transition:all var(--duration-fast);font-family:'JetBrains Mono',monospace}
+.tb-btn-ghost:hover{background:var(--surface-2);color:var(--text-primary)}
+.tb-btn-ghost:disabled{opacity:.4;cursor:not-allowed}
+.tb-btn-save{height:28px;padding:0 10px;border:1px solid var(--border-strong);background:none;border-radius:6px;font-size:11px;font-weight:700;color:var(--ink);cursor:pointer;transition:all var(--duration-fast);font-family:'JetBrains Mono',monospace}
+.tb-btn-save:hover{background:var(--ink);color:var(--paper)}
 .bc{flex:1;min-width:0;font-family:'JetBrains Mono',monospace;font-size:var(--text-size-xs);color:var(--text-tertiary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.tr{display:flex;align-items:center;gap:5px;flex-shrink:0}
-.ss{font-family:'JetBrains Mono',monospace;font-size:var(--text-micro);font-weight:500;color:var(--status-success);letter-spacing:.08em;text-transform:uppercase;opacity:0;transition:opacity var(--fast)}
-.ss.show{opacity:1}
 /* Brutalist outline button */
 .btn-o{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;font-family:'JetBrains Mono',monospace;font-size:var(--text-micro);font-weight:500;text-transform:uppercase;letter-spacing:.1em;color:var(--text-secondary);background:transparent;border:2px solid var(--border-default);cursor:pointer;transition:all var(--fast) var(--ease-out)}
 .btn-o:hover{background:var(--surface-2);border-color:var(--border-strong);color:var(--text-primary);box-shadow:var(--shadow-brutal-sm);transform:translate(-1px,-1px)}
@@ -141,9 +142,18 @@ body{font-family:'Inter',var(--font-sans);color:var(--text-primary);
 .btn-focus.on{background:var(--coral);border-color:var(--coral);color:#fff}
 
 /* ═══════════════════════════════════════════
-   LAYOUT
+   ACTIVITY BAR — 40px icon strip
    ═══════════════════════════════════════════ */
-.layout{display:flex;flex:1;overflow:hidden}
+.activity-bar{width:40px;flex-shrink:0;background:var(--surface-1);border-right:1px solid var(--border-subtle);display:flex;flex-direction:column;align-items:center;padding:6px 0;gap:2px;z-index:10}
+.act-btn{width:36px;height:36px;border:none;background:none;cursor:pointer;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--text-ghost);transition:all var(--duration-fast);border-left:3px solid transparent}
+.act-btn:hover{background:var(--surface-3);color:var(--text-secondary)}
+.act-btn.active{border-left-color:var(--coral);background:var(--accent-subtle);color:var(--coral)}
+.act-spacer{flex:1}
+
+/* ═══════════════════════════════════════════
+   APP BODY (below topbar)
+   ═══════════════════════════════════════════ */
+.app-body{display:flex;flex:1;min-height:0;overflow:hidden}
 
 /* ═══════════════════════════════════════════
    SIDEBAR — brutalist cards, editorial labels
@@ -428,11 +438,6 @@ body{font-family:'Inter',var(--font-sans);color:var(--text-primary);
 .cf-btn-save:hover{box-shadow:var(--shadow-brutal-sm);transform:translate(-1px,-1px)}
 .cf-btn-save:active{transform:translate(0,0);box-shadow:none}
 
-/* ═══ Main nav tabs (Editor / Crons) — underline style ═══ */
-.main-nav{display:flex;gap:0;padding:0 10px;background:var(--paper);border-bottom:1px solid var(--border-subtle);flex-shrink:0}
-.nav-tab{border:none;background:none;padding:10px 16px;font-family:'JetBrains Mono',monospace;font-size:var(--text-size-xs);font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--text-tertiary);cursor:pointer;transition:all var(--fast);border-bottom:2px solid transparent;margin-bottom:-1px}
-.nav-tab:hover{color:var(--text-primary)}
-.nav-tab.nav-tab-active{color:var(--coral);border-bottom-color:var(--coral)}
 
 /* ═══════════════════════════════════════════
    REDUCED MOTION
