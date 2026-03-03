@@ -57,7 +57,7 @@ export function AgentSection({ agent, isOpen, onToggle, agents }: AgentSectionPr
     return p?.path ?? null
   })
 
-  const total = agent.instructions.length + agent.skills.length
+  const total = agent.instructions.length + (agent.memory?.length||0) + (agent.pm?.length||0) + agent.skills.length
 
   const handleClick = useCallback(() => {
     onToggle()
@@ -78,8 +78,14 @@ export function AgentSection({ agent, isOpen, onToggle, agents }: AgentSectionPr
         {agent.instructions.length > 0 && (
           <SubSection icon="📋" label="Instructions" files={agent.instructions} activePath={activePath} agents={agents} />
         )}
+        {(agent.memory?.length ?? 0) > 0 && (
+          <SubSection icon="🧠" label="Memory" files={agent.memory ?? []} activePath={activePath} agents={agents} />
+        )}
+        {(agent.pm?.length ?? 0) > 0 && (
+          <SubSection icon="📊" label="PM" files={agent.pm ?? []} activePath={activePath} agents={agents} />
+        )}
         {agent.skills.length > 0 && (
-          <SubSection icon="🧠" label="Skills" files={agent.skills} activePath={activePath} agents={agents} />
+          <SubSection icon="⚡" label="Skills" files={agent.skills} activePath={activePath} agents={agents} />
         )}
       </div>
     </div>

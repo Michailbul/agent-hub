@@ -12,6 +12,8 @@ export interface Agent {
   role: string
   root: string
   instructions: AgentFile[]
+  memory: AgentFile[]
+  pm: AgentFile[]
   skills: AgentFile[]
 }
 

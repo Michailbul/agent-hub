@@ -44,11 +44,14 @@ function discoverAgents(openclawRoot) {
       if (emojiMatch) { const e = emojiMatch[1].trim(); emoji = e.length <= 4 ? e : '🤖'; }
       if (roleMatch) role = roleMatch[1].trim();
     }
-    // Default instruction files (whichever exist)
-    const defaultFiles = ['SOUL.md','MISSION.md','MEMORY.md','USER.md','AGENTS.md',
-      'IDENTITY.md','HEARTBEAT.md','TOOLS.md','pm/vision.md','pm/backlog.md','pm/problems.md'];
+    // Categorized files
+    const instructionFiles = ['SOUL.md','MISSION.md','IDENTITY.md','USER.md',
+      'AGENTS.md','HEARTBEAT.md','TOOLS.md'];
+    const memoryFiles = ['MEMORY.md'];
+    const pmFiles = ['pm/vision.md','pm/backlog.md','pm/problems.md'];
     agents.push({ id: agentId, label, emoji, role, root: wsRoot,
-      files: defaultFiles, skillsRoot: path.join(wsRoot, 'skills') });
+      files: instructionFiles, memoryFiles, pmFiles,
+      skillsRoot: path.join(wsRoot, 'skills') });
   }
   return agents;
 }
@@ -272,7 +275,9 @@ app.post('/api/refresh', auth, (_req, res) => {
 app.get('/api/tree', auth, (req, res) => {
   const agents = AGENTS.map(agent => ({
     id: agent.id, label: agent.label, emoji: agent.emoji, role: agent.role, type: 'agent',
-    instructions: resolveFiles(agent.root, agent.files),
+    instructions: resolveFiles(agent.root, agent.files || []),
+    memory: resolveFiles(agent.root, agent.memoryFiles || []),
+    pm: resolveFiles(agent.root, agent.pmFiles || []),
     skills: scanSkillsDir(agent.skillsRoot),
   }));
   const libraries = SKILL_LIBRARIES.map(lib => ({
