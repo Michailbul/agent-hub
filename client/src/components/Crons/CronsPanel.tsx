@@ -27,8 +27,9 @@ export function CronsPanel() {
   const [loading, setLoading] = useState(true)
   const [openJobIds, setOpenJobIds] = useState<string[]>([])
   const [activeJobId, setActiveJobId] = useState<string | null>(null)
-  const [skillsOpen, setSkillsOpen] = useState(true)
-  const [skillsWidth, setSkillsWidth] = useState(260)
+  const [skillsOpen, setSkillsOpen] = useState(false)
+  const [skillsWidth, setSkillsWidth] = useState(280)
+  const skillsWidthRef = useRef(280)
   const insertSkillRef = useRef<CronDetailHandle | null>(null)
   const { toast } = useUIStore()
 
@@ -138,11 +139,12 @@ export function CronsPanel() {
     if (!skillsOpen) return
 
     const startX = event.clientX
-    const startWidth = skillsWidth
+    const startWidth = skillsWidthRef.current
 
     const onMove = (moveEvent: MouseEvent) => {
-      const delta = startX - moveEvent.clientX
-      setSkillsWidth(Math.max(160, Math.min(480, startWidth + delta)))
+      const newWidth = Math.max(180, Math.min(520, startWidth + (startX - moveEvent.clientX)))
+      skillsWidthRef.current = newWidth
+      setSkillsWidth(newWidth)
     }
 
     const onUp = () => {
@@ -152,7 +154,7 @@ export function CronsPanel() {
 
     window.addEventListener('mousemove', onMove)
     window.addEventListener('mouseup', onUp)
-  }, [skillsOpen, skillsWidth])
+  }, [skillsOpen])
 
   const activeJob = useMemo(
     () => jobs.find(job => job.id === activeJobId) ?? null,
