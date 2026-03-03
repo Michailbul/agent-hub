@@ -1,11 +1,18 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react'
 import type { TreeData } from '@/types'
 import type { CronJob } from '@/types/cron'
+import { PromptComposer } from './PromptComposer'
 
 interface CronDetailProps {
   job: CronJob
+  skills: string[]
+  onOpenSkills: () => void
   onSave: (updated: CronJob) => void
   onDelete: (id: string) => void
+}
+
+export type CronDetailHandle = {
+  insertSkill: (name: string) => void
 }
 
 const TZ_OPTIONS = ['Europe/Minsk', 'UTC', 'America/New_York', 'America/Los_Angeles', 'Europe/London', 'Asia/Tokyo']
@@ -20,35 +27,6 @@ const CRON_PRESETS = [
 ]
 
 type EveryUnit = 'minutes' | 'hours' | 'days'
-type SkillCategory = 'all' | 'coding' | 'content' | 'research' | 'data' | 'tools'
-
-type SkillEntry = {
-  name: string
-  path: string
-  agents: string[]
-}
-
-const CATEGORIES: Array<{ id: SkillCategory; label: string; keywords?: string[] }> = [
-  { id: 'all', label: 'All' },
-  { id: 'coding', label: 'Code', keywords: ['codex', 'coding', 'github', 'claude', 'git', 'pr', 'build'] },
-  { id: 'content', label: 'Content', keywords: ['content', 'copy', 'social', 'carousel', 'writing', 'humanizer', 'ad', 'tweet', 'x-'] },
-  { id: 'research', label: 'Research', keywords: ['research', 'web', 'search', 'extract', 'summarize', 'youtube', 'weather'] },
-  { id: 'data', label: 'Data', keywords: ['kb', 'notion', 'data', 'enrichment', 'storage'] },
-  { id: 'tools', label: 'Utils' },
-]
-
-function getCategory(name: string): SkillCategory {
-  const normalized = name.toLowerCase()
-  for (const category of CATEGORIES.slice(1, -1)) {
-    if (category.keywords?.some(keyword => normalized.includes(keyword))) return category.id
-  }
-  return 'tools'
-}
-
-function skillFolderName(fullPath: string): string {
-  const chunks = fullPath.split(/[\\/]/).filter(Boolean)
-  return chunks.length >= 2 ? chunks[chunks.length - 2] : chunks[chunks.length - 1]
-}
 
 function toEveryFields(everyMs?: number): { value: number; unit: EveryUnit } {
   const ms = everyMs || 60000
@@ -87,11 +65,13 @@ function normalizeJob(job: CronJob): CronJob {
   }
 }
 
-export function CronDetail({ job, onSave, onDelete }: CronDetailProps) {
+export const CronDetail = forwardRef<CronDetailHandle, CronDetailProps>(function CronDetail(
+  { job, skills, onOpenSkills, onSave, onDelete },
+  ref,
+) {
   const promptRef = useRef<HTMLTextAreaElement | null>(null)
 
   const [agentOptions, setAgentOptions] = useState<TreeData['agents']>([])
-  const [skills, setSkills] = useState<SkillEntry[]>([])
 
   const initialEvery = useMemo(() => toEveryFields(job.schedule.everyMs), [job.id])
 
@@ -110,9 +90,6 @@ export function CronDetail({ job, onSave, onDelete }: CronDetailProps) {
   const [wakeMode, setWakeMode] = useState(job.wakeMode || 'now')
 
   const [advancedOpen, setAdvancedOpen] = useState(false)
-  const [skillsOpen, setSkillsOpen] = useState(true)
-  const [skillSearch, setSkillSearch] = useState('')
-  const [activeCategory, setActiveCategory] = useState<SkillCategory>('all')
 
   useEffect(() => {
     const loadTree = async () => {
@@ -120,31 +97,9 @@ export function CronDetail({ job, onSave, onDelete }: CronDetailProps) {
         const response = await fetch('/api/tree')
         if (!response.ok) return
         const data = (await response.json()) as TreeData
-        const agents = data.agents || []
-        setAgentOptions(agents)
-
-        const map = new Map<string, SkillEntry>()
-        for (const agent of agents) {
-          for (const skill of agent.skills) {
-            const key = skillFolderName(skill.path)
-            const normalizedKey = key.toLowerCase()
-            const existing = map.get(normalizedKey)
-
-            if (!existing) {
-              map.set(normalizedKey, { name: key, path: skill.path, agents: [agent.label] })
-              continue
-            }
-
-            if (!existing.agents.includes(agent.label)) {
-              existing.agents.push(agent.label)
-            }
-          }
-        }
-
-        setSkills([...map.values()].sort((a, b) => a.name.localeCompare(b.name)))
+        setAgentOptions(data.agents || [])
       } catch {
         setAgentOptions([])
-        setSkills([])
       }
     }
 
@@ -167,9 +122,6 @@ export function CronDetail({ job, onSave, onDelete }: CronDetailProps) {
     setDeliveryMode(job.delivery?.mode || 'announce')
     setWakeMode(job.wakeMode || 'now')
     setAdvancedOpen(false)
-    setSkillsOpen(true)
-    setSkillSearch('')
-    setActiveCategory('all')
   }, [job])
 
   const selectedPreset = useMemo(() => {
@@ -177,21 +129,15 @@ export function CronDetail({ job, onSave, onDelete }: CronDetailProps) {
     return match?.expr || ''
   }, [cronExpr])
 
-  const filteredSkills = useMemo(() => {
-    const query = skillSearch.trim().toLowerCase()
-
-    return skills.filter(skill => {
-      const matchesSearch = !query || skill.name.toLowerCase().includes(query)
-      const matchesCategory = activeCategory === 'all' || getCategory(skill.name) === activeCategory
-      return matchesSearch && matchesCategory
-    })
-  }, [activeCategory, skillSearch, skills])
-
   const insertSkill = useCallback((skillName: string) => {
-    const token = `[skill: ${skillName}]`
+    const cleanName = skillName.trim()
+    if (!cleanName) return
+
+    const token = `[skill: ${cleanName}]`
+
     setMessage(prev => {
       const node = promptRef.current
-      if (!node) return `${prev}${token}`
+      if (!node) return prev.trimEnd() ? `${prev}\n${token}` : token
 
       const start = node.selectionStart ?? prev.length
       const end = node.selectionEnd ?? prev.length
@@ -208,6 +154,8 @@ export function CronDetail({ job, onSave, onDelete }: CronDetailProps) {
       return next
     })
   }, [])
+
+  useImperativeHandle(ref, () => ({ insertSkill }), [insertSkill])
 
   const buildUpdatedJob = useCallback((): CronJob => {
     const updated: CronJob = {
@@ -275,6 +223,7 @@ export function CronDetail({ job, onSave, onDelete }: CronDetailProps) {
           {isDirty && <span className="cron-dirty-badge">UNSAVED</span>}
         </div>
         <div className="crons-topbar-right">
+          <button className="btn-skill" onClick={onOpenSkills}>Skills</button>
           <button
             className="btn-delete"
             onClick={() => {
@@ -394,13 +343,12 @@ export function CronDetail({ job, onSave, onDelete }: CronDetailProps) {
 
           <div className="cron-field">
             <label className="cron-label">PROMPT</label>
-            <textarea
-              ref={promptRef}
-              className="cron-input cron-textarea"
-              rows={10}
+            <PromptComposer
               value={message}
-              onChange={event => setMessage(event.target.value)}
-              placeholder="What should this agent do?"
+              onChange={setMessage}
+              onInsertSkill={insertSkill}
+              skills={skills}
+              textareaRef={promptRef}
             />
           </div>
 
@@ -451,53 +399,8 @@ export function CronDetail({ job, onSave, onDelete }: CronDetailProps) {
               </div>
             </div>
           </div>
-
-          <div className="cron-skills-section">
-            <button className="cron-advanced-toggle" onClick={() => setSkillsOpen(prev => !prev)}>
-              <span>SKILLS {skillsOpen ? '▴' : '▾'}</span>
-              <span className="cron-skills-hint">Click a skill to insert into prompt</span>
-            </button>
-
-            {skillsOpen && (
-              <div className="cron-skills-body">
-                <input
-                  className="cron-skills-search"
-                  placeholder="Search skills..."
-                  value={skillSearch}
-                  onChange={event => setSkillSearch(event.target.value)}
-                />
-
-                <div className="cron-skills-filter-bar">
-                  {CATEGORIES.map(category => (
-                    <button
-                      key={category.id}
-                      className={`skills-filter-btn${activeCategory === category.id ? ' active' : ''}`}
-                      onClick={() => setActiveCategory(category.id)}
-                    >
-                      {category.label}
-                    </button>
-                  ))}
-                </div>
-
-                <div className="cron-skills-grid">
-                  {filteredSkills.map(skill => (
-                    <button key={skill.path} className="cron-skill-pill" onClick={() => insertSkill(skill.name)}>
-                      {skill.name}
-                      <span className="cron-skill-agents">
-                        {skill.agents.slice(0, 2).map(agent => (
-                          <span key={`${skill.path}-${agent}`} className="skill-agent-tag">{agent}</span>
-                        ))}
-                      </span>
-                    </button>
-                  ))}
-
-                  {filteredSkills.length === 0 && <div className="crons-empty">No matching skills</div>}
-                </div>
-              </div>
-            )}
-          </div>
         </div>
       </div>
     </div>
   )
-}
+})

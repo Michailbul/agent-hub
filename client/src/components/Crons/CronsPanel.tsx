@@ -1,8 +1,10 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import type { TreeData } from '@/types'
 import type { CronJob } from '@/types/cron'
 import { useUIStore } from '@/store/ui'
-import { CronDetail } from './CronDetail'
+import { CronDetail, type CronDetailHandle } from './CronDetail'
 import { CronListItem } from './CronListItem'
+import { SkillsDrawer } from './SkillsDrawer'
 
 function defaultNewJob(): Partial<CronJob> {
   return {
@@ -20,11 +22,19 @@ function defaultNewJob(): Partial<CronJob> {
   }
 }
 
+function skillFolderName(fullPath: string): string {
+  const chunks = fullPath.split(/[\\/]/).filter(Boolean)
+  return chunks.length >= 2 ? chunks[chunks.length - 2] : chunks[chunks.length - 1]
+}
+
 export function CronsPanel() {
   const [jobs, setJobs] = useState<CronJob[]>([])
   const [loading, setLoading] = useState(true)
   const [openJobIds, setOpenJobIds] = useState<string[]>([])
   const [activeJobId, setActiveJobId] = useState<string | null>(null)
+  const [skillsDrawerOpen, setSkillsDrawerOpen] = useState(false)
+  const [skillsIndex, setSkillsIndex] = useState<string[]>([])
+  const detailRef = useRef<CronDetailHandle | null>(null)
   const { toast } = useUIStore()
 
   const openJob = useCallback((id: string) => {
@@ -67,6 +77,30 @@ export function CronsPanel() {
   useEffect(() => {
     void load()
   }, [load])
+
+  useEffect(() => {
+    const loadSkills = async () => {
+      try {
+        const response = await fetch('/api/tree')
+        if (!response.ok) return
+
+        const data = (await response.json()) as TreeData
+        const names = new Set<string>()
+
+        for (const agent of data.agents || []) {
+          for (const skill of agent.skills || []) {
+            names.add(skillFolderName(skill.path))
+          }
+        }
+
+        setSkillsIndex([...names].sort((a, b) => a.localeCompare(b)))
+      } catch {
+        setSkillsIndex([])
+      }
+    }
+
+    void loadSkills()
+  }, [])
 
   const handleToggle = useCallback(async (job: CronJob) => {
     try {
@@ -184,10 +218,23 @@ export function CronsPanel() {
         </div>
 
         {activeJob ? (
-          <CronDetail job={activeJob} onSave={handleSave} onDelete={handleDelete} />
+          <CronDetail
+            ref={detailRef}
+            job={activeJob}
+            skills={skillsIndex}
+            onOpenSkills={() => setSkillsDrawerOpen(true)}
+            onSave={handleSave}
+            onDelete={handleDelete}
+          />
         ) : (
           <div className="crons-empty">← Select a cron job</div>
         )}
+
+        <SkillsDrawer
+          open={skillsDrawerOpen}
+          onClose={() => setSkillsDrawerOpen(false)}
+          onInsertSkill={name => detailRef.current?.insertSkill(name)}
+        />
       </div>
     </div>
   )
