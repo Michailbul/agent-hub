@@ -97,11 +97,14 @@ export function CronEditor({ job, onSave, onClose }: Props) {
             </div>
             <div className="cf-group" style={{ flex: 1 }}>
               <label className="cf-label">Enabled</label>
-              <div className="cf-toggle-row">
-                <button
-                  className={`cron-toggle large ${enabled ? 'cron-toggle-on' : ''}`}
+              <div className="cf-toggle-row" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div
+                  className={`toggle-switch${enabled ? ' on' : ''}`}
                   onClick={() => setEnabled(!enabled)}
-                >{enabled ? '● Enabled' : '○ Disabled'}</button>
+                />
+                <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 11, color: enabled ? 'var(--coral)' : 'var(--text-ghost)' }}>
+                  {enabled ? 'Enabled' : 'Disabled'}
+                </span>
               </div>
             </div>
           </div>

@@ -131,7 +131,7 @@ function ContextMenuInner({ file, x, y, agents, onClose }: ContextMenuProps) {
           >
             <span className="ctx-icon">📋</span>
             <span>Copy to agent</span>
-            <span className="ctx-chevron">›</span>
+            <span className="ctx-chevron">&rarr;</span>
             {copyOpen && (
               <div className="ctx-sub">
                 {agents.map(a => (
@@ -152,7 +152,7 @@ function ContextMenuInner({ file, x, y, agents, onClose }: ContextMenuProps) {
           >
             <span className="ctx-icon">✂️</span>
             <span>Move to agent</span>
-            <span className="ctx-chevron">›</span>
+            <span className="ctx-chevron">&rarr;</span>
             {moveOpen && (
               <div className="ctx-sub">
                 {agents.map(a => (

@@ -59,13 +59,11 @@ export function CronCard({ job, onEdit, onToggle, onDelete }: Props) {
           {job.description && <div className="cron-desc">{job.description}</div>}
         </div>
         <div className="cron-actions">
-          <button
-            className={`cron-toggle${job.enabled ? ' cron-toggle-on' : ''}`}
+          <div
+            className={`toggle-switch${job.enabled ? ' on' : ''}`}
             onClick={onToggle}
             title={job.enabled ? 'Disable' : 'Enable'}
-          >
-            {job.enabled ? '●' : '○'}
-          </button>
+          />
           <button className="cron-btn" onClick={onEdit} title="Edit">✎</button>
           <button className="cron-btn cron-btn-del" onClick={onDelete} title="Delete">✕</button>
         </div>
