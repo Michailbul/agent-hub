@@ -376,3 +376,65 @@ A spatial, drag-and-drop canvas (not a list, not a table — a canvas):
 - Search across all skills + filter by category
 
 ### Priority: HIGH (v0.4 — the defining feature of the product)
+
+---
+
+## [HIGH] Crons Chat Assistant (CLI streaming + apply patch) — v0.5
+
+### Goal
+Add a chat window to the Crons view so users can ask an agent to edit a cron job
+(prompt/schedule/model/etc.) instead of manually editing fields.
+
+### UX
+- In Crons editor, add a right-side panel with tabs: **Skills | Chat**
+- Chat panel:
+  - Textarea input: "Tell the agent what to change"
+  - Streamed output window (live tokens/lines)
+  - When agent proposes changes: show "Proposed changes" card + **Apply** / **Discard**
+  - Applying updates immediately updates the CronDetail form
+
+### Why it matters
+- Makes cron editing fast for non-technical users
+- Removes tedious JSON/schema thinking
+- Adds transparency vs Telegram black box (you see the whole plan + patch)
+
+### Safety constraints (non-negotiable)
+- Agent must NOT write arbitrary files blindly.
+- Scope limited to selected cron job id and allowed fields:
+  - enabled
+  - schedule
+  - payload.message
+  - payload.model
+  - payload.timeoutSeconds
+  - delivery.mode
+  - wakeMode
+- Apply step required (user approves proposed patch)
+
+### Technical plan (MVP)
+Backend:
+- `POST /api/agent/run`
+  - body: `{ kind: 'cron_edit', jobId, instruction }`
+  - spawns CLI agent process (Claude CLI or Codex CLI) as user `michael`
+  - returns `{ runId }`
+- `GET /api/agent/stream/:runId` (SSE)
+  - streams stdout/stderr lines to client
+- `POST /api/agent/stop/:runId`
+  - kills the process
+
+Agent output format (MVP):
+- Agent must output a JSON object `{ patch: Partial<CronJob> }` or a full `CronJob`
+- Server validates patch and applies via existing `PATCH /api/crons/:id`
+
+Client:
+- `CronsChatPanel.tsx`
+- SSE client with reconnect/backoff
+- Renders streaming logs + extracted proposed patch
+- Apply triggers PATCH, then refreshes `/api/crons` and updates selected job
+
+### v0.5 additions
+- Branded diff view (GitHub-like) before apply
+- Multi-run history per cron
+- “Explain what changed” summary
+
+### Priority
+HIGH for v0.5. This is the step toward "Cursor for AI agents" inside Agent Hub.
