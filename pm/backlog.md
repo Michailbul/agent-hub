@@ -295,3 +295,84 @@ OpenClaw gives you agents. Agent Hub gives you a cockpit.
 
 ### Priority: LOW-HIGH (v0.5 — after Team Builder)
 Tied directly to the Team Builder vision. Implement after v0.4 is solid.
+
+---
+
+## [HIGH] Canvas View — Team Orchestration — v0.4
+
+### The product thesis
+Agent Hub is built for **solo founders and independent creators who manage
+teams of AI agents instead of teams of humans**. 10 agents still require
+strategic orchestration decisions. This tool is their OS.
+
+### Three fundamental paradigms (the lego system)
+
+```
+┌──────────────────────────────────────────────────────┐
+│  SKILLS          AGENTS          CONTEXT & FILES     │
+│  ─────────       ──────          ─────────────────   │
+│  Building        Team            Identity, memory,   │
+│  blocks.         members.        instructions, PM.   │
+│                                                      │
+│  Drag onto       Have skills.    Shape how the agent │
+│  agents.         Have context.   thinks and acts.    │
+│  Reusable        Have crons.                         │
+│  across agents.                                      │
+└──────────────────────────────────────────────────────┘
+```
+
+### The three views (now confirmed)
+
+| View | Paradigm | Purpose |
+|---|---|---|
+| **Files** | Context & Files | Edit agent identity, memory, PM files |
+| **Crons** | Automation | Schedule what runs when |
+| **Canvas** | Agents + Skills | Visualize and orchestrate the team |
+
+### Canvas view — what it is
+
+A spatial, drag-and-drop canvas (not a list, not a table — a canvas):
+
+```
+        ┌─────────────────┐    ┌─────────────────┐
+        │  ⚙️  Persey      │    │  🎨  Meda        │
+        │  Product CTO    │    │  Creative Dir   │
+        │  ─────────────  │    │  ─────────────  │
+        │  ⚡ coding-agent │    │  ⚡ ad-creative  │
+        │  ⚡ github       │    │  ⚡ social-cont. │
+        │  ⚡ laniameda-kb │    │  ⚡ copywriting  │
+        │  [+ Add skill]  │    │  [+ Add skill]  │
+        └─────────────────┘    └─────────────────┘
+                  │                     │
+                  └──── shared context ─┘
+                  laniameda-hq/studio/identity.md
+```
+
+- Agent cards on a canvas — draggable to rearrange
+- Each card shows the agent's skills as pills
+- Click a skill pill → opens the skill in Files view
+- [+ Add skill] → opens skill picker (searchable, same SkillsBrowser)
+- Drag a skill from the palette → drop onto an agent card → installs it
+- Remove skill: × on skill pill → uninstalls from agent workspace
+- [+ New Agent] → scaffolds new workspace-xxx dir + identity files
+- Shared context section → shows which files all agents reference
+- Edge/line between agents that share crons or channels
+
+### Why canvas vs list
+- Lists are for managing. Canvas is for thinking.
+- You can't "see" a team in a spreadsheet. You can on a canvas.
+- Solo founders managing 10 agents need to understand the org
+  at a glance — who does what, what skills they have, what they share.
+- Strategic decisions (add a skill, spin up a new agent, share context)
+  should feel like moving lego blocks, not editing config files.
+
+### Implementation notes
+- React-based canvas: positioned divs + CSS transforms (no heavy lib needed for MVP)
+- Agent positions stored in localStorage or a config file
+- Skill install: POST /api/skill/copy → copy skill to agent's workspace/skills/
+- Skill remove: DELETE /api/skill → delete from agent workspace
+- New agent: POST /api/agents/create → scaffold files
+- Skills palette: same data as SkillsBrowser (from /api/tree)
+- Search across all skills + filter by category
+
+### Priority: HIGH (v0.4 — the defining feature of the product)
