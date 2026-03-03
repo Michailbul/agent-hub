@@ -171,3 +171,57 @@ Agent Hub as a Telegram Mini App — users manage their agents and skills from w
 - Worth building after npm publish + cron detail panel
 
 ### Priority: LOW-MED (v0.6+, after core features solid)
+
+---
+
+## [HIGH] Notion-style Rich Text Editor for .md files — v0.4
+
+### Problem
+Right now all files open in CodeMirror — a code editor that shows raw markdown
+symbols (`#`, `**`, `-`, ` ``` `). This is friction when editing SOUL.md,
+USER.md, AGENTS.md, PM files — these are prose, not code.
+
+### Solution: TipTap rich text editor for .md files
+
+Use **TipTap** (ProseMirror-based, MIT, used by Vercel/Linear/etc.):
+- Type like Notion: no visible `#` or `**` — just formatting that renders in place
+- Markdown shortcuts still work: type `# ` → becomes a heading, `**bold**` → bold
+- Serializes back to .md on save (lossless round-trip)
+- Headless: we style it with our design system
+
+**Behavior:**
+- File extension `.md` → TipTap RichEditor
+- All other files → CodeMirror (unchanged)
+
+**Features in scope:**
+- Headings (H1–H3), bold, italic, code inline, code blocks
+- Bullet lists, ordered lists, blockquotes
+- Links
+- Markdown shortcuts (type `## ` → H2, `- ` → bullet, ` ``` ` → code block)
+- Placeholder text ("Start writing...")
+- Same dirty/save flow as CMEditor (marks dirty on change, saves on Cmd+S)
+
+**Implementation:**
+```
+npm install @tiptap/react @tiptap/starter-kit @tiptap/extension-placeholder
+npm install @tiptap/extension-markdown  (or remark for md serialization)
+```
+
+- New component: `client/src/components/Editor/RichEditor.tsx`
+- `Pane.tsx`: if `pane.path.endsWith('.md')` → `<RichEditor>` else → `<CMEditor>`
+- `RichEditor` same interface as `CMEditor`: takes `content`, `onDirty`, `onSave`
+
+**Styling (design system):**
+- `.ProseMirror h1` → 22px 700 ink, border-bottom 2px
+- `.ProseMirror h2` → 17px 700 ink
+- `.ProseMirror p` → 14px 1.7 line-height, text-secondary
+- `.ProseMirror code` → JetBrains Mono, accent-subtle bg, 2px border
+- `.ProseMirror pre` → code block with 2px border, ink shadow, mono font
+- `.ProseMirror ul/ol` → indented, marker color coral
+- `.ProseMirror blockquote` → 2px coral left border, indent
+
+### Also applies to: Cron prompt textarea
+The `CronDetail` prompt field could optionally use the same TipTap editor
+(just don't show heading options) — but plain textarea is fine for v0.4 MVP.
+
+### Priority: HIGH (v0.4, alongside cron detail panel)
