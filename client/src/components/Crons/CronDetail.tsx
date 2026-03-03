@@ -223,7 +223,7 @@ export const CronDetail = forwardRef<CronDetailHandle, CronDetailProps>(function
           {isDirty && <span className="cron-dirty-badge">UNSAVED</span>}
         </div>
         <div className="crons-topbar-right">
-          <button className="btn-skill" onClick={onOpenSkills}>Skills</button>
+          <button type="button" className="btn-skill" onClick={onOpenSkills}>Skills</button>
           <button
             className="btn-delete"
             onClick={() => {

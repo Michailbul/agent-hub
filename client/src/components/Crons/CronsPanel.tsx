@@ -230,6 +230,17 @@ export function CronsPanel() {
           <div className="crons-empty">← Select a cron job</div>
         )}
 
+        {!skillsDrawerOpen && (
+          <button
+            type="button"
+            className="skills-drawer-handle"
+            onClick={() => setSkillsDrawerOpen(true)}
+            aria-label="Open skills drawer"
+          >
+            SKILLS
+          </button>
+        )}
+
         <SkillsDrawer
           open={skillsDrawerOpen}
           onClose={() => setSkillsDrawerOpen(false)}
