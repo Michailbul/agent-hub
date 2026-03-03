@@ -1,10 +1,8 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import type { MouseEvent as ReactMouseEvent } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { CronJob } from '@/types/cron'
 import { useUIStore } from '@/store/ui'
-import { CronDetail, type CronDetailHandle } from './CronDetail'
+import { CronDetail } from './CronDetail'
 import { CronListItem } from './CronListItem'
-import { SkillsBrowser } from './SkillsBrowser'
 
 function defaultNewJob(): Partial<CronJob> {
   return {
@@ -27,10 +25,6 @@ export function CronsPanel() {
   const [loading, setLoading] = useState(true)
   const [openJobIds, setOpenJobIds] = useState<string[]>([])
   const [activeJobId, setActiveJobId] = useState<string | null>(null)
-  const [skillsOpen, setSkillsOpen] = useState(false)
-  const [skillsWidth, setSkillsWidth] = useState(280)
-  const skillsWidthRef = useRef(280)
-  const insertSkillRef = useRef<CronDetailHandle | null>(null)
   const { toast } = useUIStore()
 
   const openJob = useCallback((id: string) => {
@@ -134,28 +128,6 @@ export function CronsPanel() {
     }
   }, [openJob, toast])
 
-  const handleResizeStart = useCallback((event: ReactMouseEvent) => {
-    event.preventDefault()
-    if (!skillsOpen) return
-
-    const startX = event.clientX
-    const startWidth = skillsWidthRef.current
-
-    const onMove = (moveEvent: MouseEvent) => {
-      const newWidth = Math.max(180, Math.min(520, startWidth + (startX - moveEvent.clientX)))
-      skillsWidthRef.current = newWidth
-      setSkillsWidth(newWidth)
-    }
-
-    const onUp = () => {
-      window.removeEventListener('mousemove', onMove)
-      window.removeEventListener('mouseup', onUp)
-    }
-
-    window.addEventListener('mousemove', onMove)
-    window.addEventListener('mouseup', onUp)
-  }, [skillsOpen])
-
   const activeJob = useMemo(
     () => jobs.find(job => job.id === activeJobId) ?? null,
     [activeJobId, jobs],
@@ -165,7 +137,7 @@ export function CronsPanel() {
     <div className="crons-layout">
       <div className="crons-list-col">
         <div className="crons-list-header">
-          <span className="crons-list-label">Cron Jobs</span>
+          <span className="crons-list-label">CRON JOBS</span>
           <button className="crons-new-btn" onClick={handleNew}>+ New</button>
         </div>
         <div className="cron-list-scroll">
@@ -177,7 +149,7 @@ export function CronsPanel() {
             <CronListItem
               key={job.id}
               job={job}
-              selected={job.id === activeJobId}
+              selected={openJobIds.includes(job.id) && job.id === activeJobId}
               onSelect={() => openJob(job.id)}
               onToggle={handleToggle}
             />
@@ -185,7 +157,7 @@ export function CronsPanel() {
         </div>
       </div>
 
-      <div className="crons-detail-col">
+      <div className="crons-main-col">
         <div className="cron-tabs">
           {openJobIds.map(id => {
             const job = jobs.find(entry => entry.id === id)
@@ -212,35 +184,9 @@ export function CronsPanel() {
         </div>
 
         {activeJob ? (
-          <CronDetail
-            ref={insertSkillRef}
-            job={activeJob}
-            onSave={handleSave}
-            onDelete={handleDelete}
-          />
+          <CronDetail job={activeJob} onSave={handleSave} onDelete={handleDelete} />
         ) : (
-          <div className="crons-empty">
-            <span>← Select a cron job to edit</span>
-          </div>
-        )}
-      </div>
-
-      <div className="crons-resize-handle" onMouseDown={handleResizeStart} />
-
-      <div
-        className={`crons-skills-col${skillsOpen ? '' : ' collapsed'}`}
-        style={{ width: skillsOpen ? skillsWidth : 32 }}
-      >
-        {skillsOpen ? (
-          <>
-            <div className="skills-panel-header">
-              <span className="crons-list-label">Skills</span>
-              <button className="skills-collapse-btn" onClick={() => setSkillsOpen(false)}>‹</button>
-            </div>
-            <SkillsBrowser onInsertSkill={name => insertSkillRef.current?.insertSkill(name)} />
-          </>
-        ) : (
-          <button className="skills-collapsed-label" onClick={() => setSkillsOpen(true)}>SKILLS ▶</button>
+          <div className="crons-empty">← Select a cron job</div>
         )}
       </div>
     </div>
