@@ -229,23 +229,25 @@ export function CronsPanel() {
         ) : (
           <div className="crons-empty">← Select a cron job</div>
         )}
+      </div>
 
-        {!skillsDrawerOpen && (
+      <div className={`crons-skills-rail${skillsDrawerOpen ? ' open' : ' collapsed'}`}>
+        {skillsDrawerOpen ? (
+          <SkillsDrawer
+            open={true}
+            onClose={() => setSkillsDrawerOpen(false)}
+            onInsertSkill={name => detailRef.current?.insertSkill(name)}
+          />
+        ) : (
           <button
             type="button"
-            className="skills-drawer-handle"
+            className="skills-rail-handle"
             onClick={() => setSkillsDrawerOpen(true)}
-            aria-label="Open skills drawer"
+            aria-label="Open skills"
           >
             SKILLS
           </button>
         )}
-
-        <SkillsDrawer
-          open={skillsDrawerOpen}
-          onClose={() => setSkillsDrawerOpen(false)}
-          onInsertSkill={name => detailRef.current?.insertSkill(name)}
-        />
       </div>
     </div>
   )

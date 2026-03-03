@@ -133,15 +133,23 @@ export const CronDetail = forwardRef<CronDetailHandle, CronDetailProps>(function
     const cleanName = skillName.trim()
     if (!cleanName) return
 
-    const token = `[skill: ${cleanName}]`
+    const tokenCore = `[skill: ${cleanName}]`
 
     setMessage(prev => {
       const node = promptRef.current
-      if (!node) return prev.trimEnd() ? `${prev}\n${token}` : token
+      const start = node?.selectionStart ?? prev.length
+      const end = node?.selectionEnd ?? prev.length
 
-      const start = node.selectionStart ?? prev.length
-      const end = node.selectionEnd ?? prev.length
-      const next = `${prev.slice(0, start)}${token}${prev.slice(end)}`
+      const before = prev.slice(0, start)
+      const after = prev.slice(end)
+
+      const needsLeadSpace = before.length > 0 && !/\s$/.test(before)
+      const needsTrailSpace = after.length > 0 && !/^\s/.test(after)
+
+      // Insert as a token separated by spaces (prevents weird indentation/outdenting feel)
+      const token = `${needsLeadSpace ? ' ' : ''}${tokenCore}${needsTrailSpace ? ' ' : ''}`
+
+      const next = `${before}${token}${after}`
 
       requestAnimationFrame(() => {
         const focusNode = promptRef.current
@@ -223,7 +231,9 @@ export const CronDetail = forwardRef<CronDetailHandle, CronDetailProps>(function
           {isDirty && <span className="cron-dirty-badge">UNSAVED</span>}
         </div>
         <div className="crons-topbar-right">
-          <button type="button" className="btn-skill" onClick={onOpenSkills}>Skills</button>
+          <button type="button" className="btn-skill" onClick={onOpenSkills}>
+            Skills ▸
+          </button>
           <button
             className="btn-delete"
             onClick={() => {
