@@ -136,3 +136,38 @@ this cron is assigned to:
 - Save: PATCH /api/crons/:id (already exists)
 
 ### Priority: HIGH (v0.4, after Team Builder MVP)
+
+---
+
+## [IDEA] Telegram Mini App — v0.6+
+
+### Concept
+Agent Hub as a Telegram Mini App — users manage their agents and skills from within Telegram, without opening a browser.
+
+### Why it makes sense
+- OpenClaw users are already in Telegram (it's the primary chat interface)
+- Zero friction — tap the bot, get your agent dashboard instantly
+- Mobile-first: read SOUL.md, check cron status, trigger a cron manually, edit a quick prompt
+- Consistent with the distribution model: "runs where OpenClaw is, accessed from where you are"
+
+### What it could include (MVP)
+- View agents list + their files (read-only on mobile, tap to read)
+- Toggle crons on/off
+- Trigger a cron job manually
+- Quick-edit a single file (SOUL.md, HEARTBEAT.md, etc.)
+- View last run status of crons
+
+### Implementation approach
+- Telegram Mini App = React SPA embedded in Telegram WebView
+- Same Vite build, separate entry point (e.g. `client/src/mini-app/`)
+- Connects to same Express API (uses same auth cookie or token)
+- Bot handles /start → opens mini app via InlineKeyboard + WebApp.url
+- Separate from main desktop UI — optimized for small screen + touch
+
+### Notes
+- Mini Apps support full HTML/CSS/JS — can reuse component library
+- Telegram provides user identity (no separate login needed if bot is trusted)
+- Could replace the --tunnel flag for mobile access completely
+- Worth building after npm publish + cron detail panel
+
+### Priority: LOW-MED (v0.6+, after core features solid)
