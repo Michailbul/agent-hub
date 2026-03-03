@@ -19,10 +19,11 @@ interface CMEditorProps {
   initialContent: string
   filePath: string | null
   isLocal: boolean
+  isLoading: boolean
   onCursorChange: (line: number, col: number) => void
 }
 
-export function CMEditor({ paneId, initialContent, filePath, isLocal, onCursorChange }: CMEditorProps) {
+export function CMEditor({ paneId, initialContent, filePath, isLocal, isLoading, onCursorChange }: CMEditorProps) {
   const cmRef = useRef<HTMLDivElement>(null)
   const viewRef = useRef<EditorView | null>(null)
   const { updateContent, setDirty } = usePanesStore()
@@ -99,9 +100,12 @@ export function CMEditor({ paneId, initialContent, filePath, isLocal, onCursorCh
   }, [doSave])
 
   return (
-    <div
-      ref={cmRef}
-      style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
-    />
+    <div className="pane-editor-wrap">
+      <div
+        ref={cmRef}
+        style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
+      />
+      {isLoading && <div className="pane-loading">Loading...</div>}
+    </div>
   )
 }

@@ -11,8 +11,11 @@ interface PanesStore {
   setActivePane: (id: string) => void
   updateContent: (id: string, content: string) => void
   setDirty: (id: string, dirty: boolean) => void
+  setLoading: (id: string, loading: boolean) => void
   openFileInPane: (paneId: string, path: string, label: string, content: string) => void
   insertPaneAfter: (afterId: string, path?: string | null, label?: string | null, content?: string) => string | null
+  insertPaneAt: (index: number, path?: string | null, label?: string | null, content?: string) => string | null
+  reorderPane: (fromId: string, toId: string) => void
 }
 
 export const usePanesStore = create<PanesStore>((set, get) => ({
@@ -23,7 +26,7 @@ export const usePanesStore = create<PanesStore>((set, get) => ({
     const { panes } = get()
     if (panes.length >= 4) return ''
     const id = 'pane-' + (++paneCounter)
-    const pane: PaneState = { id, path, label, content, isDirty: false, isLocal }
+    const pane: PaneState = { id, path, label, content, isDirty: false, isLocal, isLoading: false }
     set({ panes: [...panes, pane], activePaneId: id })
     return id
   },
@@ -34,7 +37,7 @@ export const usePanesStore = create<PanesStore>((set, get) => ({
     if (next.length === 0) {
       const newId = 'pane-' + (++paneCounter)
       set({
-        panes: [{ id: newId, path: null, label: null, content: '', isDirty: false, isLocal: false }],
+        panes: [{ id: newId, path: null, label: null, content: '', isDirty: false, isLocal: false, isLoading: false }],
         activePaneId: newId,
       })
       return
@@ -57,10 +60,17 @@ export const usePanesStore = create<PanesStore>((set, get) => ({
       panes: s.panes.map(p => (p.id === id ? { ...p, isDirty: dirty } : p)),
     })),
 
+  setLoading: (id: string, loading: boolean) =>
+    set(s => ({
+      panes: s.panes.map(p => (p.id === id ? { ...p, isLoading: loading } : p)),
+    })),
+
   openFileInPane: (paneId: string, path: string, label: string, content: string) =>
     set(s => ({
       panes: s.panes.map(p =>
-        p.id === paneId ? { ...p, path, label, content, isDirty: false, isLocal: false } : p,
+        p.id === paneId
+          ? { ...p, path, label, content, isDirty: false, isLocal: false, isLoading: false }
+          : p,
       ),
       activePaneId: paneId,
     })),
@@ -71,10 +81,33 @@ export const usePanesStore = create<PanesStore>((set, get) => ({
     const idx = panes.findIndex(p => p.id === afterId)
     if (idx === -1) return null
     const id = 'pane-' + (++paneCounter)
-    const pane: PaneState = { id, path, label, content, isDirty: false, isLocal: false }
+    const pane: PaneState = { id, path, label, content, isDirty: false, isLocal: false, isLoading: false }
     const next = [...panes]
     next.splice(idx + 1, 0, pane)
     set({ panes: next, activePaneId: id })
     return id
   },
+
+  insertPaneAt: (index: number, path = null, label = null, content = '') => {
+    const { panes } = get()
+    if (panes.length >= 4) return null
+    const normalizedIndex = Math.max(0, Math.min(index, panes.length))
+    const id = 'pane-' + (++paneCounter)
+    const pane: PaneState = { id, path, label, content, isDirty: false, isLocal: false, isLoading: false }
+    const next = [...panes]
+    next.splice(normalizedIndex, 0, pane)
+    set({ panes: next, activePaneId: id })
+    return id
+  },
+
+  reorderPane: (fromId: string, toId: string) =>
+    set(s => {
+      const panes = [...s.panes]
+      const fromIdx = panes.findIndex(p => p.id === fromId)
+      const toIdx = panes.findIndex(p => p.id === toId)
+      if (fromIdx === -1 || toIdx === -1 || fromIdx === toIdx) return s
+      const [moved] = panes.splice(fromIdx, 1)
+      panes.splice(toIdx, 0, moved)
+      return { panes }
+    }),
 }))

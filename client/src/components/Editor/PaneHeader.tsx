@@ -1,4 +1,5 @@
-import { useCallback } from 'react'
+import { useCallback, useState } from 'react'
+import { usePanesStore } from '@/store/panes'
 
 interface PaneHeaderProps {
   paneId: string
@@ -11,18 +12,33 @@ interface PaneHeaderProps {
   onHeaderDrop: (data: { path: string; label: string }) => void
 }
 
-export function PaneHeader({ label, isDirty, hasFile, isLocal, onSave, onClose, onHeaderDrop }: PaneHeaderProps) {
+export function PaneHeader({ paneId, label, isDirty, hasFile, isLocal, onSave, onClose, onHeaderDrop }: PaneHeaderProps) {
+  const reorderPane = usePanesStore(s => s.reorderPane)
+  const [reorderTarget, setReorderTarget] = useState<'before' | 'after' | null>(null)
+
+  const getDropSide = useCallback((e: React.DragEvent) => {
+    const rect = e.currentTarget.getBoundingClientRect()
+    return e.clientX < rect.left + rect.width / 2 ? 'before' : 'after'
+  }, [])
+
   const handleDragOver = useCallback((e: React.DragEvent) => {
+    if (e.dataTransfer.types.includes('pane-reorder')) {
+      e.preventDefault()
+      e.stopPropagation()
+      setReorderTarget(getDropSide(e))
+      return
+    }
     if (e.dataTransfer.types.includes('text/plain')) {
       e.preventDefault()
       e.stopPropagation()
       e.currentTarget.classList.add('drop-target')
     }
-  }, [])
+  }, [getDropSide])
 
   const handleDragLeave = useCallback((e: React.DragEvent) => {
     if (!e.currentTarget.contains(e.relatedTarget as Node)) {
       e.currentTarget.classList.remove('drop-target')
+      setReorderTarget(null)
     }
   }, [])
 
@@ -31,24 +47,48 @@ export function PaneHeader({ label, isDirty, hasFile, isLocal, onSave, onClose, 
       e.preventDefault()
       e.stopPropagation()
       e.currentTarget.classList.remove('drop-target')
+      const draggedPaneId = e.dataTransfer.getData('pane-reorder')
+      if (draggedPaneId) {
+        reorderPane(draggedPaneId, paneId)
+        setReorderTarget(null)
+        return
+      }
       try {
         const data = JSON.parse(e.dataTransfer.getData('text/plain'))
         if (data.path) onHeaderDrop(data)
       } catch {
         // ignore
       }
+      setReorderTarget(null)
     },
-    [onHeaderDrop],
+    [onHeaderDrop, paneId, reorderPane],
   )
+
+  const handleTabDragStart = useCallback((e: React.DragEvent) => {
+    e.dataTransfer.setData('pane-reorder', paneId)
+    e.dataTransfer.effectAllowed = 'move'
+    const ghost = document.createElement('div')
+    ghost.className = 'pane-tab-drag-ghost'
+    ghost.textContent = label || 'Empty pane'
+    document.body.appendChild(ghost)
+    e.dataTransfer.setDragImage(ghost, 16, 10)
+    requestAnimationFrame(() => {
+      document.body.removeChild(ghost)
+    })
+  }, [paneId, label])
+
+  const handleTabDragEnd = useCallback(() => {
+    setReorderTarget(null)
+  }, [])
 
   return (
     <div
-      className="pane-header"
+      className={`pane-header${reorderTarget ? ` reorder-target-${reorderTarget}` : ''}`}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
-      <div className="pane-tab">
+      <div className="pane-tab" draggable onDragStart={handleTabDragStart} onDragEnd={handleTabDragEnd}>
         <span className="pane-name">{label || 'Empty pane'}</span>
         <span className={`pane-dirty${isDirty ? ' show' : ''}`} />
       </div>

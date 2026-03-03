@@ -49,6 +49,7 @@ export interface PaneState {
   content: string
   isDirty: boolean
   isLocal: boolean
+  isLoading?: boolean
 }
 
 export interface AssignTarget {

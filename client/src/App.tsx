@@ -8,7 +8,6 @@ import { saveFile } from '@/lib/api'
 import { LoginForm } from '@/components/Auth/LoginForm'
 import { SetupOverlay } from '@/components/Setup/SetupOverlay'
 import { TopBar } from '@/components/Layout/TopBar'
-import { ActivityBar } from '@/components/Layout/ActivityBar'
 import { Sidebar } from '@/components/Sidebar/Sidebar'
 import { PaneManager } from '@/components/Editor/PaneManager'
 import { Toast } from '@/components/Toast'
@@ -141,9 +140,8 @@ export function App() {
 
   return (
     <div className="app">
-      <TopBar onRefresh={refetchTree} />
+      <TopBar onRefresh={refetchTree} activeView={activeView} onViewSwitch={setActiveView} />
       <div className="app-body">
-        <ActivityBar activeView={activeView} onSwitch={setActiveView} />
         {activeView === 'crons'
           ? <CronsPanel />
           : <>

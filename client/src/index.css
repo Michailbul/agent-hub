@@ -124,6 +124,9 @@ body{font-family:'Inter',var(--font-sans);color:var(--text-primary);
   display:flex;align-items:center;padding:0 14px;gap:8px;flex-shrink:0;z-index:20}
 .topbar-brand{display:flex;align-items:center;gap:6px;font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--ink);padding-right:12px;border-right:1px solid var(--border-subtle);flex-shrink:0}
 .topbar-brand-icon{font-size:16px}
+.view-switcher{display:flex;gap:2px;background:var(--surface-2);border-radius:9999px;padding:2px;border:1px solid var(--border-subtle);flex-shrink:0}
+.view-btn{height:24px;padding:0 10px;border:none;background:none;border-radius:9999px;font-size:11px;font-weight:600;color:var(--text-tertiary);cursor:pointer;transition:all var(--duration-fast);font-family:'JetBrains Mono',monospace}
+.view-btn.active{background:var(--paper);color:var(--ink);box-shadow:var(--shadow-sm)}
 .topbar-center{flex:1;display:flex;align-items:center;padding:0 12px;min-width:0}
 .topbar-actions{display:flex;align-items:center;gap:6px;padding-left:12px;border-left:1px solid var(--border-subtle);flex-shrink:0}
 .tb-btn-ghost{height:28px;padding:0 8px;border:none;background:none;border-radius:6px;font-size:11px;font-weight:600;color:var(--text-tertiary);cursor:pointer;display:flex;align-items:center;gap:4px;transition:all var(--duration-fast);font-family:'JetBrains Mono',monospace}
@@ -140,15 +143,6 @@ body{font-family:'Inter',var(--font-sans);color:var(--text-primary);
 .btn-focus{display:inline-flex;align-items:center;gap:3px;padding:4px 10px;font-family:'JetBrains Mono',monospace;font-size:var(--text-micro);font-weight:500;text-transform:uppercase;letter-spacing:.1em;color:var(--text-secondary);background:transparent;border:2px solid var(--border-default);cursor:pointer;transition:all var(--fast)}
 .btn-focus:hover{background:var(--surface-2);border-color:var(--border-strong)}
 .btn-focus.on{background:var(--coral);border-color:var(--coral);color:#fff}
-
-/* ═══════════════════════════════════════════
-   ACTIVITY BAR — 40px icon strip
-   ═══════════════════════════════════════════ */
-.activity-bar{width:40px;flex-shrink:0;background:var(--surface-1);border-right:1px solid var(--border-subtle);display:flex;flex-direction:column;align-items:center;padding:6px 0;gap:2px;z-index:10}
-.act-btn{width:36px;height:36px;border:none;background:none;cursor:pointer;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--text-ghost);transition:all var(--duration-fast);border-left:3px solid transparent}
-.act-btn:hover{background:var(--surface-3);color:var(--text-secondary)}
-.act-btn.active{border-left-color:var(--coral);background:var(--accent-subtle);color:var(--coral)}
-.act-spacer{flex:1}
 
 /* ═══════════════════════════════════════════
    APP BODY (below topbar)
@@ -209,6 +203,7 @@ body{font-family:'Inter',var(--font-sans);color:var(--text-primary);
    EDITOR AREA
    ═══════════════════════════════════════════ */
 .editor-area{flex:1;display:flex;overflow:hidden;position:relative;isolation:isolate}
+.pane-manager{flex:1;display:flex;min-width:0}
 
 /* Drop overlay: warm semi-transparent */
 .drop-overlay{display:none;position:absolute;inset:0;z-index:50;background:rgba(255,250,245,.92);backdrop-filter:blur(4px);border:3px dashed var(--coral);margin:8px;pointer-events:none;flex-direction:column;align-items:center;justify-content:center;gap:12px}
@@ -226,8 +221,13 @@ body{font-family:'Inter',var(--font-sans);color:var(--text-primary);
 /* Pane header — active gets coral left border */
 .pane-header{display:flex;align-items:center;gap:6px;padding:0 12px;height:36px;background:var(--surface-1);border-bottom:1px solid var(--border-subtle);border-left:4px solid transparent;flex-shrink:0;position:relative;transition:background var(--fast),border-color var(--fast)}
 .pane-header.drop-target{background:var(--accent-subtle);outline:2px dashed var(--coral);outline-offset:-2px}
+.pane-header.reorder-target-before{border-left:2px solid var(--coral)}
+.pane-header.reorder-target-after{border-right:2px solid var(--coral)}
 .pane.active-pane .pane-header{border-left-color:var(--coral);background:var(--surface-1)}
 .pane-tab{flex:1;min-width:0;display:flex;align-items:center;gap:5px;overflow:hidden}
+.pane-tab[draggable]{cursor:grab}
+.pane-tab[draggable]:active{cursor:grabbing;opacity:.7}
+.pane-tab-drag-ghost{position:fixed;top:-9999px;left:-9999px;padding:5px 9px;background:var(--surface-1);border:1px solid var(--border-default);font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-secondary)}
 .pane-name{font-family:'JetBrains Mono',monospace;font-size:var(--text-size-xs);font-weight:500;color:var(--text-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 /* Dirty indicator: coral pulse */
 .pane-dirty{width:6px;height:6px;border-radius:50%;background:var(--coral);flex-shrink:0;display:none}
@@ -243,6 +243,8 @@ body{font-family:'Inter',var(--font-sans);color:var(--text-primary);
 .pane-close{width:20px;height:20px;border:none;background:transparent;cursor:pointer;color:var(--text-ghost);font-size:12px;display:flex;align-items:center;justify-content:center;transition:all var(--fast);flex-shrink:0}
 .pane-close:hover{background:var(--surface-2);color:var(--text-primary)}
 .pane-cm{flex:1;overflow:hidden;position:relative;isolation:isolate;display:flex;flex-direction:column;min-height:0}
+.pane-editor-wrap{position:relative;flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden}
+.pane-loading{position:absolute;inset:0;background:rgba(255,250,245,.7);display:flex;align-items:center;justify-content:center;z-index:10;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-tertiary);backdrop-filter:blur(2px)}
 
 /* Empty pane: editorial layout */
 .pane-empty{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;pointer-events:none}
@@ -256,6 +258,10 @@ body{font-family:'Inter',var(--font-sans);color:var(--text-primary);
 /* PANE DIVIDER */
 .pane-divider{width:4px;background:var(--border-subtle);cursor:col-resize;flex-shrink:0;position:relative;transition:background var(--fast)}
 .pane-divider:hover,.pane-divider.dragging{background:var(--coral)}
+.pane-insert-zone{width:0;overflow:visible;position:relative;z-index:50;transition:width 100ms}
+.drag-active .pane-insert-zone{width:32px}
+.pane-insert-zone-inner{position:absolute;top:0;left:-16px;width:32px;height:100%;display:flex;align-items:center;justify-content:center;background:rgba(255,122,100,.12);border:2px dashed var(--coral);opacity:0;transition:opacity 150ms}
+.pane-insert-zone.drop-hover .pane-insert-zone-inner{opacity:1;background:rgba(255,122,100,.2)}
 
 /* ═══════════════════════════════════════════
    CodeMirror 6 overrides

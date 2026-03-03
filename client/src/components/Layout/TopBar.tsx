@@ -6,9 +6,11 @@ import { BreadcrumbPath } from './BreadcrumbPath'
 
 interface TopBarProps {
   onRefresh?: () => Promise<void>
+  activeView: 'editor' | 'crons'
+  onViewSwitch: (view: 'editor' | 'crons') => void
 }
 
-export function TopBar({ onRefresh }: TopBarProps) {
+export function TopBar({ onRefresh, activeView, onViewSwitch }: TopBarProps) {
   const panes = usePanesStore(s => s.panes)
   const activePaneId = usePanesStore(s => s.activePaneId)
   const { flashSaved, toast } = useUIStore()
@@ -50,6 +52,24 @@ export function TopBar({ onRefresh }: TopBarProps) {
         <span className="topbar-brand-icon">⚙️</span>
         Agent Hub
       </div>
+      <div className="view-switcher" role="tablist" aria-label="Mode switcher">
+        <button
+          className={`view-btn${activeView === 'editor' ? ' active' : ''}`}
+          onClick={() => onViewSwitch('editor')}
+          role="tab"
+          aria-selected={activeView === 'editor'}
+        >
+          Files
+        </button>
+        <button
+          className={`view-btn${activeView === 'crons' ? ' active' : ''}`}
+          onClick={() => onViewSwitch('crons')}
+          role="tab"
+          aria-selected={activeView === 'crons'}
+        >
+          Crons
+        </button>
+      </div>
       <div className="topbar-center">
         <BreadcrumbPath />
       </div>
@@ -64,7 +84,7 @@ export function TopBar({ onRefresh }: TopBarProps) {
           {refreshing ? 'Scanning…' : 'Refresh'}
         </button>
         {activePane?.isDirty && !activePane.isLocal && (
-          <button className="tb-btn-save" onClick={handleSave}>Save</button>
+          <button className="tb-btn-save" onClick={handleSave}>↑ Save</button>
         )}
       </div>
     </div>
