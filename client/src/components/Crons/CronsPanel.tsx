@@ -168,7 +168,8 @@ export function CronsPanel() {
   )
 
   return (
-    <div className="crons-layout">
+    <div className={`crons-page${skillsDrawerOpen ? ' skills-open' : ' skills-collapsed'}`}>
+      <div className="crons-layout">
       <div className="crons-list-col">
         <div className="crons-list-header">
           <span className="crons-list-label">CRON JOBS</span>
@@ -231,7 +232,7 @@ export function CronsPanel() {
         )}
       </div>
 
-      <div className={`crons-skills-rail${skillsDrawerOpen ? ' open' : ' collapsed'}`}>
+      <div className={`crons-skills-rail${skillsDrawerOpen ? '' : ' collapsed'}`}>
         {skillsDrawerOpen ? (
           <SkillsDrawer
             open={true}
@@ -250,5 +251,6 @@ export function CronsPanel() {
         )}
       </div>
     </div>
+  </div>
   )
 }

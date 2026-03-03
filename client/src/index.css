@@ -446,6 +446,10 @@ body{font-family:'Inter',var(--font-sans);color:var(--text-primary);
 .cf-btn-save:active{transform:translate(0,0);box-shadow:none}
 
 /* 2-col crons layout */
+.crons-page{height:100%;}
+.crons-page.skills-open .crons-layout{padding-right:360px}
+.crons-page.skills-collapsed .crons-layout{padding-right:40px}
+
 .crons-layout{display:flex;height:100%;overflow:hidden}
 .crons-list-col{width:220px;flex-shrink:0;border-right:2px solid var(--ink);display:flex;flex-direction:column;overflow:hidden}
 .crons-list-header{height:40px;border-bottom:2px solid var(--border-default);padding:0 12px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
@@ -454,7 +458,7 @@ body{font-family:'Inter',var(--font-sans);color:var(--text-primary);
 .crons-main-col{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
 
 /* Right rail (fixed) */
-.crons-skills-rail{width:360px;flex-shrink:0;border-left:2px solid var(--ink);background:var(--surface-1);display:flex;flex-direction:column;overflow:hidden}
+.crons-skills-rail{position:fixed;top:40px;right:0;bottom:0;width:360px;flex-shrink:0;border-left:2px solid var(--ink);background:var(--surface-1);display:flex;flex-direction:column;overflow:hidden;z-index:70}
 .crons-skills-rail.collapsed{width:40px}
 .skills-rail-handle{height:100%;width:100%;writing-mode:vertical-rl;text-orientation:mixed;background:var(--surface-1);border:none;border-left:0;font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.12em;color:var(--text-tertiary);cursor:pointer;display:flex;align-items:center;justify-content:center;user-select:none}
 .skills-rail-handle:hover{color:var(--coral);background:var(--accent-subtle)}
