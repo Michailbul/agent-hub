@@ -225,3 +225,73 @@ The `CronDetail` prompt field could optionally use the same TipTap editor
 (just don't show heading options) — but plain textarea is fine for v0.4 MVP.
 
 ### Priority: HIGH (v0.4, alongside cron detail panel)
+
+---
+
+## [VISION] Agent Chat + Live Edit Stream — v0.5
+
+### The concept
+An agent chat sidebar inside Agent Hub. You type a prompt → it spawns Claude CLI
+or Codex CLI under the hood → streams the response to the UI → file changes appear
+as a branded GitHub-style diff view in real time.
+
+### Why it matters
+Right now the options for managing agent files are:
+1. **Telegram** — black box. Agent does stuff, you have no visibility. Hope it worked.
+2. **Terminal** — same black box, but you also need multiple windows + a code editor open.
+3. **Agent Hub (today)** — manual editing. You control everything but it's all on you.
+
+This feature adds option 4:
+**Agent Hub + Chat** — you ask, the agent executes, you see every file change live,
+you approve/reject diffs, you stay in control. Not a black box. Not a terminal.
+
+### What it looks like
+
+```
+┌──────────────────────────────┬──────────────────────────┐
+│  Editor (files, panes)       │  Agent Chat              │
+│                              │  ──────────────────────  │
+│  [file content]              │  You: "Update my SOUL.md │
+│                              │  to add voice storytelling│
+│                              │  as a core skill"         │
+│                              │                          │
+│                              │  Agent: Analyzing...     │
+│                              │  ↳ Reading SOUL.md       │
+│                              │  ↳ Planning changes      │
+│                              │                          │
+│                              │  ┌─ SOUL.md ──────────┐  │
+│                              │  │ - Sharp. Technical. │  │
+│                              │  │ + Sharp. Technical. │  │
+│                              │  │ + Voice storyteller.│  │
+│                              │  └────────────────────┘  │
+│                              │  [✓ Apply] [✗ Reject]    │
+└──────────────────────────────┴──────────────────────────┘
+```
+
+### Under the hood
+- Server spawns `claude --dangerously-skip-permissions -p "..."` or `codex exec`
+  as a child process, piped to stdout
+- SSE stream from `/api/chat/stream` → client renders tokens in real time
+- Agent output parsed for file operations (create/edit/delete patterns)
+- Diffs computed server-side: before/after for each changed file
+- Client renders branded diff view (coral = additions, muted = deletions, 2px borders)
+- User approves or rejects each file change individually
+
+### Why this is Cursor for AI agents
+- Cursor = IDE where AI edits code files + you see diffs + you approve
+- Agent Hub + Chat = workspace where AI edits agent config/skills/md files + you see diffs + you approve
+- The files are different (SOUL.md, cron jobs, skills) but the pattern is identical
+- The user stays in control: black box → transparent execution
+
+### The product vision
+Agent Hub is becoming the **agentic team OS**:
+- **Files view** = workspace browser (what exists)
+- **Crons view** = automation scheduler (what runs)
+- **Team view** = org chart builder (who does what) [v0.4]
+- **Chat view** = collaborative execution (do this now) [v0.5]
+
+For OpenClaw users specifically: this is the missing GUI layer.
+OpenClaw gives you agents. Agent Hub gives you a cockpit.
+
+### Priority: LOW-HIGH (v0.5 — after Team Builder)
+Tied directly to the Team Builder vision. Implement after v0.4 is solid.
