@@ -535,6 +535,22 @@ body{font-family:'Inter',var(--font-sans);color:var(--text-primary);
 .skill-autocomplete-item:hover{background:var(--accent-subtle)}
 
 .skills-drawer{height:100%;width:100%;background:var(--surface-1);display:flex;flex-direction:column}
+.skills-drawer.open{}
+.skills-drawer-split{flex:1;min-height:0;display:grid;grid-template-columns: 1fr 1fr;overflow:hidden}
+.skills-drawer-body{flex:1;overflow:auto;padding:10px;border-right:2px solid var(--border-default);min-width:0}
+
+.skill-pill{position:relative;display:flex;align-items:center;gap:6px;padding:6px 10px;border:2px solid var(--border-default);background:var(--surface-1);font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;color:var(--text-primary);cursor:pointer;user-select:none;transition:all var(--fast)}
+.skill-pill:hover{border-color:var(--coral);background:rgba(255,122,100,.08);transform:translate(-1px,-1px);box-shadow:2px 2px 0 var(--ink)}
+.skill-pill.active{border-color:var(--coral);background:rgba(255,122,100,.10)}
+.skill-pill-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px}
+.skill-pill-insert{margin-left:auto;background:var(--surface-2);border:1.5px solid var(--border-default);font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;line-height:1;padding:2px 6px;cursor:pointer;transition:all var(--fast)}
+.skill-pill-insert:hover{border-color:var(--coral);color:var(--coral);background:#fff}
+
+.skills-preview{display:flex;flex-direction:column;min-width:0;overflow:hidden}
+.skills-preview-header{height:40px;border-bottom:2px solid var(--border-default);padding:0 12px;display:flex;align-items:center;justify-content:space-between}
+.skills-preview-title{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--text-tertiary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.skills-preview-body{flex:1;min-height:0;overflow:auto;padding:12px}
+.skills-preview-pre{margin:0;white-space:pre-wrap;word-break:break-word;font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.55;color:var(--text-primary)}
 
 /* always-visible drawer handle */
 .skills-drawer-header{height:40px;border-bottom:2px solid var(--border-default);padding:0 12px;display:flex;align-items:center;justify-content:space-between}

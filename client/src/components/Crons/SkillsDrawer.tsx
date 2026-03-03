@@ -11,6 +11,8 @@ type SkillCategory = 'all' | 'coding' | 'content' | 'research' | 'data' | 'tools
 
 type SkillEntry = {
   name: string
+  /** One representative file path (usually SKILL.md) we can preview */
+  previewPath: string
   agents: { id: string; label: string; color: string }[]
 }
 
@@ -52,6 +54,10 @@ export function SkillsDrawer({ open, onClose, onInsertSkill }: SkillsDrawerProps
   const [search, setSearch] = useState('')
   const [activeCategory, setActiveCategory] = useState<SkillCategory>('all')
 
+  const [selectedSkill, setSelectedSkill] = useState<{ name: string; path: string } | null>(null)
+  const [previewContent, setPreviewContent] = useState<string>('')
+  const [previewLoading, setPreviewLoading] = useState(false)
+
   useEffect(() => {
     const load = async () => {
       try {
@@ -73,9 +79,11 @@ export function SkillsDrawer({ open, onClose, onInsertSkill }: SkillsDrawerProps
             }
 
             if (!existing) {
-              map.set(key, { name, agents: [owner] })
+              map.set(key, { name, previewPath: skill.path, agents: [owner] })
               continue
             }
+
+            if (!existing.previewPath) existing.previewPath = skill.path
 
             if (!existing.agents.some(entry => entry.id === owner.id)) {
               existing.agents.push(owner)
@@ -83,14 +91,38 @@ export function SkillsDrawer({ open, onClose, onInsertSkill }: SkillsDrawerProps
           }
         }
 
-        setSkills([...map.values()].sort((a, b) => a.name.localeCompare(b.name)))
+        const next = [...map.values()].sort((a, b) => a.name.localeCompare(b.name))
+        setSkills(next)
+        if (!selectedSkill && next[0]) setSelectedSkill({ name: next[0].name, path: next[0].previewPath })
       } catch {
         setSkills([])
       }
     }
 
     void load()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  useEffect(() => {
+    const run = async () => {
+      if (!selectedSkill?.path) {
+        setPreviewContent('')
+        return
+      }
+      setPreviewLoading(true)
+      try {
+        const res = await fetch(`/api/file?path=${encodeURIComponent(selectedSkill.path)}`)
+        if (!res.ok) throw new Error('failed')
+        const data = await res.json()
+        setPreviewContent(data.content || '')
+      } catch {
+        setPreviewContent('Failed to load skill preview')
+      } finally {
+        setPreviewLoading(false)
+      }
+    }
+    void run()
+  }, [selectedSkill])
 
   const filteredSkills = useMemo(() => {
     const query = search.trim().toLowerCase()
@@ -104,60 +136,89 @@ export function SkillsDrawer({ open, onClose, onInsertSkill }: SkillsDrawerProps
   return (
     <aside className={`skills-drawer${open ? ' open' : ''}`}>
       <div className="skills-drawer-header">
-        <span className="skills-drawer-title">SKILLS</span>
-        <button className="skills-drawer-close" onClick={onClose} aria-label="Close skills drawer">×</button>
+        <span className="skills-drawer-title">SKILLS DB</span>
+        <button type="button" className="skills-drawer-close" onClick={onClose} aria-label="Close skills panel">×</button>
       </div>
 
-      <div className="skills-drawer-body">
-        <input
-          className="cron-skills-search"
-          placeholder="Search skills..."
-          value={search}
-          onChange={event => setSearch(event.target.value)}
-        />
+      <div className="skills-drawer-split">
+        <div className="skills-drawer-body">
+          <input
+            className="cron-skills-search"
+            placeholder="Search skills..."
+            value={search}
+            onChange={event => setSearch(event.target.value)}
+          />
 
-        <div className="cron-skills-filter-bar">
-          {CATEGORIES.map(category => (
-            <button
-              key={category.id}
-              className={`skills-filter-btn${activeCategory === category.id ? ' active' : ''}`}
-              onClick={() => setActiveCategory(category.id)}
-            >
-              {category.label}
-            </button>
-          ))}
+          <div className="cron-skills-filter-bar">
+            {CATEGORIES.map(category => (
+              <button
+                key={category.id}
+                type="button"
+                className={`skills-filter-btn${activeCategory === category.id ? ' active' : ''}`}
+                onClick={() => setActiveCategory(category.id)}
+              >
+                {category.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="cron-skills-grid">
+            {filteredSkills.map(skill => (
+              <div
+                key={skill.name}
+                className={`skill-pill${selectedSkill?.name === skill.name ? ' active' : ''}`}
+                draggable
+                onDragStart={event => {
+                  event.dataTransfer.setData('text/plain', skill.name)
+                  event.dataTransfer.setData('application/x-agent-hub-skill', skill.name)
+                  event.dataTransfer.effectAllowed = 'copy'
+                }}
+                onClick={() => setSelectedSkill({ name: skill.name, path: skill.previewPath })}
+                role="button"
+                tabIndex={0}
+              >
+                <span className="skill-pill-name">{skill.name}</span>
+                <span className="skill-pill-agents">
+                  {skill.agents.slice(0, 2).map(agent => (
+                    <span
+                      key={`${skill.name}-${agent.id}`}
+                      className="skill-agent-tag"
+                      style={{ borderColor: agent.color, color: agent.color }}
+                      title={agent.label}
+                    >
+                      {agent.label}
+                    </span>
+                  ))}
+                </span>
+                <button
+                  type="button"
+                  className="skill-pill-insert"
+                  title="Insert into prompt"
+                  onClick={event => {
+                    event.stopPropagation()
+                    onInsertSkill(skill.name)
+                  }}
+                >
+                  +
+                </button>
+              </div>
+            ))}
+
+            {filteredSkills.length === 0 && <div className="crons-empty">No matching skills</div>}
+          </div>
         </div>
 
-        <div className="cron-skills-grid">
-          {filteredSkills.map(skill => (
-            <button
-              key={skill.name}
-              className="skill-pill"
-              draggable
-              onDragStart={event => {
-                event.dataTransfer.setData('text/plain', skill.name)
-                event.dataTransfer.setData('application/x-agent-hub-skill', skill.name)
-                event.dataTransfer.effectAllowed = 'copy'
-              }}
-              onClick={() => onInsertSkill(skill.name)}
-            >
-              <span>{skill.name}</span>
-              <span className="skill-pill-agents">
-                {skill.agents.slice(0, 3).map(agent => (
-                  <span
-                    key={`${skill.name}-${agent.id}`}
-                    className="skill-agent-tag"
-                    style={{ borderColor: agent.color, color: agent.color }}
-                    title={agent.label}
-                  >
-                    {agent.label}
-                  </span>
-                ))}
-              </span>
-            </button>
-          ))}
-
-          {filteredSkills.length === 0 && <div className="crons-empty">No matching skills</div>}
+        <div className="skills-preview">
+          <div className="skills-preview-header">
+            <span className="skills-preview-title">{selectedSkill ? `${selectedSkill.name}/SKILL.md` : 'Select a skill'}</span>
+          </div>
+          <div className="skills-preview-body">
+            {previewLoading ? (
+              <div className="crons-loading">Loading...</div>
+            ) : (
+              <pre className="skills-preview-pre">{previewContent}</pre>
+            )}
+          </div>
         </div>
       </div>
     </aside>
