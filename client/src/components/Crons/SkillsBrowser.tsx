@@ -13,6 +13,25 @@ type SkillEntry = {
   agents: string[]
 }
 
+type SkillCategory = 'all' | 'coding' | 'content' | 'research' | 'data' | 'tools'
+
+const CATEGORIES: Array<{ id: SkillCategory; label: string; keywords?: string[] }> = [
+  { id: 'all', label: 'All' },
+  { id: 'coding', label: 'Code', keywords: ['codex', 'coding', 'github', 'claude', 'git', 'pr', 'build'] },
+  { id: 'content', label: 'Content', keywords: ['content', 'copy', 'social', 'carousel', 'writing', 'humanizer', 'ad', 'tweet', 'x-'] },
+  { id: 'research', label: 'Research', keywords: ['research', 'web', 'search', 'extract', 'summarize', 'youtube', 'weather'] },
+  { id: 'data', label: 'Data', keywords: ['kb', 'notion', 'data', 'enrichment', 'storage'] },
+  { id: 'tools', label: 'Utils' },
+]
+
+function getCategory(name: string): SkillCategory {
+  const n = name.toLowerCase()
+  for (const cat of CATEGORIES.slice(1, -1)) {
+    if (cat.keywords?.some(k => n.includes(k))) return cat.id
+  }
+  return 'tools'
+}
+
 function skillFolderName(fullPath: string): string {
   const chunks = fullPath.split(/[\\/]/).filter(Boolean)
   return chunks.length >= 2 ? chunks[chunks.length - 2] : chunks[chunks.length - 1]
@@ -41,7 +60,7 @@ function highlightMatch(name: string, query: string): ReactNode {
 export function SkillsBrowser({ onInsertSkill }: SkillsBrowserProps) {
   const [agents, setAgents] = useState<TreeData['agents']>([])
   const [search, setSearch] = useState('')
-  const [groupOpen, setGroupOpen] = useState<Record<string, boolean>>({})
+  const [activeCategory, setActiveCategory] = useState<SkillCategory>('all')
 
   useEffect(() => {
     const loadTree = async () => {
@@ -50,13 +69,6 @@ export function SkillsBrowser({ onInsertSkill }: SkillsBrowserProps) {
         if (!response.ok) return
         const data = (await response.json()) as TreeData
         setAgents(data.agents || [])
-        setGroupOpen(prev => {
-          const next = { ...prev }
-          for (const agent of data.agents || []) {
-            if (next[agent.label] === undefined) next[agent.label] = true
-          }
-          return next
-        })
       } catch {
         setAgents([])
       }
@@ -97,25 +109,16 @@ export function SkillsBrowser({ onInsertSkill }: SkillsBrowserProps) {
   }, [agents])
 
   const query = search.trim().toLowerCase()
-  const searchActive = query.length > 0
 
   const filteredSkills = useMemo(() => {
-    if (!query) return skills
-    return skills.filter(skill => skill.name.toLowerCase().includes(query))
-  }, [query, skills])
+    return skills.filter(skill => {
+      const matchesSearch = !query || skill.name.toLowerCase().includes(query)
+      const matchesCategory = activeCategory === 'all' || getCategory(skill.name) === activeCategory
+      return matchesSearch && matchesCategory
+    })
+  }, [activeCategory, query, skills])
 
-  const groupedSkills = useMemo(() => {
-    const groups: Array<{ agentLabel: string; items: SkillEntry[] }> = []
-
-    for (const agent of agents) {
-      const items = skills.filter(skill => skill.agents.includes(agent.label))
-      if (items.length > 0) groups.push({ agentLabel: agent.label, items })
-    }
-
-    return groups
-  }, [agents, skills])
-
-  const count = searchActive ? filteredSkills.length : skills.length
+  const count = filteredSkills.length
 
   return (
     <div className="skills-browser">
@@ -133,53 +136,38 @@ export function SkillsBrowser({ onInsertSkill }: SkillsBrowserProps) {
         />
       </div>
 
+      <div className="skills-filter-bar">
+        {CATEGORIES.map(cat => (
+          <button
+            key={cat.id}
+            className={`skills-filter-btn${activeCategory === cat.id ? ' active' : ''}`}
+            onClick={() => setActiveCategory(cat.id)}
+          >
+            {cat.label}
+          </button>
+        ))}
+      </div>
+
       <div className="skills-list">
-        {searchActive ? (
-          filteredSkills.map(skill => (
-            <div key={skill.path} className="skill-item" onClick={() => onInsertSkill(skill.name)}>
-              <div className="skill-name">{highlightMatch(skill.name, search)}</div>
-              <div className="skill-tags">
-                {skill.agents.map(agentLabel => (
-                  <span
-                    key={`${skill.name}-${agentLabel}`}
-                    className="skill-agent-tag"
-                    style={{ borderColor: agentColorByLabel.get(agentLabel), background: agentColorByLabel.get(agentLabel) }}
-                  >
-                    {agentLabel}
-                  </span>
-                ))}
-              </div>
-            </div>
-          ))
-        ) : (
-          groupedSkills.map(group => (
-            <div key={group.agentLabel}>
-              <button
-                className="skills-group-header"
-                onClick={() => setGroupOpen(prev => ({ ...prev, [group.agentLabel]: !prev[group.agentLabel] }))}
-              >
-                <span>{groupOpen[group.agentLabel] ? '▾' : '▸'}</span>
-                <span>{group.agentLabel}</span>
-                <span>({group.items.length})</span>
-              </button>
-              {groupOpen[group.agentLabel] !== false && group.items.map(skill => (
-                <div key={`${group.agentLabel}-${skill.path}`} className="skill-item" onClick={() => onInsertSkill(skill.name)}>
-                  <div className="skill-name">{skill.name}</div>
-                  <div className="skill-tags">
-                    {skill.agents.map(agentLabel => (
-                      <span
-                        key={`${skill.name}-${agentLabel}`}
-                        className="skill-agent-tag"
-                        style={{ borderColor: agentColorByLabel.get(agentLabel), background: agentColorByLabel.get(agentLabel) }}
-                      >
-                        {agentLabel}
-                      </span>
-                    ))}
-                  </div>
-                </div>
+        {filteredSkills.map(skill => (
+          <div key={skill.path} className="skill-item" onClick={() => onInsertSkill(skill.name)}>
+            <div className="skill-name">{highlightMatch(skill.name, search)}</div>
+            <div className="skill-tags">
+              {skill.agents.map(agentLabel => (
+                <span
+                  key={`${skill.name}-${agentLabel}`}
+                  className="skill-agent-tag"
+                  style={{ borderColor: agentColorByLabel.get(agentLabel), background: agentColorByLabel.get(agentLabel) }}
+                >
+                  {agentLabel}
+                </span>
               ))}
             </div>
-          ))
+          </div>
+        ))}
+
+        {filteredSkills.length === 0 && (
+          <div className="crons-empty">No matching skills</div>
         )}
       </div>
     </div>

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import type { MouseEvent as ReactMouseEvent } from 'react'
 import type { CronJob } from '@/types/cron'
 import { useUIStore } from '@/store/ui'
 import { CronDetail, type CronDetailHandle } from './CronDetail'
@@ -24,9 +25,25 @@ function defaultNewJob(): Partial<CronJob> {
 export function CronsPanel() {
   const [jobs, setJobs] = useState<CronJob[]>([])
   const [loading, setLoading] = useState(true)
-  const [selectedJobId, setSelectedJobId] = useState<string | null>(null)
+  const [openJobIds, setOpenJobIds] = useState<string[]>([])
+  const [activeJobId, setActiveJobId] = useState<string | null>(null)
+  const [skillsOpen, setSkillsOpen] = useState(true)
+  const [skillsWidth, setSkillsWidth] = useState(260)
   const insertSkillRef = useRef<CronDetailHandle | null>(null)
   const { toast } = useUIStore()
+
+  const openJob = useCallback((id: string) => {
+    setOpenJobIds(prev => (prev.includes(id) ? prev : [...prev, id]))
+    setActiveJobId(id)
+  }, [])
+
+  const closeJob = useCallback((id: string) => {
+    setOpenJobIds(prev => {
+      const next = prev.filter(jobId => jobId !== id)
+      setActiveJobId(current => (current === id ? (next[next.length - 1] ?? null) : current))
+      return next
+    })
+  }, [])
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -36,7 +53,12 @@ export function CronsPanel() {
       const data = await response.json()
       const nextJobs = (data.jobs || []) as CronJob[]
       setJobs(nextJobs)
-      setSelectedJobId(prev => {
+      setOpenJobIds(prev => {
+        const valid = prev.filter(id => nextJobs.some(job => job.id === id))
+        if (valid.length > 0) return valid
+        return nextJobs[0]?.id ? [nextJobs[0].id] : []
+      })
+      setActiveJobId(prev => {
         if (!nextJobs.length) return null
         if (prev && nextJobs.some(job => job.id === prev)) return prev
         return nextJobs[0].id
@@ -70,19 +92,13 @@ export function CronsPanel() {
     try {
       const response = await fetch(`/api/crons/${id}`, { method: 'DELETE' })
       if (!response.ok) throw new Error('failed')
-      setJobs(prev => {
-        const next = prev.filter(job => job.id !== id)
-        setSelectedJobId(current => {
-          if (!current || current !== id) return current
-          return next[0]?.id || null
-        })
-        return next
-      })
+      setJobs(prev => prev.filter(job => job.id !== id))
+      closeJob(id)
       toast('Deleted', 'success')
     } catch {
       toast('Failed to delete job', 'error')
     }
-  }, [toast])
+  }, [closeJob, toast])
 
   const handleSave = useCallback(async (updated: CronJob) => {
     try {
@@ -110,16 +126,37 @@ export function CronsPanel() {
       if (!response.ok) throw new Error('failed')
       const data = await response.json()
       setJobs(prev => [...prev, data.job])
-      setSelectedJobId(data.job.id)
+      openJob(data.job.id)
       toast('Cron job created', 'success')
     } catch {
       toast('Failed to create cron job', 'error')
     }
-  }, [toast])
+  }, [openJob, toast])
 
-  const selectedJob = useMemo(
-    () => jobs.find(job => job.id === selectedJobId) ?? null,
-    [jobs, selectedJobId],
+  const handleResizeStart = useCallback((event: ReactMouseEvent) => {
+    event.preventDefault()
+    if (!skillsOpen) return
+
+    const startX = event.clientX
+    const startWidth = skillsWidth
+
+    const onMove = (moveEvent: MouseEvent) => {
+      const delta = startX - moveEvent.clientX
+      setSkillsWidth(Math.max(160, Math.min(480, startWidth + delta)))
+    }
+
+    const onUp = () => {
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup', onUp)
+    }
+
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+  }, [skillsOpen, skillsWidth])
+
+  const activeJob = useMemo(
+    () => jobs.find(job => job.id === activeJobId) ?? null,
+    [activeJobId, jobs],
   )
 
   return (
@@ -138,8 +175,8 @@ export function CronsPanel() {
             <CronListItem
               key={job.id}
               job={job}
-              selected={job.id === selectedJobId}
-              onSelect={() => setSelectedJobId(job.id)}
+              selected={job.id === activeJobId}
+              onSelect={() => openJob(job.id)}
               onToggle={handleToggle}
             />
           ))}
@@ -147,10 +184,35 @@ export function CronsPanel() {
       </div>
 
       <div className="crons-detail-col">
-        {selectedJob ? (
+        <div className="cron-tabs">
+          {openJobIds.map(id => {
+            const job = jobs.find(entry => entry.id === id)
+            if (!job) return null
+            return (
+              <div
+                key={id}
+                className={`cron-tab${id === activeJobId ? ' active' : ''}`}
+                onClick={() => setActiveJobId(id)}
+              >
+                <span className="cron-tab-name">{job.name}</span>
+                <button
+                  className="cron-tab-close"
+                  onClick={event => {
+                    event.stopPropagation()
+                    closeJob(id)
+                  }}
+                >
+                  ×
+                </button>
+              </div>
+            )
+          })}
+        </div>
+
+        {activeJob ? (
           <CronDetail
             ref={insertSkillRef}
-            job={selectedJob}
+            job={activeJob}
             onSave={handleSave}
             onDelete={handleDelete}
           />
@@ -161,8 +223,23 @@ export function CronsPanel() {
         )}
       </div>
 
-      <div className="crons-skills-col">
-        <SkillsBrowser onInsertSkill={name => insertSkillRef.current?.insertSkill(name)} />
+      <div className="crons-resize-handle" onMouseDown={handleResizeStart} />
+
+      <div
+        className={`crons-skills-col${skillsOpen ? '' : ' collapsed'}`}
+        style={{ width: skillsOpen ? skillsWidth : 32 }}
+      >
+        {skillsOpen ? (
+          <>
+            <div className="skills-panel-header">
+              <span className="crons-list-label">Skills</span>
+              <button className="skills-collapse-btn" onClick={() => setSkillsOpen(false)}>‹</button>
+            </div>
+            <SkillsBrowser onInsertSkill={name => insertSkillRef.current?.insertSkill(name)} />
+          </>
+        ) : (
+          <button className="skills-collapsed-label" onClick={() => setSkillsOpen(true)}>SKILLS ▶</button>
+        )}
       </div>
     </div>
   )
