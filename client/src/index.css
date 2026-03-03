@@ -172,6 +172,7 @@ body{font-family:'Inter',var(--font-sans);color:var(--text-primary);
 .arr.dn{transform:rotate(180deg)}
 .agent-body{display:none;padding-bottom:4px}.agent-body.open{display:block;animation:sdn var(--norm) var(--ease) both;max-height:600px;overflow-y:auto}
 @keyframes sdn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
 .sub-s{margin:1px 0}
 .sub-hdr{display:flex;align-items:center;gap:5px;padding:4px 9px 4px 11px;cursor:pointer;transition:background var(--fast);user-select:none}
 .sub-hdr:hover{background:var(--surface-2)}
@@ -367,7 +368,7 @@ body{font-family:'Inter',var(--font-sans);color:var(--text-primary);
 .crons-title{font-size:14px;font-weight:700;color:var(--text-primary)}
 .crons-sub{font-family:'JetBrains Mono',monospace;font-size:var(--text-size-xs);color:var(--text-tertiary);margin-top:2px}
 /* New job button: brutalist coral */
-.crons-new-btn{background:var(--coral);color:#fff;border:2px solid var(--ink);padding:6px 14px;font-family:'JetBrains Mono',monospace;font-size:var(--text-size-xs);font-weight:600;text-transform:uppercase;letter-spacing:.06em;cursor:pointer;transition:all var(--fast)}
+.crons-new-btn{background:var(--coral);color:#fff;border:2px solid var(--ink);padding:6px 14px;font-family:'JetBrains Mono',monospace;font-size:var(--text-size-xs);font-weight:600;text-transform:uppercase;letter-spacing:.06em;cursor:pointer;transition:box-shadow var(--fast),transform var(--fast)}
 .crons-new-btn:hover{box-shadow:var(--shadow-brutal-sm);transform:translate(-1px,-1px)}
 .crons-new-btn:active{transform:translate(0,0);box-shadow:none}
 .mt-8{margin-top:8px}
@@ -379,8 +380,8 @@ body{font-family:'Inter',var(--font-sans);color:var(--text-primary);
 .crons-group-label{font-family:'JetBrains Mono',monospace;font-size:var(--text-micro);font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text-tertiary);padding:4px 4px 6px}
 
 /* ═══ Cron Card — brutalist ═══ */
-.cron-card{background:var(--surface-1);border:2px solid var(--border-default);padding:10px 12px;margin-bottom:8px;transition:all var(--fast) var(--ease-out)}
-.cron-card:hover{border-color:var(--border-strong);box-shadow:var(--shadow-brutal);transform:translate(-2px,-2px)}
+.cron-card{background:var(--surface-1);border:2px solid var(--border-default);padding:10px 12px;margin-bottom:8px;transition:border-color var(--fast),box-shadow var(--fast),transform var(--fast)}
+.cron-card:hover{border-color:var(--border-strong);box-shadow:var(--shadow-brutal);transform:translate(-2px,-2px);will-change:transform}
 .cron-card:active{transform:translate(0,0);box-shadow:none}
 .cron-card.cron-disabled{opacity:.55}
 .cron-card.cron-disabled:hover{box-shadow:var(--shadow-brutal-sm);transform:translate(-1px,-1px)}

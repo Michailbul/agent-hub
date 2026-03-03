@@ -87,3 +87,52 @@ A canvas with:
 - [ ] Agent collaboration graph (edge lines from shared crons/channels)
 - [ ] AI-generated suggestions for team structure
 - [ ] Export team config as agent-hub.config.json
+
+---
+
+## [HIGH] Cron Job Detail Panel + Skills Browser — v0.4
+
+### Problem
+Right now clicking a cron job just opens the edit modal (full-screen overlay).
+There's no way to:
+- See the cron job description/prompt at a glance
+- Browse skills of the agent this cron is assigned to
+- Reference or drag a skill directly into the cron's prompt
+
+### Feature: Cron Detail Panel (right-side split layout)
+
+Change the Crons view to a master-detail layout:
+```
+┌──────────────────┬─────────────────────────────────┐
+│  Cron list       │  Detail panel (selected cron)   │
+│  (left ~40%)     │  (right ~60%)                   │
+│                  │  - Name, description, agent      │
+│  > daily-review  │  - Schedule (cron expr / every) │
+│    kb-maint  ●   │  - Full prompt (editable inline) │
+│    signal-map    │  - Last run / next run / status  │
+│                  │  - [Save changes] button         │
+└──────────────────┴─────────────────────────────────┘
+```
+
+Click a cron card on the left → right panel shows its details.
+Inline editing of the prompt (textarea, not modal).
+Save without leaving the view.
+
+### Feature: Agent Skills Browser in Detail Panel
+
+Below the prompt in the detail panel, show a "Skills" browser for the agent
+this cron is assigned to:
+- Shows all skills that agent has (from their workspace/skills dir)
+- Each skill is a draggable pill
+- Drag a skill pill into the prompt textarea → inserts `[skill: skill-name]` reference
+- Or click the pill → appends skill name to the prompt
+- This makes it easy to say "use the laniameda-kb skill" in the cron prompt
+
+### Implementation notes
+- Left list: cron cards (current), click → set selectedJobId state
+- Right panel: new CronDetail.tsx component, reads selectedJob from state
+- Prompt textarea: plain contenteditable or textarea, auto-resize
+- Skills: fetch from /api/tree, find agent by agentId, render skill pills
+- Save: PATCH /api/crons/:id (already exists)
+
+### Priority: HIGH (v0.4, after Team Builder MVP)
