@@ -24,10 +24,11 @@ export function Sidebar({ tree }: SidebarProps) {
     <div className="sidebar">
       <FilterBar />
       <div className="grp-lbl">Agents</div>
-      {tree.agents.map(agent => (
+      {tree.agents.map((agent, index) => (
         <AgentSection
           key={agent.id}
           agent={agent}
+          index={index}
           isOpen={openAgentId === agent.id}
           onToggle={() => handleToggle(agent.id)}
           agents={tree.agents}

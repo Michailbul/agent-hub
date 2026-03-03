@@ -1,11 +1,13 @@
 import { useState, useCallback } from 'react'
 import type { Agent } from '@/types'
 import { FileItem } from './FileItem'
+import { AgentBadge } from './AgentBadge'
 import { useUIStore } from '@/store/ui'
 import { usePanesStore } from '@/store/panes'
 
 interface AgentSectionProps {
   agent: Agent
+  index: number
   isOpen: boolean
   onToggle: () => void
 }
@@ -51,7 +53,7 @@ function SubSection({
 }
 
 interface AgentSectionProps2 extends AgentSectionProps { agents: Agent[] }
-export function AgentSection({ agent, isOpen, onToggle, agents }: AgentSectionProps2) {
+export function AgentSection({ agent, index, isOpen, onToggle, agents }: AgentSectionProps2) {
   const activePath = usePanesStore(s => {
     const p = s.panes.find(p => p.id === s.activePaneId)
     return p?.path ?? null
@@ -66,7 +68,7 @@ export function AgentSection({ agent, isOpen, onToggle, agents }: AgentSectionPr
   return (
     <div className={`agent-card${isOpen ? ' is-open' : ''}`}>
       <div className={`agent-hdr${isOpen ? ' is-open' : ''}`} onClick={handleClick}>
-        <div className="av">{agent.emoji}</div>
+        <AgentBadge label={agent.label} index={index} />
         <div className="a-info">
           <div className="a-name">{agent.label}</div>
           <div className="a-role">{agent.role}</div>

@@ -1,127 +1,169 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { CronJob } from '@/types/cron'
-import { CronCard } from './CronCard'
-import { CronEditor } from './CronEditor'
 import { useUIStore } from '@/store/ui'
+import { CronDetail, type CronDetailHandle } from './CronDetail'
+import { CronListItem } from './CronListItem'
+import { SkillsBrowser } from './SkillsBrowser'
+
+function defaultNewJob(): Partial<CronJob> {
+  return {
+    name: 'new-cron-job',
+    enabled: true,
+    schedule: { kind: 'cron', expr: '0 9 * * *', tz: 'UTC' },
+    sessionTarget: 'isolated',
+    wakeMode: 'now',
+    payload: {
+      kind: 'agentTurn',
+      message: 'Describe what this cron should do.',
+      timeoutSeconds: 300,
+    },
+    delivery: { mode: 'announce' },
+  }
+}
 
 export function CronsPanel() {
-  const [jobs, setJobs]         = useState<CronJob[]>([])
-  const [loading, setLoading]   = useState(true)
-  const [editing, setEditing]   = useState<CronJob | null | 'new'>(null)
-  const { toast }               = useUIStore()
+  const [jobs, setJobs] = useState<CronJob[]>([])
+  const [loading, setLoading] = useState(true)
+  const [selectedJobId, setSelectedJobId] = useState<string | null>(null)
+  const insertSkillRef = useRef<CronDetailHandle | null>(null)
+  const { toast } = useUIStore()
 
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const r = await fetch('/api/crons')
-      const d = await r.json()
-      setJobs(d.jobs || [])
-    } catch { toast('Failed to load cron jobs', 'error') }
+      const response = await fetch('/api/crons')
+      if (!response.ok) throw new Error('failed')
+      const data = await response.json()
+      const nextJobs = (data.jobs || []) as CronJob[]
+      setJobs(nextJobs)
+      setSelectedJobId(prev => {
+        if (!nextJobs.length) return null
+        if (prev && nextJobs.some(job => job.id === prev)) return prev
+        return nextJobs[0].id
+      })
+    } catch {
+      toast('Failed to load cron jobs', 'error')
+    }
     setLoading(false)
   }, [toast])
 
-  useEffect(() => { void load() }, [load])
+  useEffect(() => {
+    void load()
+  }, [load])
 
   const handleToggle = useCallback(async (job: CronJob) => {
     try {
-      await fetch(`/api/crons/${job.id}`, {
+      const response = await fetch(`/api/crons/${job.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ enabled: !job.enabled }),
       })
-      setJobs(prev => prev.map(j => j.id === job.id ? { ...j, enabled: !j.enabled } : j))
-    } catch { toast('Failed to update job', 'error') }
+      if (!response.ok) throw new Error('failed')
+      const data = await response.json()
+      setJobs(prev => prev.map(item => (item.id === data.job.id ? data.job : item)))
+    } catch {
+      toast('Failed to update job', 'error')
+    }
   }, [toast])
 
   const handleDelete = useCallback(async (id: string) => {
-    if (!confirm('Delete this cron job?')) return
     try {
-      await fetch(`/api/crons/${id}`, { method: 'DELETE' })
-      setJobs(prev => prev.filter(j => j.id !== id))
+      const response = await fetch(`/api/crons/${id}`, { method: 'DELETE' })
+      if (!response.ok) throw new Error('failed')
+      setJobs(prev => {
+        const next = prev.filter(job => job.id !== id)
+        setSelectedJobId(current => {
+          if (!current || current !== id) return current
+          return next[0]?.id || null
+        })
+        return next
+      })
       toast('Deleted', 'success')
-    } catch { toast('Failed to delete job', 'error') }
+    } catch {
+      toast('Failed to delete job', 'error')
+    }
   }, [toast])
 
-  const handleSave = useCallback(async (job: Partial<CronJob>) => {
+  const handleSave = useCallback(async (updated: CronJob) => {
     try {
-      if (editing === 'new') {
-        const r = await fetch('/api/crons', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(job),
-        })
-        const d = await r.json()
-        setJobs(prev => [...prev, d.job])
-        toast('Cron job created', 'success')
-      } else if (editing) {
-        const r = await fetch(`/api/crons/${editing.id}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(job),
-        })
-        const d = await r.json()
-        setJobs(prev => prev.map(j => j.id === d.job.id ? d.job : j))
-        toast('Saved', 'success')
-      }
-      setEditing(null)
-    } catch { toast('Failed to save job', 'error') }
-  }, [editing, toast])
+      const response = await fetch(`/api/crons/${updated.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updated),
+      })
+      if (!response.ok) throw new Error('failed')
+      const data = await response.json()
+      setJobs(prev => prev.map(job => (job.id === data.job.id ? data.job : job)))
+      toast('Saved', 'success')
+    } catch {
+      toast('Failed to save job', 'error')
+    }
+  }, [toast])
 
-  const enabled  = jobs.filter(j => j.enabled)
-  const disabled = jobs.filter(j => !j.enabled)
+  const handleNew = useCallback(async () => {
+    try {
+      const response = await fetch('/api/crons', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(defaultNewJob()),
+      })
+      if (!response.ok) throw new Error('failed')
+      const data = await response.json()
+      setJobs(prev => [...prev, data.job])
+      setSelectedJobId(data.job.id)
+      toast('Cron job created', 'success')
+    } catch {
+      toast('Failed to create cron job', 'error')
+    }
+  }, [toast])
+
+  const selectedJob = useMemo(
+    () => jobs.find(job => job.id === selectedJobId) ?? null,
+    [jobs, selectedJobId],
+  )
 
   return (
-    <div className="crons-panel">
-      <div className="crons-header">
-        <div>
-          <div className="crons-title">⏰ Cron Jobs</div>
-          <div className="crons-sub">{jobs.length} jobs · {enabled.length} active</div>
+    <div className="crons-layout">
+      <div className="crons-list-col">
+        <div className="crons-list-header">
+          <span className="crons-list-label">Cron Jobs</span>
+          <button className="crons-new-btn" onClick={handleNew}>+ New</button>
         </div>
-        <button className="crons-new-btn" onClick={() => setEditing('new')}>+ New Job</button>
+        <div className="cron-list-scroll">
+          {loading ? (
+            <div className="crons-loading">Loading...</div>
+          ) : jobs.length === 0 ? (
+            <div className="crons-loading">No cron jobs</div>
+          ) : jobs.map(job => (
+            <CronListItem
+              key={job.id}
+              job={job}
+              selected={job.id === selectedJobId}
+              onSelect={() => setSelectedJobId(job.id)}
+              onToggle={handleToggle}
+            />
+          ))}
+        </div>
       </div>
 
-      {loading ? (
-        <div className="crons-loading">Loading...</div>
-      ) : jobs.length === 0 ? (
-        <div className="crons-empty">
-          <div className="crons-empty-icon">⏰</div>
-          <div>No cron jobs yet</div>
-          <button className="crons-new-btn mt-8" onClick={() => setEditing('new')}>Create first job</button>
-        </div>
-      ) : (
-        <div className="crons-list">
-          {enabled.length > 0 && (
-            <div className="crons-group">
-              <div className="crons-group-label">Active ({enabled.length})</div>
-              {enabled.map(job => (
-                <CronCard key={job.id} job={job}
-                  onEdit={() => setEditing(job)}
-                  onToggle={() => handleToggle(job)}
-                  onDelete={() => handleDelete(job.id)} />
-              ))}
-            </div>
-          )}
-          {disabled.length > 0 && (
-            <div className="crons-group">
-              <div className="crons-group-label">Disabled ({disabled.length})</div>
-              {disabled.map(job => (
-                <CronCard key={job.id} job={job}
-                  onEdit={() => setEditing(job)}
-                  onToggle={() => handleToggle(job)}
-                  onDelete={() => handleDelete(job.id)} />
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+      <div className="crons-detail-col">
+        {selectedJob ? (
+          <CronDetail
+            ref={insertSkillRef}
+            job={selectedJob}
+            onSave={handleSave}
+            onDelete={handleDelete}
+          />
+        ) : (
+          <div className="crons-empty">
+            <span>← Select a cron job to edit</span>
+          </div>
+        )}
+      </div>
 
-      {editing !== null && (
-        <CronEditor
-          job={editing === 'new' ? null : editing}
-          onSave={handleSave}
-          onClose={() => setEditing(null)}
-        />
-      )}
+      <div className="crons-skills-col">
+        <SkillsBrowser onInsertSkill={name => insertSkillRef.current?.insertSkill(name)} />
+      </div>
     </div>
   )
 }
