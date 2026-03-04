@@ -7,12 +7,27 @@ interface PaneHeaderProps {
   isDirty: boolean
   hasFile: boolean
   isLocal: boolean
+  isMarkdownFile: boolean
+  mdMode: 'rich' | 'markdown'
+  onModeChange: (mode: 'rich' | 'markdown') => void
   onSave: () => void
   onClose: () => void
   onHeaderDrop: (data: { path: string; label: string }) => void
 }
 
-export function PaneHeader({ paneId, label, isDirty, hasFile, isLocal, onSave, onClose, onHeaderDrop }: PaneHeaderProps) {
+export function PaneHeader({
+  paneId,
+  label,
+  isDirty,
+  hasFile,
+  isLocal,
+  isMarkdownFile,
+  mdMode,
+  onModeChange,
+  onSave,
+  onClose,
+  onHeaderDrop,
+}: PaneHeaderProps) {
   const reorderPane = usePanesStore(s => s.reorderPane)
   const [reorderTarget, setReorderTarget] = useState<'before' | 'after' | null>(null)
 
@@ -93,6 +108,26 @@ export function PaneHeader({ paneId, label, isDirty, hasFile, isLocal, onSave, o
         <span className={`pane-dirty${isDirty ? ' show' : ''}`} />
       </div>
       <div className="pane-actions">
+        {isMarkdownFile && (
+          <div className="pane-mode-toggle" role="tablist" aria-label="Markdown mode">
+            <button
+              className={`pane-mode-btn${mdMode === 'rich' ? ' active' : ''}`}
+              onClick={() => onModeChange('rich')}
+              role="tab"
+              aria-selected={mdMode === 'rich'}
+            >
+              Rich
+            </button>
+            <button
+              className={`pane-mode-btn${mdMode === 'markdown' ? ' active' : ''}`}
+              onClick={() => onModeChange('markdown')}
+              role="tab"
+              aria-selected={mdMode === 'markdown'}
+            >
+              Markdown
+            </button>
+          </div>
+        )}
         {hasFile && !isLocal && (
           <button className="pane-save show" onClick={onSave}>
             ↑ Save

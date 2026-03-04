@@ -52,6 +52,7 @@ export interface PaneState {
   isDirty: boolean
   isLocal: boolean
   isLoading?: boolean
+  mdMode?: 'rich' | 'markdown'
 }
 
 export interface AssignTarget {

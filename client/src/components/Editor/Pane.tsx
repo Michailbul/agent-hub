@@ -5,6 +5,7 @@ import { saveFile } from '@/lib/api'
 import { PaneHeader } from './PaneHeader'
 import { PaneStatus } from './PaneStatus'
 import { CMEditor } from './CMEditor'
+import { RichMarkdownEditor } from './RichMarkdownEditor'
 import type { PaneState } from '@/types'
 
 interface PaneProps {
@@ -13,10 +14,24 @@ interface PaneProps {
 }
 
 export const Pane = forwardRef<HTMLDivElement, PaneProps>(function Pane({ pane, isActive }, ref) {
-  const { closePane, setActivePane, openFileInPane, insertPaneAfter, setDirty, setLoading } = usePanesStore()
+  const {
+    closePane,
+    setActivePane,
+    openFileInPane,
+    insertPaneAfter,
+    setDirty,
+    setLoading,
+    updateContent,
+    setMdMode,
+  } = usePanesStore()
   const { flashSaved, toast } = useUIStore()
   const [cursorLine, setCursorLine] = useState(1)
   const [cursorCol, setCursorCol]   = useState(1)
+  const fileRef = (pane.path || pane.label || '').toLowerCase().trim()
+  const isMarkdownFile = fileRef.endsWith('.md') || fileRef.endsWith('.markdown')
+  const mdMode = pane.mdMode ?? (isMarkdownFile ? 'rich' : 'markdown')
+  const showEditor = !!pane.path || pane.isLocal
+  const fileKey = pane.path || pane.label || pane.id
 
   const doSave = useCallback(async () => {
     if (!pane.path || pane.isLocal) return
@@ -97,6 +112,9 @@ export const Pane = forwardRef<HTMLDivElement, PaneProps>(function Pane({ pane, 
         isDirty={pane.isDirty}
         hasFile={!!pane.path}
         isLocal={pane.isLocal}
+        isMarkdownFile={isMarkdownFile}
+        mdMode={mdMode}
+        onModeChange={(mode) => setMdMode(pane.id, mode)}
         onSave={doSave}
         onClose={handleClose}
         onHeaderDrop={handleHeaderDrop}
@@ -109,7 +127,7 @@ export const Pane = forwardRef<HTMLDivElement, PaneProps>(function Pane({ pane, 
         onDrop={handleContentDrop}
       >
         {/* Empty state — shown when no file is open */}
-        {!pane.path && (
+        {!showEditor && (
           <div className="pane-empty">
             <div className="pe-icon">📄</div>
             <div className="pe-title">Empty pane</div>
@@ -122,16 +140,34 @@ export const Pane = forwardRef<HTMLDivElement, PaneProps>(function Pane({ pane, 
         )}
 
         {/* CodeMirror — keyed by path so it remounts cleanly on file change */}
-        {pane.path && (
-          <CMEditor
-            key={pane.path}
-            paneId={pane.id}
-            initialContent={pane.content}
-            filePath={pane.path}
-            isLocal={pane.isLocal}
-            isLoading={!!pane.isLoading}
-            onCursorChange={handleCursor}
-          />
+        {showEditor && (
+          isMarkdownFile && mdMode === 'rich'
+            ? (
+                <RichMarkdownEditor
+                  key={fileKey}
+                  value={pane.content}
+                  onChange={(nextMarkdown) => updateContent(pane.id, nextMarkdown)}
+                  onDirty={() => setDirty(pane.id, true)}
+                  onSave={() => { void doSave() }}
+                  isDirty={pane.isDirty}
+                  isLoading={!!pane.isLoading}
+                  onFallbackToMarkdown={() => {
+                    setMdMode(pane.id, 'markdown')
+                    toast('Rich editor error. Switched to Markdown mode.', 'error')
+                  }}
+                />
+              )
+            : (
+                <CMEditor
+                  key={`${fileKey}-${mdMode}`}
+                  paneId={pane.id}
+                  initialContent={pane.content}
+                  filePath={pane.path}
+                  isLocal={pane.isLocal}
+                  isLoading={!!pane.isLoading}
+                  onCursorChange={handleCursor}
+                />
+              )
         )}
       </div>
 

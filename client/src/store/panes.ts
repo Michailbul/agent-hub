@@ -16,6 +16,12 @@ interface PanesStore {
   insertPaneAfter: (afterId: string, path?: string | null, label?: string | null, content?: string) => string | null
   insertPaneAt: (index: number, path?: string | null, label?: string | null, content?: string) => string | null
   reorderPane: (fromId: string, toId: string) => void
+  setMdMode: (id: string, mode: 'rich' | 'markdown') => void
+}
+
+function shouldUseRichMode(path: string | null, label: string | null): boolean {
+  const candidate = (path || label || '').toLowerCase().trim()
+  return candidate.endsWith('.md') || candidate.endsWith('.markdown')
 }
 
 export const usePanesStore = create<PanesStore>((set, get) => ({
@@ -26,7 +32,16 @@ export const usePanesStore = create<PanesStore>((set, get) => ({
     const { panes } = get()
     if (panes.length >= 4) return ''
     const id = 'pane-' + (++paneCounter)
-    const pane: PaneState = { id, path, label, content, isDirty: false, isLocal, isLoading: false }
+    const pane: PaneState = {
+      id,
+      path,
+      label,
+      content,
+      isDirty: false,
+      isLocal,
+      isLoading: false,
+      mdMode: shouldUseRichMode(path, label) ? 'rich' : 'markdown',
+    }
     set({ panes: [...panes, pane], activePaneId: id })
     return id
   },
@@ -37,7 +52,16 @@ export const usePanesStore = create<PanesStore>((set, get) => ({
     if (next.length === 0) {
       const newId = 'pane-' + (++paneCounter)
       set({
-        panes: [{ id: newId, path: null, label: null, content: '', isDirty: false, isLocal: false, isLoading: false }],
+        panes: [{
+          id: newId,
+          path: null,
+          label: null,
+          content: '',
+          isDirty: false,
+          isLocal: false,
+          isLoading: false,
+          mdMode: 'markdown',
+        }],
         activePaneId: newId,
       })
       return
@@ -69,7 +93,16 @@ export const usePanesStore = create<PanesStore>((set, get) => ({
     set(s => ({
       panes: s.panes.map(p =>
         p.id === paneId
-          ? { ...p, path, label, content, isDirty: false, isLocal: false, isLoading: false }
+          ? {
+              ...p,
+              path,
+              label,
+              content,
+              isDirty: false,
+              isLocal: false,
+              isLoading: false,
+              mdMode: shouldUseRichMode(path, label) ? 'rich' : 'markdown',
+            }
           : p,
       ),
       activePaneId: paneId,
@@ -81,7 +114,16 @@ export const usePanesStore = create<PanesStore>((set, get) => ({
     const idx = panes.findIndex(p => p.id === afterId)
     if (idx === -1) return null
     const id = 'pane-' + (++paneCounter)
-    const pane: PaneState = { id, path, label, content, isDirty: false, isLocal: false, isLoading: false }
+    const pane: PaneState = {
+      id,
+      path,
+      label,
+      content,
+      isDirty: false,
+      isLocal: false,
+      isLoading: false,
+      mdMode: shouldUseRichMode(path, label) ? 'rich' : 'markdown',
+    }
     const next = [...panes]
     next.splice(idx + 1, 0, pane)
     set({ panes: next, activePaneId: id })
@@ -93,7 +135,16 @@ export const usePanesStore = create<PanesStore>((set, get) => ({
     if (panes.length >= 4) return null
     const normalizedIndex = Math.max(0, Math.min(index, panes.length))
     const id = 'pane-' + (++paneCounter)
-    const pane: PaneState = { id, path, label, content, isDirty: false, isLocal: false, isLoading: false }
+    const pane: PaneState = {
+      id,
+      path,
+      label,
+      content,
+      isDirty: false,
+      isLocal: false,
+      isLoading: false,
+      mdMode: shouldUseRichMode(path, label) ? 'rich' : 'markdown',
+    }
     const next = [...panes]
     next.splice(normalizedIndex, 0, pane)
     set({ panes: next, activePaneId: id })
@@ -110,4 +161,9 @@ export const usePanesStore = create<PanesStore>((set, get) => ({
       panes.splice(toIdx, 0, moved)
       return { panes }
     }),
+
+  setMdMode: (id: string, mode: 'rich' | 'markdown') =>
+    set(s => ({
+      panes: s.panes.map(p => (p.id === id ? { ...p, mdMode: mode } : p)),
+    })),
 }))
