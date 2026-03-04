@@ -1483,6 +1483,36 @@ body{font-family:'Inter',var(--font-sans);color:var(--text-primary);
 }
 
 /* ═══════════════════════════════════════════
+   SKILL YAML PREAMBLE (Frontmatter)
+   ═══════════════════════════════════════════ */
+
+.skill-preview-container{
+  display:flex;
+  flex-direction:column;
+}
+
+.skill-preamble{
+  border-bottom:2px solid var(--border-default);
+  border-left:4px solid var(--coral);
+  padding:0;
+  margin-bottom:16px;
+  background:var(--surface-2);
+}
+
+.skill-preamble-content{
+  margin:0;
+  padding:12px 16px;
+  font-family:'JetBrains Mono',monospace;
+  font-size:11px;
+  line-height:1.6;
+  color:var(--text-primary);
+  background:transparent;
+  white-space:pre-wrap;
+  word-wrap:break-word;
+  overflow-x:auto;
+}
+
+/* ═══════════════════════════════════════════
    REDUCED MOTION
    ═══════════════════════════════════════════ */
 @media (prefers-reduced-motion:reduce){

@@ -53,10 +53,32 @@ function hashColor(seed: string): string {
   return `hsl(${hue} 65% 40%)`
 }
 
+function extractYamlPreamble(content: string): { preamble: string | null; body: string } {
+  const lines = content.split('\n')
+  if (!lines[0].startsWith('---')) return { preamble: null, body: content }
+
+  let endIndex = -1
+  for (let i = 1; i < lines.length; i++) {
+    if (lines[i].startsWith('---')) {
+      endIndex = i
+      break
+    }
+  }
+
+  if (endIndex === -1) return { preamble: null, body: content }
+
+  const preamble = lines.slice(0, endIndex + 1).join('\n')
+  const body = lines.slice(endIndex + 1).join('\n').trim()
+
+  return { preamble, body }
+}
+
 function SkillPreviewRenderer({ content }: { content: string }) {
+  const { preamble, body } = extractYamlPreamble(content)
+
   const editor = useEditor({
     immediatelyRender: false,
-    content,
+    content: body,
     contentType: 'markdown',
     editable: false,
     extensions: [
@@ -69,14 +91,24 @@ function SkillPreviewRenderer({ content }: { content: string }) {
   useEffect(() => {
     if (!editor) return
     try {
-      editor.commands.setContent(content, { contentType: 'markdown' })
+      editor.commands.setContent(body, { contentType: 'markdown' })
     } catch {
       // fallback handled by parent
     }
-  }, [editor, content])
+  }, [editor, body])
 
   if (!editor) return null
-  return <EditorContent editor={editor} className="tiptap" />
+
+  return (
+    <div className="skill-preview-container">
+      {preamble && (
+        <div className="skill-preamble">
+          <pre className="skill-preamble-content">{preamble}</pre>
+        </div>
+      )}
+      <EditorContent editor={editor} className="tiptap" />
+    </div>
+  )
 }
 
 export function SkillsDrawer({ open, onClose, onInsertSkill }: SkillsDrawerProps) {
