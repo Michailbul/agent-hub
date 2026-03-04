@@ -438,3 +438,56 @@ Client:
 
 ### Priority
 HIGH for v0.5. This is the step toward "Cursor for AI agents" inside Agent Hub.
+
+---
+
+## [HIGH] Workspace Structure: Agents + Skills fundamentals (no-form UX)
+
+### Problem
+Managing/adding skills across machines and agents is currently too manual (SSH, git pull, folder ops).
+The UI needs to be a structured control plane for:
+- agent fundamentals
+- skill fundamentals
+- operations that connect them
+
+### Requirements (MVP)
+- Clear top-level sections:
+  - **Agents**: fundamentals + installed skills
+  - **Skills**: libraries + search + preview
+- First-class operations:
+  - Install skill to agent(s)
+  - Remove skill from agent
+  - Move/copy skills between libraries
+  - Create folders/files safely (no terminal)
+
+### UX principle
+Avoid templated form-based “skill builder” flows. Prefer:
+- direct editing (docs/code)
+- AI-assisted generation later
+
+---
+
+## [MED] Agent Departments (UI-only grouping)
+
+### Goal
+Allow users to group multiple agents into departments/teams (pure UI/metadata at first):
+- Departments in sidebar/canvas
+- Filter/scope views by department
+
+No runtime behavior change required for MVP.
+
+---
+
+## [MED] Research: Channel integrations config UI (Telegram/Slack/etc.)
+
+### Problem
+Configuring OpenClaw channels (Telegram/Slack/etc.) is terminal-heavy.
+
+### Idea
+Bring OpenClaw config management into Agent Hub:
+- Read/validate `~/.openclaw/openclaw.json`
+- Provide guided UI for enabling channels + required fields
+- Generate instructions + copy-paste tokens safely
+
+### Scope
+Start with **Telegram** as the first channel config UI.
