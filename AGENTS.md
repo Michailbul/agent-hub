@@ -114,3 +114,28 @@ Next.js landing page marketing the app. Three design variants (/v1, /v2, /v3).
 Internal Laniameda project — not open source.
 
 If you ship a new feature to this repo, update `lib/content.ts` in the landing page repo to keep features accurate.
+
+---
+
+## Product principles (Michael, 2026-03-04)
+
+### Agent Hub = control plane over the real filesystem (no lock-in)
+- The UI is just a representation of the underlying OpenClaw directory structure.
+- Under the hood we only move/copy/create folders + files + config files.
+- If the user stops using Agent Hub, they can return to terminal/OpenClaw and everything still works.
+
+### Organize the workspace explicitly
+We need a structured workspace view with clear separation:
+- **Agent fundamentals** (identity + instruction files)
+- **Skill fundamentals** (libraries + installed skills)
+- Clear operations to connect them (install/copy/move/remove skills per agent)
+
+### Avoid “forms are the past” UX
+- Do NOT build a templated “form builder” experience for skill creation.
+- We are AI-native: creation should be driven by editing + AI assistance (chat-driven creation later), not rigid forms.
+- Crons have some structure, but even there we should avoid over-forming the UX; use composable blocks/chips where possible.
+
+### Future (not immediate) but aligned
+- Chat-driven skill creation/editing via Claude CLI / Codex CLI (nice, but not priority right now).
+- UI-only grouping of agents into **departments** (org structure) even if it doesn’t change runtime behavior yet.
+
