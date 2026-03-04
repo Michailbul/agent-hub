@@ -1138,6 +1138,15 @@ body{font-family:'Inter',var(--font-sans);color:var(--text-primary);
   color:var(--text-ghost);
 }
 
+.cron-textarea{
+  min-height:320px;
+  font-family:'JetBrains Mono',monospace;
+}
+
+.cron-textarea::-webkit-resizer{
+  background:var(--border-default);
+}
+
 /* Tab styles for schedule */
 .cf-tab{
   background:transparent;
