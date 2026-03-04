@@ -446,20 +446,26 @@ body{font-family:'Inter',var(--font-sans);color:var(--text-primary);
 .cf-btn-save:active{transform:translate(0,0);box-shadow:none}
 
 /* 2-col crons layout */
-.crons-page{height:100%;}
-.crons-page.skills-open .crons-layout{padding-right:360px}
-.crons-page.skills-collapsed .crons-layout{padding-right:40px}
+.crons-page{height:100%;--crons-skills-space:40px}
 
-.crons-layout{display:flex;height:100%;overflow:hidden}
-.crons-list-col{width:220px;flex-shrink:0;border-right:2px solid var(--ink);display:flex;flex-direction:column;overflow:hidden}
+.crons-layout{display:flex;height:100%;overflow:hidden;padding-right:var(--crons-skills-space)}
+.crons-list-col{flex-shrink:0;border-right:2px solid var(--ink);display:flex;flex-direction:column;overflow:hidden}
 .crons-list-header{height:40px;border-bottom:2px solid var(--border-default);padding:0 12px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
 .crons-list-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--text-tertiary)}
 .cron-list-scroll{flex:1;overflow-y:auto;padding:6px}
+.resize-handle-vertical{position:relative;width:8px;min-width:8px;flex-shrink:0;display:flex;align-items:center;justify-content:center;cursor:col-resize;background:transparent;transition:background-color var(--fast)}
+.resize-handle-vertical::before{content:'';position:absolute;top:0;bottom:0;left:50%;width:8px;transform:translateX(-50%);transition:width var(--fast),background-color var(--fast)}
+.resize-handle-vertical:hover::before,.resize-handle-vertical:focus-visible::before{width:10px;background:var(--accent-subtle)}
+.resize-handle-vertical:hover .resize-grip,.resize-handle-vertical:focus-visible .resize-grip{color:var(--coral)}
+.resize-handle-vertical:focus-visible{outline:none}
+.resize-grip{position:relative;z-index:1;font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1;color:var(--text-ghost);user-select:none;pointer-events:none}
+.crons-list-resize{border-right:1px solid var(--border-subtle)}
 .crons-main-col{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
 
 /* Right rail (fixed) */
 .crons-skills-rail{position:fixed;top:40px;right:0;bottom:0;width:360px;flex-shrink:0;border-left:2px solid var(--ink);background:var(--surface-1);display:flex;flex-direction:column;overflow:hidden;z-index:70}
 .crons-skills-rail.collapsed{width:40px}
+.crons-skills-resize{position:absolute;left:0;top:0;bottom:0;transform:translateX(-50%);z-index:2;border-left:1px solid var(--border-subtle);border-right:1px solid var(--border-subtle)}
 .skills-rail-handle{height:100%;width:100%;writing-mode:vertical-rl;text-orientation:mixed;background:var(--surface-1);border:none;border-left:0;font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.12em;color:var(--text-tertiary);cursor:pointer;display:flex;align-items:center;justify-content:center;user-select:none}
 .skills-rail-handle:hover{color:var(--coral);background:var(--accent-subtle)}
 .crons-empty{flex:1;display:flex;align-items:center;justify-content:center;color:var(--text-ghost);font-family:'JetBrains Mono',monospace;font-size:12px}

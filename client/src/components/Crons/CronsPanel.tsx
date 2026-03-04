@@ -1,26 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import type { TreeData } from '@/types'
-import type { CronJob } from '@/types/cron'
-import { useUIStore } from '@/store/ui'
+import { useResizablePane } from '@/lib/useResizablePane'
+import { useCronsStore } from '@/store/crons'
+import { useLayoutStore } from '@/store/layout'
 import { CronDetail, type CronDetailHandle } from './CronDetail'
 import { CronListItem } from './CronListItem'
 import { SkillsDrawer } from './SkillsDrawer'
-
-function defaultNewJob(): Partial<CronJob> {
-  return {
-    name: 'new-cron-job',
-    enabled: true,
-    schedule: { kind: 'cron', expr: '0 9 * * *', tz: 'UTC' },
-    sessionTarget: 'isolated',
-    wakeMode: 'now',
-    payload: {
-      kind: 'agentTurn',
-      message: 'Describe what this cron should do.',
-      timeoutSeconds: 300,
-    },
-    delivery: { mode: 'announce' },
-  }
-}
 
 function skillFolderName(fullPath: string): string {
   const chunks = fullPath.split(/[\\/]/).filter(Boolean)
@@ -28,55 +13,35 @@ function skillFolderName(fullPath: string): string {
 }
 
 export function CronsPanel() {
-  const [jobs, setJobs] = useState<CronJob[]>([])
-  const [loading, setLoading] = useState(true)
-  const [openJobIds, setOpenJobIds] = useState<string[]>([])
-  const [activeJobId, setActiveJobId] = useState<string | null>(null)
-  const [skillsDrawerOpen, setSkillsDrawerOpen] = useState(false)
-  const [skillsIndex, setSkillsIndex] = useState<string[]>([])
   const detailRef = useRef<CronDetailHandle | null>(null)
-  const { toast } = useUIStore()
 
-  const openJob = useCallback((id: string) => {
-    setOpenJobIds(prev => (prev.includes(id) ? prev : [...prev, id]))
-    setActiveJobId(id)
-  }, [])
+  const jobs = useCronsStore(state => state.jobs)
+  const loading = useCronsStore(state => state.loading)
+  const openJobIds = useCronsStore(state => state.openJobIds)
+  const activeJobId = useCronsStore(state => state.activeJobId)
+  const skillsOpen = useCronsStore(state => state.skillsOpen)
+  const loadJobs = useCronsStore(state => state.loadJobs)
+  const createJob = useCronsStore(state => state.createJob)
+  const saveJob = useCronsStore(state => state.saveJob)
+  const deleteJob = useCronsStore(state => state.deleteJob)
+  const toggleJobEnabled = useCronsStore(state => state.toggleJobEnabled)
+  const openJob = useCronsStore(state => state.openJob)
+  const closeJob = useCronsStore(state => state.closeJob)
+  const setActiveJobId = useCronsStore(state => state.setActiveJobId)
+  const setSkillsOpen = useCronsStore(state => state.setSkillsOpen)
 
-  const closeJob = useCallback((id: string) => {
-    setOpenJobIds(prev => {
-      const next = prev.filter(jobId => jobId !== id)
-      setActiveJobId(current => (current === id ? (next[next.length - 1] ?? null) : current))
-      return next
-    })
-  }, [])
+  const listWidth = useLayoutStore(state => state.cronsListWidth)
+  const skillsWidth = useLayoutStore(state => state.cronsSkillsWidth)
+  const setCronsListWidth = useLayoutStore(state => state.setCronsListWidth)
+  const setCronsSkillsWidth = useLayoutStore(state => state.setCronsSkillsWidth)
+  const hydrateFromStorage = useLayoutStore(state => state.hydrateFromStorage)
 
-  const load = useCallback(async () => {
-    setLoading(true)
-    try {
-      const response = await fetch('/api/crons')
-      if (!response.ok) throw new Error('failed')
-      const data = await response.json()
-      const nextJobs = (data.jobs || []) as CronJob[]
-      setJobs(nextJobs)
-      setOpenJobIds(prev => {
-        const valid = prev.filter(id => nextJobs.some(job => job.id === id))
-        if (valid.length > 0) return valid
-        return nextJobs[0]?.id ? [nextJobs[0].id] : []
-      })
-      setActiveJobId(prev => {
-        if (!nextJobs.length) return null
-        if (prev && nextJobs.some(job => job.id === prev)) return prev
-        return nextJobs[0].id
-      })
-    } catch {
-      toast('Failed to load cron jobs', 'error')
-    }
-    setLoading(false)
-  }, [toast])
+  const [skillsIndex, setSkillsIndex] = useState<string[]>([])
 
   useEffect(() => {
-    void load()
-  }, [load])
+    hydrateFromStorage()
+    void loadJobs()
+  }, [hydrateFromStorage, loadJobs])
 
   useEffect(() => {
     const loadSkills = async () => {
@@ -102,155 +67,130 @@ export function CronsPanel() {
     void loadSkills()
   }, [])
 
-  const handleToggle = useCallback(async (job: CronJob) => {
-    try {
-      const response = await fetch(`/api/crons/${job.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ enabled: !job.enabled }),
-      })
-      if (!response.ok) throw new Error('failed')
-      const data = await response.json()
-      setJobs(prev => prev.map(item => (item.id === data.job.id ? data.job : item)))
-    } catch {
-      toast('Failed to update job', 'error')
-    }
-  }, [toast])
+  const { handleProps: listResizeHandle } = useResizablePane({
+    value: listWidth,
+    onChange: setCronsListWidth,
+    min: 180,
+    max: 420,
+    resetTo: 220,
+  })
 
-  const handleDelete = useCallback(async (id: string) => {
-    try {
-      const response = await fetch(`/api/crons/${id}`, { method: 'DELETE' })
-      if (!response.ok) throw new Error('failed')
-      setJobs(prev => prev.filter(job => job.id !== id))
-      closeJob(id)
-      toast('Deleted', 'success')
-    } catch {
-      toast('Failed to delete job', 'error')
-    }
-  }, [closeJob, toast])
-
-  const handleSave = useCallback(async (updated: CronJob) => {
-    try {
-      const response = await fetch(`/api/crons/${updated.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updated),
-      })
-      if (!response.ok) throw new Error('failed')
-      const data = await response.json()
-      setJobs(prev => prev.map(job => (job.id === data.job.id ? data.job : job)))
-      toast('Saved', 'success')
-    } catch {
-      toast('Failed to save job', 'error')
-    }
-  }, [toast])
-
-  const handleNew = useCallback(async () => {
-    try {
-      const response = await fetch('/api/crons', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(defaultNewJob()),
-      })
-      if (!response.ok) throw new Error('failed')
-      const data = await response.json()
-      setJobs(prev => [...prev, data.job])
-      openJob(data.job.id)
-      toast('Cron job created', 'success')
-    } catch {
-      toast('Failed to create cron job', 'error')
-    }
-  }, [openJob, toast])
+  const { handleProps: skillsResizeHandle } = useResizablePane({
+    value: skillsWidth,
+    onChange: setCronsSkillsWidth,
+    min: 260,
+    max: 520,
+    enabled: skillsOpen,
+    direction: -1,
+    resetTo: 360,
+  })
 
   const activeJob = useMemo(
     () => jobs.find(job => job.id === activeJobId) ?? null,
     [activeJobId, jobs],
   )
 
+  const skillsReservedWidth = skillsOpen ? skillsWidth : 40
+  const pageStyle: CSSProperties = {
+    ['--crons-skills-space' as string]: `${skillsReservedWidth}px`,
+  }
+
   return (
-    <div className={`crons-page${skillsDrawerOpen ? ' skills-open' : ' skills-collapsed'}`}>
+    <div className={`crons-page${skillsOpen ? ' skills-open' : ' skills-collapsed'}`} style={pageStyle}>
       <div className="crons-layout">
-      <div className="crons-list-col">
-        <div className="crons-list-header">
-          <span className="crons-list-label">CRON JOBS</span>
-          <button className="crons-new-btn" onClick={handleNew}>+ New</button>
+        <div className="crons-list-col" style={{ width: `${listWidth}px` }}>
+          <div className="crons-list-header">
+            <span className="crons-list-label">CRON JOBS</span>
+            <button className="crons-new-btn" onClick={() => void createJob()}>+ New</button>
+          </div>
+          <div className="cron-list-scroll">
+            {loading ? (
+              <div className="crons-loading">Loading...</div>
+            ) : jobs.length === 0 ? (
+              <div className="crons-loading">No cron jobs</div>
+            ) : jobs.map(job => (
+              <CronListItem
+                key={job.id}
+                job={job}
+                selected={openJobIds.includes(job.id) && job.id === activeJobId}
+                onSelect={() => openJob(job.id)}
+                onToggle={item => void toggleJobEnabled(item)}
+              />
+            ))}
+          </div>
         </div>
-        <div className="cron-list-scroll">
-          {loading ? (
-            <div className="crons-loading">Loading...</div>
-          ) : jobs.length === 0 ? (
-            <div className="crons-loading">No cron jobs</div>
-          ) : jobs.map(job => (
-            <CronListItem
-              key={job.id}
-              job={job}
-              selected={openJobIds.includes(job.id) && job.id === activeJobId}
-              onSelect={() => openJob(job.id)}
-              onToggle={handleToggle}
-            />
-          ))}
-        </div>
-      </div>
 
-      <div className="crons-main-col">
-        <div className="cron-tabs">
-          {openJobIds.map(id => {
-            const job = jobs.find(entry => entry.id === id)
-            if (!job) return null
-            return (
-              <div
-                key={id}
-                className={`cron-tab${id === activeJobId ? ' active' : ''}`}
-                onClick={() => setActiveJobId(id)}
-              >
-                <span className="cron-tab-name">{job.name}</span>
-                <button
-                  className="cron-tab-close"
-                  onClick={event => {
-                    event.stopPropagation()
-                    closeJob(id)
-                  }}
+        <div className="resize-handle-vertical crons-list-resize" {...listResizeHandle} aria-label="Resize cron list">
+          <span className="resize-grip" aria-hidden="true">⋮</span>
+        </div>
+
+        <div className="crons-main-col">
+          <div className="cron-tabs">
+            {openJobIds.map(id => {
+              const job = jobs.find(entry => entry.id === id)
+              if (!job) return null
+              return (
+                <div
+                  key={id}
+                  className={`cron-tab${id === activeJobId ? ' active' : ''}`}
+                  onClick={() => setActiveJobId(id)}
                 >
-                  ×
-                </button>
-              </div>
-            )
-          })}
+                  <span className="cron-tab-name">{job.name}</span>
+                  <button
+                    className="cron-tab-close"
+                    onClick={event => {
+                      event.stopPropagation()
+                      closeJob(id)
+                    }}
+                  >
+                    ×
+                  </button>
+                </div>
+              )
+            })}
+          </div>
+
+          {activeJob ? (
+            <CronDetail
+              ref={detailRef}
+              job={activeJob}
+              skills={skillsIndex}
+              onOpenSkills={() => setSkillsOpen(true)}
+              onSave={updated => void saveJob(updated)}
+              onDelete={id => void deleteJob(id)}
+            />
+          ) : (
+            <div className="crons-empty">← Select a cron job</div>
+          )}
         </div>
 
-        {activeJob ? (
-          <CronDetail
-            ref={detailRef}
-            job={activeJob}
-            skills={skillsIndex}
-            onOpenSkills={() => setSkillsDrawerOpen(true)}
-            onSave={handleSave}
-            onDelete={handleDelete}
-          />
-        ) : (
-          <div className="crons-empty">← Select a cron job</div>
-        )}
-      </div>
-
-      <div className={`crons-skills-rail${skillsDrawerOpen ? '' : ' collapsed'}`}>
-        {skillsDrawerOpen ? (
-          <SkillsDrawer
-            open={true}
-            onClose={() => setSkillsDrawerOpen(false)}
-            onInsertSkill={name => detailRef.current?.insertSkill(name)}
-          />
-        ) : (
-          <button
-            type="button"
-            className="skills-rail-handle"
-            onClick={() => setSkillsDrawerOpen(true)}
-            aria-label="Open skills"
-          >
-            SKILLS
-          </button>
-        )}
+        <div
+          className={`crons-skills-rail${skillsOpen ? '' : ' collapsed'}`}
+          style={{ width: `${skillsOpen ? skillsWidth : 40}px` }}
+        >
+          {skillsOpen && (
+            <div className="resize-handle-vertical crons-skills-resize" {...skillsResizeHandle} aria-label="Resize skills panel">
+              <span className="resize-grip" aria-hidden="true">⋮</span>
+            </div>
+          )}
+          {skillsOpen ? (
+            <SkillsDrawer
+              open={true}
+              onClose={() => setSkillsOpen(false)}
+              onInsertSkill={name => detailRef.current?.insertSkill(name)}
+            />
+          ) : (
+            <button
+              type="button"
+              className="skills-rail-handle"
+              onClick={() => setSkillsOpen(true)}
+              aria-label="Open skills"
+            >
+              SKILLS
+            </button>
+          )}
+        </div>
       </div>
     </div>
-  </div>
   )
 }
