@@ -235,10 +235,10 @@ body{font-family:'Inter',var(--font-sans);color:var(--text-primary);
 .pane-dirty.show{display:block;animation:dirty-pulse 1.5s ease-in-out infinite}
 @keyframes dirty-pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.8)}}
 .pane-actions{display:flex;align-items:center;gap:3px;flex-shrink:0}
-.pane-mode-toggle{display:inline-flex;align-items:center;border:2px solid var(--border-default);background:var(--surface-2)}
-.pane-mode-btn{padding:2px 7px;border:0;background:transparent;font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-tertiary);cursor:pointer;transition:background var(--fast),color var(--fast)}
-.pane-mode-btn:hover{background:var(--surface-3);color:var(--text-primary)}
-.pane-mode-btn.active{background:var(--coral);color:#fff}
+.pane-mode-toggle{display:inline-flex;align-items:center;border:1.5px solid var(--border-default);background:var(--surface-2);border-radius:6px;padding:2px;gap:1px}
+.pane-mode-btn{padding:3px 10px;border:0;background:transparent;font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--text-ghost);cursor:pointer;transition:all var(--fast);border-radius:4px;line-height:1.4}
+.pane-mode-btn:hover{background:var(--surface-3);color:var(--text-secondary)}
+.pane-mode-btn.active{background:var(--coral);color:#fff;box-shadow:0 1px 3px rgba(255,122,100,.35)}
 /* Save button: brutalist */
 .pane-save{padding:3px 8px;font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:500;text-transform:uppercase;letter-spacing:.1em;color:var(--invt);background:var(--inv);border:2px solid var(--inv);cursor:pointer;transition:all var(--fast);display:none}
 .pane-save.show{display:inline-flex}
@@ -282,27 +282,120 @@ body{font-family:'Inter',var(--font-sans);color:var(--text-primary);
 .pane .cm-editor.cm-focused{outline:none!important}
 
 /* ═══════════════════════════════════════════
-   TipTap Markdown Editor
+   TipTap Rich Markdown Editor — Premium
    ═══════════════════════════════════════════ */
 .tiptap{flex:1;min-height:0;overflow:auto;background:transparent}
-.tiptap .ProseMirror{min-height:100%;padding:16px 18px 28px;font-family:'Inter',sans-serif;color:var(--ink);line-height:1.7}
+.tiptap .ProseMirror{
+  min-height:100%;
+  max-width:860px;
+  margin:0 auto;
+  padding:32px 40px 48px;
+  font-family:'Inter',sans-serif;
+  font-size:15px;
+  color:var(--ink);
+  line-height:1.75;
+  caret-color:var(--ink);
+}
 .tiptap .ProseMirror:focus{outline:none}
-.tiptap .ProseMirror h1{font-size:22px;font-weight:800;color:var(--ink);margin:0 0 10px;padding-bottom:5px;border-bottom:2px solid var(--ink);line-height:1.2}
-.tiptap .ProseMirror h2{font-size:18px;font-weight:800;color:var(--ink);margin:14px 0 7px;line-height:1.25}
-.tiptap .ProseMirror h3{font-size:15px;font-weight:800;color:var(--text-primary);margin:12px 0 6px;line-height:1.3}
-.tiptap .ProseMirror p{margin:0 0 9px}
-.tiptap .ProseMirror ul,.tiptap .ProseMirror ol{padding-left:1.4rem;margin:0 0 9px}
+.tiptap .ProseMirror::selection{background:rgba(255,122,100,.16)}
+.tiptap .ProseMirror *::selection{background:rgba(255,122,100,.16)}
+
+/* — Headings — */
+.tiptap .ProseMirror h1{
+  font-size:26px;font-weight:800;color:var(--ink);
+  margin:32px 0 12px;padding-bottom:6px;
+  border-bottom:2px solid var(--border-default);
+  line-height:1.2;letter-spacing:-.02em;
+}
+.tiptap .ProseMirror h1:first-child{margin-top:0}
+.tiptap .ProseMirror h2{
+  font-size:20px;font-weight:700;color:var(--ink);
+  margin:28px 0 8px;line-height:1.3;letter-spacing:-.01em;
+}
+.tiptap .ProseMirror h3{
+  font-size:16px;font-weight:700;color:var(--text-primary);
+  margin:22px 0 6px;line-height:1.35;
+}
+
+/* — Paragraphs — */
+.tiptap .ProseMirror p{margin:0 0 12px}
+
+/* — Lists — */
+.tiptap .ProseMirror ul,.tiptap .ProseMirror ol{padding-left:1.5rem;margin:4px 0 12px}
+.tiptap .ProseMirror li{margin-bottom:2px}
 .tiptap .ProseMirror li::marker{color:var(--coral)}
-.tiptap .ProseMirror code{font-family:'JetBrains Mono',monospace;font-size:.92em;background:var(--accent-subtle);border:1.5px solid var(--border-default);padding:1px 4px}
-.tiptap .ProseMirror pre{background:var(--surface-1);border:2px solid var(--ink);box-shadow:var(--shadow-brutal-sm);padding:11px 12px;margin:10px 0;overflow:auto}
-.tiptap .ProseMirror pre code{background:transparent;border:0;padding:0;font-size:.86em}
-.tiptap .ProseMirror blockquote{border-left:2px solid var(--coral);padding-left:11px;color:var(--text-secondary);margin:10px 0}
-.tiptap .ProseMirror a{color:var(--coral);text-decoration:underline}
-.tiptap .ProseMirror .is-editor-empty:first-child::before{content:attr(data-placeholder);color:var(--text-ghost);float:left;height:0;pointer-events:none}
-.tiptap .ProseMirror ul[data-type="taskList"]{list-style:none;padding-left:.3rem}
-.tiptap .ProseMirror ul[data-type="taskList"] li{display:flex;align-items:flex-start;gap:8px}
-.tiptap .ProseMirror ul[data-type="taskList"] li > label{margin-top:.15rem;display:flex}
-.tiptap .ProseMirror ul[data-type="taskList"] li > label input{accent-color:var(--coral)}
+.tiptap .ProseMirror li p{margin:0 0 2px}
+
+/* — Inline code — */
+.tiptap .ProseMirror code{
+  font-family:'JetBrains Mono',monospace;font-size:.88em;
+  background:rgba(255,122,100,.07);
+  border:1px solid var(--border-default);
+  border-radius:3px;padding:1px 5px;
+  color:var(--text-primary);
+}
+
+/* — Code blocks — */
+.tiptap .ProseMirror pre{
+  background:var(--surface-1);
+  border:2px solid var(--ink);
+  box-shadow:var(--shadow-brutal-sm);
+  padding:14px 16px;margin:16px 0;
+  overflow:auto;border-radius:0;
+}
+.tiptap .ProseMirror pre code{
+  background:transparent;border:0;padding:0;
+  font-size:.85em;line-height:1.6;border-radius:0;
+  color:var(--text-primary);
+}
+
+/* — Blockquote — */
+.tiptap .ProseMirror blockquote{
+  border-left:3px solid var(--coral);
+  padding:8px 0 8px 16px;
+  background:rgba(255,122,100,.04);
+  color:var(--text-secondary);
+  margin:16px 0;
+  border-radius:0 2px 2px 0;
+}
+.tiptap .ProseMirror blockquote p{margin:0 0 4px}
+.tiptap .ProseMirror blockquote p:last-child{margin:0}
+
+/* — Links — */
+.tiptap .ProseMirror a{
+  color:var(--ink);
+  text-decoration:underline;
+  text-decoration-color:rgba(255,122,100,.4);
+  text-underline-offset:2px;
+  transition:text-decoration-color .15s;
+}
+.tiptap .ProseMirror a:hover{
+  text-decoration-color:var(--coral);
+  color:var(--coral);
+}
+
+/* — Horizontal rule — */
+.tiptap .ProseMirror hr{
+  border:none;border-top:1.5px solid var(--border-default);
+  margin:24px 0;
+}
+
+/* — Placeholder — */
+.tiptap .ProseMirror .is-editor-empty:first-child::before{
+  content:attr(data-placeholder);
+  color:var(--text-ghost);
+  float:left;height:0;pointer-events:none;
+  font-style:italic;
+}
+
+/* — Task lists — */
+.tiptap .ProseMirror ul[data-type="taskList"]{list-style:none;padding-left:.2rem;margin:4px 0 12px}
+.tiptap .ProseMirror ul[data-type="taskList"] li{display:flex;align-items:flex-start;gap:8px;margin-bottom:2px}
+.tiptap .ProseMirror ul[data-type="taskList"] li > label{margin-top:3px;display:flex}
+.tiptap .ProseMirror ul[data-type="taskList"] li > label input[type="checkbox"]{
+  accent-color:var(--coral);
+  width:15px;height:15px;cursor:pointer;
+}
 .tiptap .ProseMirror ul[data-type="taskList"] li > div{flex:1}
 
 /* ═══════════════════════════════════════════
