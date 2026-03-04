@@ -28,17 +28,30 @@ node server.js  # runs existing plain JS server
 npm run build && node dist/server.js  # runs TypeScript compiled version
 ```
 
-### After changes
+### After changes (MANDATORY workflow)
 ```bash
-npm run build  # compile src/ → dist/
-git add -A && git commit -m "feat/fix: description" && git push
-```
-
-### Deploy to VPS
-```bash
-cd ~/work/agent-hub && docker compose up -d --build
+npm run build                # compile src/ → dist/
+git add -A && git commit -m "feat/fix: description"
+git push                     # push to origin
+docker compose up -d --build # deploy to VPS (reload container)
 # Live at: https://agent-hub.srv1439489.hstgr.cloud
 ```
+
+**⚠️ Do NOT skip docker deploy** — the Docker image caches the compiled files; pushing code without rebuilding the container means VPS won't see your changes.
+
+### Recent work (Ocean Crons Editor)
+
+**Branch:** `sprint/ocean-crons` (merged to master)  
+**Status:** Complete — Phase A–D all done, build passes, docker deployed  
+**What changed:**
+- Crons editor is now **centered, document-first** (max-width: 860px)
+- Left: resizable jobs list (180–420px, persisted)
+- Right: collapsible skills rail (40px→360px, persisted, markdown preview)
+- Prompt editor: min-height 320px, large document-like textarea
+- Keyboard nav: Tab/Shift+Tab cycles open cron tabs (safe focus rules)
+- Skills: click=preview, **+** button=insert (drag-drop enabled)
+
+See PRD at `/root/michael/prd-crons-ocean.md` for full spec.
 
 ---
 
