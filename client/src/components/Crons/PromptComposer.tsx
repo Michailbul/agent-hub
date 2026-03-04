@@ -132,7 +132,7 @@ export function PromptComposer({ value, onChange, onInsertSkill, skills, textare
         <textarea
           ref={inputRef}
           className="cron-input cron-textarea"
-          rows={10}
+          rows={14}
           value={value}
           onChange={event => {
             onChange(event.target.value)

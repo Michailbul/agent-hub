@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import type { TreeData } from '@/types'
 import { useResizablePane } from '@/lib/useResizablePane'
 import { useCronsStore } from '@/store/crons'
@@ -84,6 +84,32 @@ export function CronsPanel() {
     direction: -1,
     resetTo: 360,
   })
+
+  const cycleTab = useCallback((direction: 1 | -1) => {
+    if (openJobIds.length < 2 || !activeJobId) return
+    const idx = openJobIds.indexOf(activeJobId)
+    const next = (idx + direction + openJobIds.length) % openJobIds.length
+    setActiveJobId(openJobIds[next])
+  }, [activeJobId, openJobIds, setActiveJobId])
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'Tab') return
+
+      // Never steal Tab from inputs / textareas / contenteditable
+      const tag = (e.target as HTMLElement)?.tagName
+      const isEditable = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT'
+        || (e.target as HTMLElement)?.isContentEditable
+
+      if (isEditable && !e.ctrlKey && !e.metaKey) return
+
+      e.preventDefault()
+      cycleTab(e.shiftKey ? -1 : 1)
+    }
+
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [cycleTab])
 
   const activeJob = useMemo(
     () => jobs.find(job => job.id === activeJobId) ?? null,

@@ -566,11 +566,11 @@ body{font-family:'Inter',var(--font-sans);color:var(--text-primary);
 .cf-btn-save:hover{box-shadow:var(--shadow-brutal-sm);transform:translate(-1px,-1px)}
 .cf-btn-save:active{transform:translate(0,0);box-shadow:none}
 
-/* 2-col crons layout */
-.crons-page{height:100%;--crons-skills-space:40px}
+/* 3-col crons layout — ocean page */
+.crons-page{height:100%;--crons-skills-space:40px;background:var(--paper)}
 
 .crons-layout{display:flex;height:100%;overflow:hidden;padding-right:var(--crons-skills-space)}
-.crons-list-col{flex-shrink:0;border-right:2px solid var(--ink);display:flex;flex-direction:column;overflow:hidden}
+.crons-list-col{flex-shrink:0;border-right:2px solid var(--ink);display:flex;flex-direction:column;overflow:hidden;background:var(--surface-1)}
 .crons-list-header{height:40px;border-bottom:2px solid var(--border-default);padding:0 12px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
 .crons-list-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--text-tertiary)}
 .cron-list-scroll{flex:1;overflow-y:auto;padding:6px}
@@ -581,7 +581,7 @@ body{font-family:'Inter',var(--font-sans);color:var(--text-primary);
 .resize-handle-vertical:focus-visible{outline:none}
 .resize-grip{position:relative;z-index:1;font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1;color:var(--text-ghost);user-select:none;pointer-events:none}
 .crons-list-resize{border-right:1px solid var(--border-subtle)}
-.crons-main-col{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+.crons-main-col{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0;background:var(--paper)}
 
 /* Right rail (fixed) */
 .crons-skills-rail{position:fixed;top:40px;right:0;bottom:0;width:360px;flex-shrink:0;border-left:2px solid var(--ink);background:var(--surface-1);display:flex;flex-direction:column;overflow:hidden;z-index:70}
@@ -590,14 +590,14 @@ body{font-family:'Inter',var(--font-sans);color:var(--text-primary);
 .skills-rail-handle{height:100%;width:100%;writing-mode:vertical-rl;text-orientation:mixed;background:var(--surface-1);border:none;border-left:0;font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.12em;color:var(--text-tertiary);cursor:pointer;display:flex;align-items:center;justify-content:center;user-select:none}
 .skills-rail-handle:hover{color:var(--coral);background:var(--accent-subtle)}
 .crons-empty{flex:1;display:flex;align-items:center;justify-content:center;color:var(--text-ghost);font-family:'JetBrains Mono',monospace;font-size:12px}
-.crons-detail-topbar{height:40px;border-bottom:2px solid var(--border-default);padding:0 16px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;background:var(--surface-1)}
+.crons-detail-topbar{height:40px;border-bottom:2px solid var(--border-default);padding:0 20px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;background:var(--paper)}
 .cron-topbar-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--text-tertiary)}
 .crons-topbar-left{display:flex;align-items:center;gap:10px}
 .crons-topbar-right{display:flex;align-items:center;gap:8px}
 .cron-detail-wrap{flex:1;display:flex;flex-direction:column;overflow:hidden}
-.cron-detail-body{flex:1;overflow-y:auto;padding:24px 32px;max-width:860px;margin:0 auto;width:100%}
-.cron-detail-inner{width:100%;display:flex;flex-direction:column;gap:18px}
-.cron-name-input{font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:700;border:none;border-bottom:2px solid var(--border-default);background:transparent;width:100%;padding:4px 0;outline:none;color:var(--text-primary);transition:border-color var(--fast)}
+.cron-detail-body{flex:1;overflow-y:auto;padding:32px 48px 48px;max-width:860px;margin:0 auto;width:100%}
+.cron-detail-inner{width:100%;display:flex;flex-direction:column;gap:20px}
+.cron-name-input{font-family:'JetBrains Mono',monospace;font-size:26px;font-weight:700;border:none;border-bottom:2px solid var(--border-default);background:transparent;width:100%;padding:6px 0;outline:none;color:var(--text-primary);transition:border-color var(--fast)}
 .cron-name-input:focus{border-bottom-color:var(--coral)}
 .cron-row-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 .cron-field{display:flex;flex-direction:column;gap:6px}
@@ -606,7 +606,7 @@ body{font-family:'Inter',var(--font-sans);color:var(--text-primary);
 .cron-input:focus{border-color:var(--coral)}
 .cron-select{font-family:'JetBrains Mono',monospace;font-size:12px;padding:7px 10px;background:var(--surface-1);border:2px solid var(--border-default);color:var(--text-primary);outline:none;width:100%;cursor:pointer;transition:border-color var(--fast)}
 .cron-select:focus{border-color:var(--coral)}
-.cron-textarea{resize:vertical;min-height:200px;line-height:1.6;font-size:12px}
+.cron-textarea{resize:vertical;min-height:320px;line-height:1.7;font-size:13px;padding:14px 16px}
 .cron-inline-status{display:flex;align-items:center;gap:8px}
 .cron-inline-text{font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--text-secondary)}
 
@@ -680,7 +680,9 @@ body{font-family:'Inter',var(--font-sans);color:var(--text-primary);
 .skills-preview{display:flex;flex-direction:column;min-width:0;overflow:hidden}
 .skills-preview-header{height:40px;border-bottom:2px solid var(--border-default);padding:0 12px;display:flex;align-items:center;justify-content:space-between}
 .skills-preview-title{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--text-tertiary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.skills-preview-body{flex:1;min-height:0;overflow:auto;padding:12px}
+.skills-preview-body{flex:1;min-height:0;overflow:auto;padding:14px 16px}
+.skills-preview-body .tiptap{overflow:visible}
+.skills-preview-body .tiptap .ProseMirror{padding:0;font-size:12px;line-height:1.6}
 .skills-preview-pre{margin:0;white-space:pre-wrap;word-break:break-word;font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.55;color:var(--text-primary)}
 
 /* always-visible drawer handle */
@@ -695,8 +697,9 @@ body{font-family:'Inter',var(--font-sans);color:var(--text-primary);
 .skill-pill-agents{display:flex;gap:3px}
 
 @media (max-width:900px){
-  .cron-detail-body{padding:16px}
+  .cron-detail-body{padding:20px 16px}
   .cron-row-2{grid-template-columns:1fr}
+  .cron-name-input{font-size:20px}
 }
 
 /* Agent badge (replaces emoji circle) */

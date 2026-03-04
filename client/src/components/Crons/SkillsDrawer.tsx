@@ -1,4 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
+import { EditorContent, useEditor } from '@tiptap/react'
+import StarterKit from '@tiptap/starter-kit'
+import Link from '@tiptap/extension-link'
+import { Markdown } from '@tiptap/markdown'
 import type { TreeData } from '@/types'
 
 type SkillsDrawerProps = {
@@ -47,6 +51,32 @@ function hashColor(seed: string): string {
 
   const hue = Math.abs(hash) % 360
   return `hsl(${hue} 65% 40%)`
+}
+
+function SkillPreviewRenderer({ content }: { content: string }) {
+  const editor = useEditor({
+    immediatelyRender: false,
+    content,
+    contentType: 'markdown',
+    editable: false,
+    extensions: [
+      StarterKit.configure({ heading: { levels: [1, 2, 3] } }),
+      Markdown,
+      Link.configure({ autolink: true, openOnClick: true }),
+    ],
+  })
+
+  useEffect(() => {
+    if (!editor) return
+    try {
+      editor.commands.setContent(content, { contentType: 'markdown' })
+    } catch {
+      // fallback handled by parent
+    }
+  }, [editor, content])
+
+  if (!editor) return null
+  return <EditorContent editor={editor} className="tiptap" />
 }
 
 export function SkillsDrawer({ open, onClose, onInsertSkill }: SkillsDrawerProps) {
@@ -215,8 +245,10 @@ export function SkillsDrawer({ open, onClose, onInsertSkill }: SkillsDrawerProps
           <div className="skills-preview-body">
             {previewLoading ? (
               <div className="crons-loading">Loading...</div>
+            ) : previewContent ? (
+              <SkillPreviewRenderer content={previewContent} />
             ) : (
-              <pre className="skills-preview-pre">{previewContent}</pre>
+              <div className="crons-loading">Select a skill to preview</div>
             )}
           </div>
         </div>
