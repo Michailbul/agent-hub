@@ -1,0 +1,385 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   VARIANT 1: "Glass: Paper Warm" (.cl-glass-1)
+   macOS Liquid Glass with warm brand tones on #fffaf5 paper canvas.
+   Overrides v7-clay.css — scope every selector with .cl-glass-1
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Canvas ── */
+.cl-canvas.cl-glass-1 { background: #fffaf5; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', system-ui, sans-serif; letter-spacing: -0.01em; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+
+/* Grid underlay — very faint warm dots */
+.cl-canvas.cl-glass-1::before { background-image: radial-gradient(circle, rgba(32,23,16,0.045) 1px, transparent 1px); background-size: 24px 24px; }
+
+/* ── Panels container ── */
+.cl-glass-1 .cl-panels { gap: 16px; }
+
+/* ── Base panel ── */
+.cl-glass-1 .cl-panel { background: rgba(255,250,245,0.72); border: 1px solid rgba(32,23,16,0.06); border-radius: 14px; box-shadow: 0 2px 12px rgba(32,23,16,0.06), 0 0 0 0.5px rgba(32,23,16,0.04); backdrop-filter: blur(40px) saturate(180%); -webkit-backdrop-filter: blur(40px) saturate(180%); transition: opacity 200ms ease-out, transform 200ms ease-out, border-color 200ms ease-out, box-shadow 200ms ease-out; }
+.cl-glass-1 .cl-panel.cl-visible { opacity: 1; transform: translateY(0); }
+.cl-glass-1 .cl-panel.cl-focused { border-color: rgba(255,122,100,0.3); box-shadow: 0 4px 24px rgba(255,122,100,0.1), 0 0 0 0.5px rgba(255,122,100,0.15); transform: translateY(-1px); }
+.cl-glass-1 .cl-panel.cl-dimmed { opacity: 0.5; }
+
+/* ── Panel header ── */
+.cl-glass-1 .cl-panel-header { background: rgba(255,122,100,0.06); border-bottom: 1px solid rgba(32,23,16,0.05); backdrop-filter: blur(20px) saturate(150%); -webkit-backdrop-filter: blur(20px) saturate(150%); padding: 14px 20px; }
+.cl-glass-1 .cl-panel-title-row { gap: 8px; }
+.cl-glass-1 .cl-panel-icon { color: #ff7a64; }
+.cl-glass-1 .cl-panel-title { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: #ff7a64; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif; }
+.cl-glass-1 .cl-panel-badge { font-size: 10px; font-weight: 600; font-family: 'SF Mono', ui-monospace, monospace; color: #ff7a64; background: rgba(255,122,100,0.08); border: 1px solid rgba(255,122,100,0.12); border-radius: 20px; padding: 3px 10px; letter-spacing: 0.02em; }
+
+/* ═══ Navigator Panel ═══ */
+.cl-glass-1 .cl-nav { width: 300px; min-width: 300px; }
+
+/* ── Nav controls ── */
+.cl-glass-1 .cl-nav-controls { padding: 14px 20px 0; gap: 12px; }
+.cl-glass-1 .cl-nav-tabs { border-bottom: 1px solid rgba(32,23,16,0.08); }
+.cl-glass-1 .cl-nav-tab { font-size: 12px; font-weight: 600; color: #ab9381; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif; letter-spacing: -0.01em; transition: color 200ms ease-out; }
+.cl-glass-1 .cl-nav-tab:hover { color: #7d6755; }
+.cl-glass-1 .cl-nav-tab.active { color: #ff7a64; }
+.cl-glass-1 .cl-nav-tab.active::after { height: 2px; background: #ff7a64; border-radius: 1px; bottom: -1px; }
+
+/* ── Search bar ── */
+.cl-glass-1 .cl-search-bar { background: rgba(255,250,245,0.6); border: 1px solid rgba(32,23,16,0.08); border-radius: 10px; backdrop-filter: blur(20px) saturate(150%); -webkit-backdrop-filter: blur(20px) saturate(150%); transition: border-color 200ms ease-out, box-shadow 200ms ease-out, background 200ms ease-out; }
+.cl-glass-1 .cl-search-bar:focus-within { border-color: rgba(255,122,100,0.3); box-shadow: 0 0 0 3px rgba(255,122,100,0.08); background: rgba(255,252,250,0.85); }
+.cl-glass-1 .cl-search-icon { color: #ab9381; }
+.cl-glass-1 .cl-search-input { color: #201710; font-size: 13px; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif; }
+.cl-glass-1 .cl-search-input::placeholder { color: #ab9381; }
+.cl-glass-1 .cl-search-clear { color: #ab9381; font-weight: 600; transition: color 200ms ease-out; }
+.cl-glass-1 .cl-search-clear:hover { color: #ff7a64; }
+
+/* ── Nav tree ── */
+.cl-glass-1 .cl-nav-tree { padding: 8px 0; }
+.cl-glass-1 .cl-nav-tree::-webkit-scrollbar { width: 6px; }
+.cl-glass-1 .cl-nav-tree::-webkit-scrollbar-track { background: transparent; }
+.cl-glass-1 .cl-nav-tree::-webkit-scrollbar-thumb { background: rgba(32,23,16,0.1); border-radius: 3px; }
+.cl-glass-1 .cl-nav-tree::-webkit-scrollbar-thumb:hover { background: rgba(32,23,16,0.18); }
+
+/* ── Agent rows ── */
+.cl-glass-1 .cl-agent-group { margin-bottom: 1px; }
+.cl-glass-1 .cl-agent-row { color: #7d6755; border-left: 3px solid transparent; transition: all 200ms ease-out; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif; border-radius: 0 8px 8px 0; margin-right: 8px; }
+.cl-glass-1 .cl-agent-row:hover { background: rgba(255,122,100,0.04); }
+.cl-glass-1 .cl-agent-row.expanded { color: #201710; background: rgba(255,122,100,0.08); border-left-color: #ff7a64; }
+.cl-glass-1 .cl-chevron-icon { color: #ab9381; transition: transform 200ms ease-out, color 200ms ease-out; }
+.cl-glass-1 .cl-chevron-icon.open { color: #ff7a64; }
+.cl-glass-1 .cl-agent-emoji { font-size: 16px; }
+.cl-glass-1 .cl-agent-info { gap: 2px; }
+.cl-glass-1 .cl-agent-name { font-size: 13px; font-weight: 600; color: inherit; }
+.cl-glass-1 .cl-agent-path { font-size: 10px; font-family: 'SF Mono', ui-monospace, monospace; color: #ab9381; }
+.cl-glass-1 .cl-agent-count { font-size: 10px; font-family: 'SF Mono', ui-monospace, monospace; color: #ff7a64; font-weight: 600; }
+
+/* ── Skill list ── */
+.cl-glass-1 .cl-skill-list { padding-left: 0; }
+.cl-glass-1 .cl-skill-row { color: #7d6755; border-left: 3px solid transparent; transition: all 200ms ease-out; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif; border-radius: 0 8px 8px 0; margin-right: 8px; }
+.cl-glass-1 .cl-skill-row:hover { background: rgba(255,122,100,0.04); color: #201710; }
+.cl-glass-1 .cl-skill-row.active { background: rgba(255,122,100,0.08); color: #201710; border-left-color: #ff7a64; }
+.cl-glass-1 .cl-skill-indicator { border-radius: 50%; background: rgba(32,23,16,0.12); transition: background 200ms ease-out, box-shadow 200ms ease-out; }
+.cl-glass-1 .cl-skill-row.active .cl-skill-indicator { background: #ff7a64; box-shadow: 0 0 6px rgba(255,122,100,0.3); }
+.cl-glass-1 .cl-skill-name { font-size: 12px; font-weight: 400; }
+.cl-glass-1 .cl-skill-dept-label { font-size: 10px; font-family: 'SF Mono', ui-monospace, monospace; color: #ab9381; }
+.cl-glass-1 .cl-no-results { font-size: 11px; color: #ab9381; }
+.cl-glass-1 .cl-show-more { font-size: 11px; font-family: 'SF Mono', ui-monospace, monospace; text-transform: uppercase; letter-spacing: 0.05em; color: #ff7a64; opacity: 0.7; }
+.cl-glass-1 .cl-show-more:hover { opacity: 1; }
+
+/* ── Source rows ── */
+.cl-glass-1 .cl-source-group { margin-bottom: 1px; }
+.cl-glass-1 .cl-source-row { color: #7d6755; border-left: 3px solid transparent; transition: all 200ms ease-out; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif; }
+.cl-glass-1 .cl-source-row:hover { background: rgba(255,122,100,0.04); }
+.cl-glass-1 .cl-source-row.active { background: rgba(255,122,100,0.08); color: #201710; border-left-color: #ff7a64; }
+.cl-glass-1 .cl-source-dot { border-radius: 50%; }
+.cl-glass-1 .cl-source-name { font-size: 12px; font-weight: 600; }
+.cl-glass-1 .cl-source-count { font-size: 10px; font-family: 'SF Mono', ui-monospace, monospace; color: #ff7a64; font-weight: 600; }
+
+/* ── Department pills footer ── */
+.cl-glass-1 .cl-nav-depts { border-top: 1px solid rgba(32,23,16,0.06); }
+.cl-glass-1 .cl-dept-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: #ff7a64; font-family: 'SF Mono', ui-monospace, monospace; }
+.cl-glass-1 .cl-dept-pills { gap: 6px; }
+.cl-glass-1 .cl-dept-pill { background: rgba(255,250,245,0.6); border: 1px solid rgba(32,23,16,0.08); border-radius: 20px; padding: 5px 12px; font-size: 11px; font-weight: 600; color: #7d6755; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif; backdrop-filter: blur(12px) saturate(150%); -webkit-backdrop-filter: blur(12px) saturate(150%); transition: all 200ms ease-out; }
+.cl-glass-1 .cl-dept-pill:hover { border-color: rgba(255,122,100,0.25); color: #201710; background: rgba(255,250,245,0.8); transform: translateY(-1px); box-shadow: 0 2px 8px rgba(32,23,16,0.06); }
+.cl-glass-1 .cl-dept-pill.active { background: rgba(255,122,100,0.12); border-color: rgba(255,122,100,0.2); color: #ff7a64; box-shadow: 0 2px 8px rgba(255,122,100,0.08); }
+.cl-glass-1 .cl-dept-count { font-size: 10px; font-family: 'SF Mono', ui-monospace, monospace; color: #ab9381; }
+.cl-glass-1 .cl-dept-pill.active .cl-dept-count { color: rgba(255,122,100,0.6); }
+
+/* ═══ Editor Panel ═══ */
+.cl-glass-1 .cl-editor-panel { flex: 1; min-width: 0; }
+.cl-glass-1 .cl-editor-header { background: rgba(255,122,100,0.06); border-bottom: 1px solid rgba(32,23,16,0.05); backdrop-filter: blur(20px) saturate(150%); -webkit-backdrop-filter: blur(20px) saturate(150%); padding: 14px 20px; }
+.cl-glass-1 .cl-back-btn { background: rgba(255,250,245,0.7); border: 1px solid rgba(32,23,16,0.08); border-radius: 8px; color: #ff7a64; transition: all 200ms ease-out; }
+.cl-glass-1 .cl-back-btn:hover { background: rgba(255,250,245,0.9); transform: translateY(-1px); box-shadow: 0 2px 8px rgba(32,23,16,0.06); }
+.cl-glass-1 .cl-filename-area { gap: 12px; }
+.cl-glass-1 .cl-filename { font-size: 13px; font-weight: 700; font-family: 'SF Mono', ui-monospace, monospace; color: #ff7a64; letter-spacing: 0.02em; text-transform: uppercase; }
+.cl-glass-1 .cl-file-meta { font-size: 12px; color: #ab9381; font-weight: 500; }
+
+/* ── CodeMirror wrapper ── */
+.cl-glass-1 .cl-cm-wrap { height: 100%; }
+.cl-glass-1 .cl-cm-status { font-size: 10px; font-family: 'SF Mono', ui-monospace, monospace; color: #ab9381; border-bottom: 1px solid rgba(32,23,16,0.06); text-transform: uppercase; letter-spacing: 0.05em; }
+.cl-glass-1 .cl-unsaved-dot { border-radius: 4px; background: #ff7a64; }
+.cl-glass-1 .cl-saved-flash { color: #ff7a64; font-weight: 600; }
+.cl-glass-1 .cl-cm-path { color: #ab9381; }
+.cl-glass-1 .cl-cm-editor { flex: 1; }
+.cl-glass-1 .cl-cm-editor .cm-editor { height: 100%; }
+.cl-glass-1 .cl-editor-loading { color: #ab9381; }
+
+/* ═══ Welcome State ═══ */
+.cl-glass-1 .cl-welcome { transition: opacity 200ms ease-out, transform 200ms ease-out; }
+.cl-glass-1 .cl-welcome.cl-visible { opacity: 1; transform: translateY(0); }
+.cl-glass-1 .cl-welcome-inner { max-width: 420px; }
+.cl-glass-1 .cl-welcome-icon { color: #ff7a64; }
+.cl-glass-1 .cl-welcome-title { font-size: 32px; font-weight: 700; color: #201710; letter-spacing: -0.03em; text-transform: none; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif; text-shadow: none; }
+.cl-glass-1 .cl-welcome-sub { font-size: 13px; color: #7d6755; line-height: 1.6; }
+.cl-glass-1 .cl-welcome-stats { gap: 10px; }
+.cl-glass-1 .cl-stat { font-size: 11px; font-family: 'SF Mono', ui-monospace, monospace; color: #ff7a64; font-weight: 600; letter-spacing: 0.02em; text-transform: uppercase; padding: 6px 14px; background: rgba(255,122,100,0.06); border: 1px solid rgba(255,122,100,0.12); border-radius: 20px; }
+.cl-glass-1 .cl-stat-sep { display: none; }
+
+/* ═══ Inspector Panel ═══ */
+.cl-glass-1 .cl-meta-panel { width: 320px; min-width: 320px; }
+
+/* ── Meta sections ── */
+.cl-glass-1 .cl-meta-section { padding: 20px; border-bottom: 1px solid rgba(32,23,16,0.06); }
+.cl-glass-1 .cl-meta-row { padding: 8px 0; }
+.cl-glass-1 .cl-meta-row + .cl-meta-row { border-top: 1px solid rgba(32,23,16,0.04); }
+.cl-glass-1 .cl-meta-key { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: #ff7a64; font-family: 'SF Mono', ui-monospace, monospace; }
+.cl-glass-1 .cl-meta-val { font-size: 12px; color: #7d6755; }
+
+/* ── Meta groups ── */
+.cl-glass-1 .cl-meta-group { padding: 20px; border-bottom: 1px solid rgba(32,23,16,0.06); }
+.cl-glass-1 .cl-meta-group-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: #ff7a64; font-family: 'SF Mono', ui-monospace, monospace; }
+
+/* ── Tags ── */
+.cl-glass-1 .cl-meta-tags { gap: 6px; }
+.cl-glass-1 .cl-tag { font-size: 11px; font-weight: 600; font-family: 'SF Mono', ui-monospace, monospace; color: #7d6755; background: rgba(255,250,245,0.6); border: 1px solid rgba(32,23,16,0.08); border-radius: 20px; padding: 4px 12px; backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+
+/* ── Agent badges ── */
+.cl-glass-1 .cl-meta-agents { gap: 6px; }
+.cl-glass-1 .cl-agent-badge { font-size: 12px; font-weight: 600; color: #7d6755; background: rgba(255,250,245,0.6); border: 1px solid rgba(32,23,16,0.08); border-radius: 20px; padding: 6px 14px; backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+.cl-glass-1 .cl-agent-badge-emoji { font-size: 14px; }
+.cl-glass-1 .cl-meta-empty { font-size: 11px; color: #ab9381; font-style: italic; }
+
+/* ── Source presence ── */
+.cl-glass-1 .cl-meta-sources { gap: 0; }
+.cl-glass-1 .cl-meta-source-row { gap: 10px; padding: 8px 0; }
+.cl-glass-1 .cl-meta-source-row + .cl-meta-source-row { border-top: 1px solid rgba(32,23,16,0.04); }
+.cl-glass-1 .cl-meta-source-dot { border-radius: 50%; }
+.cl-glass-1 .cl-meta-source-name { font-size: 12px; color: #7d6755; }
+.cl-glass-1 .cl-meta-source-kind { font-size: 10px; font-family: 'SF Mono', ui-monospace, monospace; color: #ab9381; text-transform: uppercase; letter-spacing: 0.05em; }
+.cl-glass-1 .cl-meta-source-kind.canonical { color: #ff7a64; }
+.cl-glass-1 .cl-meta-source-kind.symlink { color: #7d6755; }
+.cl-glass-1 .cl-meta-source-kind.copy { color: #7d6755; }
+.cl-glass-1 .cl-meta-source-kind.absent { color: #ab9381; }
+
+/* ── Action grid ── */
+.cl-glass-1 .cl-meta-actions { padding: 20px; }
+.cl-glass-1 .cl-action-grid { gap: 8px; }
+.cl-glass-1 .cl-action-btn { padding: 10px 12px; background: rgba(255,250,245,0.6); border: 1px solid rgba(32,23,16,0.08); border-radius: 10px; color: #7d6755; font-size: 12px; font-weight: 600; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif; text-transform: none; letter-spacing: 0; backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); transition: all 200ms ease-out; }
+.cl-glass-1 .cl-action-btn:hover { border-color: rgba(255,122,100,0.2); color: #201710; background: rgba(255,250,245,0.85); transform: translateY(-1px); box-shadow: 0 2px 8px rgba(32,23,16,0.06); }
+.cl-glass-1 .cl-action-btn.cl-action-primary { background: rgba(255,122,100,0.12); border-color: rgba(255,122,100,0.2); color: #ff7a64; box-shadow: 0 2px 8px rgba(255,122,100,0.08); }
+.cl-glass-1 .cl-action-btn.cl-action-primary:hover { background: rgba(255,122,100,0.18); transform: translateY(-1px); box-shadow: 0 4px 14px rgba(255,122,100,0.12); }
+.cl-glass-1 .cl-action-btn.cl-action-danger { color: #ab9381; }
+.cl-glass-1 .cl-action-btn.cl-action-danger:hover { color: #ef4444; border-color: rgba(239,68,68,0.2); box-shadow: 0 2px 8px rgba(239,68,68,0.06); }
+.cl-glass-1 .cl-action-label { font-size: 11px; font-weight: 600; letter-spacing: 0; }
+
+/* ═══ Loading & Error States ═══ */
+.cl-glass-1 .cl-loading-state { color: #ab9381; font-size: 13px; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif; text-transform: none; letter-spacing: 0; }
+.cl-glass-1 .cl-loading-state.cl-error { color: #ef4444; }
+.cl-glass-1 .cl-loading-spinner { border: 2px solid rgba(32,23,16,0.08); border-top-color: #ff7a64; border-radius: 50%; animation: cl-spin 800ms ease-in-out infinite; }
+
+/* ═══ Scrollbar styling ═══ */
+.cl-glass-1 .cl-meta-panel::-webkit-scrollbar, .cl-glass-1 .cl-editor-body::-webkit-scrollbar { width: 6px; }
+.cl-glass-1 .cl-meta-panel::-webkit-scrollbar-track, .cl-glass-1 .cl-editor-body::-webkit-scrollbar-track { background: transparent; }
+.cl-glass-1 .cl-meta-panel::-webkit-scrollbar-thumb, .cl-glass-1 .cl-editor-body::-webkit-scrollbar-thumb { background: rgba(32,23,16,0.1); border-radius: 3px; }
+.cl-glass-1 .cl-meta-panel::-webkit-scrollbar-thumb:hover, .cl-glass-1 .cl-editor-body::-webkit-scrollbar-thumb:hover { background: rgba(32,23,16,0.18); }
+
+/* ═══ Top Bar — warm glass adaptation ═══ */
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   VARIANT 2: "Glass: Cool System" (.cl-glass-2)
+   macOS Liquid Glass — closest to Finder / System Preferences.
+   System blue #007AFF accent on #f5f5f5 canvas.
+   Overrides v7-clay.css — scope every selector with .cl-glass-2
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Canvas ── */
+.cl-canvas.cl-glass-2 { background: #f5f5f5; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', system-ui, sans-serif; letter-spacing: -0.01em; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+
+/* Grid underlay — removed */
+.cl-canvas.cl-glass-2::before { background-image: none; background: none; }
+
+/* ── Panels container ── */
+.cl-glass-2 .cl-panels { gap: 14px; }
+
+/* ── Base panel ── */
+.cl-glass-2 .cl-panel { background: rgba(246,246,246,0.72); border: 1px solid rgba(0,0,0,0.06); border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 0 0 0.5px rgba(0,0,0,0.04); backdrop-filter: blur(40px) saturate(180%); -webkit-backdrop-filter: blur(40px) saturate(180%); transition: opacity 200ms ease-out, transform 200ms ease-out, border-color 200ms ease-out, box-shadow 200ms ease-out; }
+.cl-glass-2 .cl-panel.cl-visible { opacity: 1; transform: translateY(0); }
+.cl-glass-2 .cl-panel.cl-focused { border-color: rgba(0,122,255,0.2); box-shadow: 0 4px 20px rgba(0,122,255,0.08), 0 0 0 0.5px rgba(0,122,255,0.12); transform: translateY(-1px); }
+.cl-glass-2 .cl-panel.cl-dimmed { opacity: 0.5; }
+
+/* ── Panel header ── */
+.cl-glass-2 .cl-panel-header { background: rgba(0,122,255,0.04); border-bottom: 1px solid rgba(0,0,0,0.05); backdrop-filter: blur(20px) saturate(150%); -webkit-backdrop-filter: blur(20px) saturate(150%); padding: 14px 20px; }
+.cl-glass-2 .cl-panel-title-row { gap: 8px; }
+.cl-glass-2 .cl-panel-icon { color: #007AFF; }
+.cl-glass-2 .cl-panel-title { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: #007AFF; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif; }
+.cl-glass-2 .cl-panel-badge { font-size: 10px; font-weight: 600; font-family: 'SF Mono', ui-monospace, monospace; color: #007AFF; background: rgba(0,122,255,0.06); border: 1px solid rgba(0,122,255,0.1); border-radius: 20px; padding: 3px 10px; letter-spacing: 0.02em; }
+
+/* ═══ Navigator Panel ═══ */
+.cl-glass-2 .cl-nav { width: 300px; min-width: 300px; }
+
+/* ── Nav controls ── */
+.cl-glass-2 .cl-nav-controls { padding: 14px 20px 0; gap: 12px; }
+.cl-glass-2 .cl-nav-tabs { border-bottom: 1px solid rgba(0,0,0,0.06); }
+.cl-glass-2 .cl-nav-tab { font-size: 12px; font-weight: 600; color: #aeaeb2; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif; letter-spacing: -0.01em; transition: color 200ms ease-out; }
+.cl-glass-2 .cl-nav-tab:hover { color: #6e6e73; }
+.cl-glass-2 .cl-nav-tab.active { color: #007AFF; }
+.cl-glass-2 .cl-nav-tab.active::after { height: 2px; background: #007AFF; border-radius: 1px; bottom: -1px; }
+
+/* ── Search bar ── */
+.cl-glass-2 .cl-search-bar { background: rgba(246,246,246,0.6); border: 1px solid rgba(0,0,0,0.06); border-radius: 8px; backdrop-filter: blur(20px) saturate(150%); -webkit-backdrop-filter: blur(20px) saturate(150%); transition: border-color 200ms ease-out, box-shadow 200ms ease-out, background 200ms ease-out; }
+.cl-glass-2 .cl-search-bar:focus-within { border-color: rgba(0,122,255,0.3); box-shadow: 0 0 0 3px rgba(0,122,255,0.1); background: rgba(255,255,255,0.85); }
+.cl-glass-2 .cl-search-icon { color: #aeaeb2; }
+.cl-glass-2 .cl-search-input { color: #1d1d1f; font-size: 13px; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif; }
+.cl-glass-2 .cl-search-input::placeholder { color: #aeaeb2; }
+.cl-glass-2 .cl-search-clear { color: #aeaeb2; font-weight: 600; transition: color 200ms ease-out; }
+.cl-glass-2 .cl-search-clear:hover { color: #007AFF; }
+
+/* ── Nav tree ── */
+.cl-glass-2 .cl-nav-tree { padding: 8px 0; }
+.cl-glass-2 .cl-nav-tree::-webkit-scrollbar { width: 6px; }
+.cl-glass-2 .cl-nav-tree::-webkit-scrollbar-track { background: transparent; }
+.cl-glass-2 .cl-nav-tree::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 3px; }
+.cl-glass-2 .cl-nav-tree::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.18); }
+
+/* ── Agent rows ── */
+.cl-glass-2 .cl-agent-group { margin-bottom: 1px; }
+.cl-glass-2 .cl-agent-row { color: #6e6e73; border-left: 3px solid transparent; transition: all 200ms ease-out; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif; border-radius: 0 8px 8px 0; margin-right: 8px; }
+.cl-glass-2 .cl-agent-row:hover { background: rgba(0,122,255,0.04); }
+.cl-glass-2 .cl-agent-row.expanded { color: #1d1d1f; background: rgba(0,122,255,0.08); border-left-color: #007AFF; }
+.cl-glass-2 .cl-chevron-icon { color: #aeaeb2; transition: transform 200ms ease-out, color 200ms ease-out; }
+.cl-glass-2 .cl-chevron-icon.open { color: #007AFF; }
+.cl-glass-2 .cl-agent-emoji { font-size: 16px; }
+.cl-glass-2 .cl-agent-info { gap: 2px; }
+.cl-glass-2 .cl-agent-name { font-size: 13px; font-weight: 600; color: inherit; }
+.cl-glass-2 .cl-agent-path { font-size: 10px; font-family: 'SF Mono', ui-monospace, monospace; color: #aeaeb2; }
+.cl-glass-2 .cl-agent-count { font-size: 10px; font-family: 'SF Mono', ui-monospace, monospace; color: #007AFF; font-weight: 600; }
+
+/* ── Skill list ── */
+.cl-glass-2 .cl-skill-list { padding-left: 0; }
+.cl-glass-2 .cl-skill-row { color: #6e6e73; border-left: 3px solid transparent; transition: all 200ms ease-out; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif; border-radius: 0 8px 8px 0; margin-right: 8px; }
+.cl-glass-2 .cl-skill-row:hover { background: rgba(0,122,255,0.04); color: #1d1d1f; transform: translateY(-1px); }
+.cl-glass-2 .cl-skill-row:active { transform: scale(0.98); }
+.cl-glass-2 .cl-skill-row.active { background: rgba(0,122,255,0.08); color: #1d1d1f; border-left-color: #007AFF; }
+.cl-glass-2 .cl-skill-indicator { border-radius: 50%; background: rgba(0,0,0,0.1); transition: background 200ms ease-out, box-shadow 200ms ease-out; }
+.cl-glass-2 .cl-skill-row.active .cl-skill-indicator { background: #007AFF; box-shadow: 0 0 6px rgba(0,122,255,0.3); }
+.cl-glass-2 .cl-skill-name { font-size: 12px; font-weight: 400; }
+.cl-glass-2 .cl-skill-dept-label { font-size: 10px; font-family: 'SF Mono', ui-monospace, monospace; color: #aeaeb2; }
+.cl-glass-2 .cl-no-results { font-size: 11px; color: #aeaeb2; }
+.cl-glass-2 .cl-show-more { font-size: 11px; font-family: 'SF Mono', ui-monospace, monospace; text-transform: uppercase; letter-spacing: 0.05em; color: #007AFF; opacity: 0.7; }
+.cl-glass-2 .cl-show-more:hover { opacity: 1; }
+
+/* ── Source rows ── */
+.cl-glass-2 .cl-source-group { margin-bottom: 1px; }
+.cl-glass-2 .cl-source-row { color: #6e6e73; border-left: 3px solid transparent; transition: all 200ms ease-out; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif; }
+.cl-glass-2 .cl-source-row:hover { background: rgba(0,122,255,0.04); }
+.cl-glass-2 .cl-source-row.active { background: rgba(0,122,255,0.08); color: #1d1d1f; border-left-color: #007AFF; }
+.cl-glass-2 .cl-source-dot { border-radius: 50%; }
+.cl-glass-2 .cl-source-name { font-size: 12px; font-weight: 600; }
+.cl-glass-2 .cl-source-count { font-size: 10px; font-family: 'SF Mono', ui-monospace, monospace; color: #007AFF; font-weight: 600; }
+
+/* ── Department pills footer ── */
+.cl-glass-2 .cl-nav-depts { border-top: 1px solid rgba(0,0,0,0.06); }
+.cl-glass-2 .cl-dept-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: #007AFF; font-family: 'SF Mono', ui-monospace, monospace; }
+.cl-glass-2 .cl-dept-pills { gap: 6px; }
+.cl-glass-2 .cl-dept-pill { background: rgba(246,246,246,0.6); border: 1px solid rgba(0,0,0,0.06); border-radius: 20px; padding: 5px 12px; font-size: 11px; font-weight: 600; color: #6e6e73; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif; backdrop-filter: blur(12px) saturate(150%); -webkit-backdrop-filter: blur(12px) saturate(150%); transition: all 200ms ease-out; }
+.cl-glass-2 .cl-dept-pill:hover { border-color: rgba(0,122,255,0.15); color: #1d1d1f; background: rgba(246,246,246,0.82); transform: translateY(-1px); box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+.cl-glass-2 .cl-dept-pill.active { background: rgba(0,122,255,0.1); border-color: rgba(0,122,255,0.15); color: #007AFF; box-shadow: 0 2px 8px rgba(0,122,255,0.06); }
+.cl-glass-2 .cl-dept-count { font-size: 10px; font-family: 'SF Mono', ui-monospace, monospace; color: #aeaeb2; }
+.cl-glass-2 .cl-dept-pill.active .cl-dept-count { color: rgba(0,122,255,0.5); }
+
+/* ═══ Editor Panel ═══ */
+.cl-glass-2 .cl-editor-panel { flex: 1; min-width: 0; }
+.cl-glass-2 .cl-editor-header { background: rgba(0,122,255,0.04); border-bottom: 1px solid rgba(0,0,0,0.05); backdrop-filter: blur(20px) saturate(150%); -webkit-backdrop-filter: blur(20px) saturate(150%); padding: 14px 20px; }
+.cl-glass-2 .cl-back-btn { background: rgba(246,246,246,0.7); border: 1px solid rgba(0,0,0,0.06); border-radius: 8px; color: #007AFF; transition: all 200ms ease-out; }
+.cl-glass-2 .cl-back-btn:hover { background: rgba(246,246,246,0.9); transform: translateY(-1px); box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+.cl-glass-2 .cl-filename-area { gap: 12px; }
+.cl-glass-2 .cl-filename { font-size: 13px; font-weight: 700; font-family: 'SF Mono', ui-monospace, monospace; color: #007AFF; letter-spacing: 0.02em; text-transform: uppercase; }
+.cl-glass-2 .cl-file-meta { font-size: 12px; color: #aeaeb2; font-weight: 500; }
+
+/* ── CodeMirror wrapper ── */
+.cl-glass-2 .cl-cm-wrap { height: 100%; }
+.cl-glass-2 .cl-cm-status { font-size: 10px; font-family: 'SF Mono', ui-monospace, monospace; color: #aeaeb2; border-bottom: 1px solid rgba(0,0,0,0.05); text-transform: uppercase; letter-spacing: 0.05em; }
+.cl-glass-2 .cl-unsaved-dot { border-radius: 4px; background: #007AFF; }
+.cl-glass-2 .cl-saved-flash { color: #007AFF; font-weight: 600; }
+.cl-glass-2 .cl-cm-path { color: #aeaeb2; }
+.cl-glass-2 .cl-cm-editor { flex: 1; }
+.cl-glass-2 .cl-cm-editor .cm-editor { height: 100%; }
+.cl-glass-2 .cl-editor-loading { color: #aeaeb2; }
+
+/* ═══ Welcome State ═══ */
+.cl-glass-2 .cl-welcome { transition: opacity 200ms ease-out, transform 200ms ease-out; }
+.cl-glass-2 .cl-welcome.cl-visible { opacity: 1; transform: translateY(0); }
+.cl-glass-2 .cl-welcome-inner { max-width: 420px; }
+.cl-glass-2 .cl-welcome-icon { color: #007AFF; }
+.cl-glass-2 .cl-welcome-title { font-size: 32px; font-weight: 700; color: #1d1d1f; letter-spacing: -0.03em; text-transform: none; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif; text-shadow: none; }
+.cl-glass-2 .cl-welcome-sub { font-size: 13px; color: #6e6e73; line-height: 1.6; }
+.cl-glass-2 .cl-welcome-stats { gap: 10px; }
+.cl-glass-2 .cl-stat { font-size: 11px; font-family: 'SF Mono', ui-monospace, monospace; color: #007AFF; font-weight: 600; letter-spacing: 0.02em; text-transform: uppercase; padding: 6px 14px; background: rgba(0,122,255,0.05); border: 1px solid rgba(0,122,255,0.1); border-radius: 20px; }
+.cl-glass-2 .cl-stat-sep { display: none; }
+
+/* ═══ Inspector Panel ═══ */
+.cl-glass-2 .cl-meta-panel { width: 320px; min-width: 320px; }
+
+/* ── Meta sections ── */
+.cl-glass-2 .cl-meta-section { padding: 20px; border-bottom: 1px solid rgba(0,0,0,0.05); }
+.cl-glass-2 .cl-meta-row { padding: 8px 0; }
+.cl-glass-2 .cl-meta-row + .cl-meta-row { border-top: 1px solid rgba(0,0,0,0.04); }
+.cl-glass-2 .cl-meta-key { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: #007AFF; font-family: 'SF Mono', ui-monospace, monospace; }
+.cl-glass-2 .cl-meta-val { font-size: 12px; color: #6e6e73; }
+
+/* ── Meta groups ── */
+.cl-glass-2 .cl-meta-group { padding: 20px; border-bottom: 1px solid rgba(0,0,0,0.05); }
+.cl-glass-2 .cl-meta-group-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: #007AFF; font-family: 'SF Mono', ui-monospace, monospace; }
+
+/* ── Tags ── */
+.cl-glass-2 .cl-meta-tags { gap: 6px; }
+.cl-glass-2 .cl-tag { font-size: 11px; font-weight: 500; font-family: 'SF Mono', ui-monospace, monospace; color: #6e6e73; background: rgba(246,246,246,0.6); border: 1px solid rgba(0,0,0,0.06); border-radius: 20px; padding: 4px 12px; backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+
+/* ── Agent badges ── */
+.cl-glass-2 .cl-meta-agents { gap: 6px; }
+.cl-glass-2 .cl-agent-badge { font-size: 12px; font-weight: 600; color: #6e6e73; background: rgba(246,246,246,0.6); border: 1px solid rgba(0,0,0,0.06); border-radius: 20px; padding: 6px 14px; backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+.cl-glass-2 .cl-agent-badge-emoji { font-size: 14px; }
+.cl-glass-2 .cl-meta-empty { font-size: 11px; color: #aeaeb2; font-style: italic; }
+
+/* ── Source presence ── */
+.cl-glass-2 .cl-meta-sources { gap: 0; }
+.cl-glass-2 .cl-meta-source-row { gap: 10px; padding: 8px 0; }
+.cl-glass-2 .cl-meta-source-row + .cl-meta-source-row { border-top: 1px solid rgba(0,0,0,0.04); }
+.cl-glass-2 .cl-meta-source-dot { border-radius: 50%; }
+.cl-glass-2 .cl-meta-source-name { font-size: 12px; color: #6e6e73; }
+.cl-glass-2 .cl-meta-source-kind { font-size: 10px; font-family: 'SF Mono', ui-monospace, monospace; color: #aeaeb2; text-transform: uppercase; letter-spacing: 0.05em; }
+.cl-glass-2 .cl-meta-source-kind.canonical { color: #007AFF; }
+.cl-glass-2 .cl-meta-source-kind.symlink { color: #6e6e73; }
+.cl-glass-2 .cl-meta-source-kind.copy { color: #6e6e73; }
+.cl-glass-2 .cl-meta-source-kind.absent { color: #aeaeb2; }
+
+/* ── Action grid ── */
+.cl-glass-2 .cl-meta-actions { padding: 20px; }
+.cl-glass-2 .cl-action-grid { gap: 8px; }
+.cl-glass-2 .cl-action-btn { padding: 10px 12px; background: rgba(246,246,246,0.6); border: 1px solid rgba(0,0,0,0.06); border-radius: 8px; color: #6e6e73; font-size: 12px; font-weight: 600; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif; text-transform: none; letter-spacing: 0; backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); transition: all 200ms ease-out; }
+.cl-glass-2 .cl-action-btn:hover { border-color: rgba(0,122,255,0.15); color: #1d1d1f; background: rgba(246,246,246,0.85); transform: translateY(-1px); box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+.cl-glass-2 .cl-action-btn:active { transform: scale(0.98); box-shadow: none; }
+.cl-glass-2 .cl-action-btn.cl-action-primary { background: #007AFF; border-color: #007AFF; color: #ffffff; box-shadow: 0 2px 8px rgba(0,122,255,0.2); }
+.cl-glass-2 .cl-action-btn.cl-action-primary:hover { background: #0070ee; transform: translateY(-1px); box-shadow: 0 4px 14px rgba(0,122,255,0.25); }
+.cl-glass-2 .cl-action-btn.cl-action-primary:active { transform: scale(0.98); box-shadow: 0 1px 4px rgba(0,122,255,0.15); }
+.cl-glass-2 .cl-action-btn.cl-action-danger { color: #aeaeb2; }
+.cl-glass-2 .cl-action-btn.cl-action-danger:hover { color: #ff3b30; border-color: rgba(255,59,48,0.2); box-shadow: 0 2px 8px rgba(255,59,48,0.06); }
+.cl-glass-2 .cl-action-label { font-size: 11px; font-weight: 600; letter-spacing: 0; }
+
+/* ═══ Loading & Error States ═══ */
+.cl-glass-2 .cl-loading-state { color: #aeaeb2; font-size: 13px; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif; text-transform: none; letter-spacing: 0; }
+.cl-glass-2 .cl-loading-state.cl-error { color: #ff3b30; }
+.cl-glass-2 .cl-loading-spinner { border: 2px solid rgba(0,0,0,0.06); border-top-color: #007AFF; border-radius: 50%; animation: cl-spin 800ms ease-in-out infinite; }
+
+/* ═══ Scrollbar styling ═══ */
+.cl-glass-2 .cl-meta-panel::-webkit-scrollbar, .cl-glass-2 .cl-editor-body::-webkit-scrollbar { width: 6px; }
+.cl-glass-2 .cl-meta-panel::-webkit-scrollbar-track, .cl-glass-2 .cl-editor-body::-webkit-scrollbar-track { background: transparent; }
+.cl-glass-2 .cl-meta-panel::-webkit-scrollbar-thumb, .cl-glass-2 .cl-editor-body::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 3px; }
+.cl-glass-2 .cl-meta-panel::-webkit-scrollbar-thumb:hover, .cl-glass-2 .cl-editor-body::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.18); }
+
+/* ═══ Top Bar — cool system glass adaptation ═══ */
+.cl-glass-2 .cl-editor-body { overflow-y: auto; }

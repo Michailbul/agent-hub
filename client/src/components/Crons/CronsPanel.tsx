@@ -1,222 +1,106 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
-import type { TreeData } from '@/types'
-import { useResizablePane } from '@/lib/useResizablePane'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useCronsStore } from '@/store/crons'
-import { useLayoutStore } from '@/store/layout'
 import { CronDetail, type CronDetailHandle } from './CronDetail'
-import { CronListItem } from './CronListItem'
-import { SkillsDrawer } from './SkillsDrawer'
-
-function skillFolderName(fullPath: string): string {
-  const chunks = fullPath.split(/[\\/]/).filter(Boolean)
-  return chunks.length >= 2 ? chunks[chunks.length - 2] : chunks[chunks.length - 1]
-}
 
 export function CronsPanel() {
   const detailRef = useRef<CronDetailHandle | null>(null)
 
   const jobs = useCronsStore(state => state.jobs)
   const loading = useCronsStore(state => state.loading)
-  const openJobIds = useCronsStore(state => state.openJobIds)
   const activeJobId = useCronsStore(state => state.activeJobId)
-  const skillsOpen = useCronsStore(state => state.skillsOpen)
   const loadJobs = useCronsStore(state => state.loadJobs)
   const createJob = useCronsStore(state => state.createJob)
   const saveJob = useCronsStore(state => state.saveJob)
   const deleteJob = useCronsStore(state => state.deleteJob)
-  const toggleJobEnabled = useCronsStore(state => state.toggleJobEnabled)
-  const openJob = useCronsStore(state => state.openJob)
-  const closeJob = useCronsStore(state => state.closeJob)
   const setActiveJobId = useCronsStore(state => state.setActiveJobId)
-  const setSkillsOpen = useCronsStore(state => state.setSkillsOpen)
 
-  const listWidth = useLayoutStore(state => state.cronsListWidth)
-  const skillsWidth = useLayoutStore(state => state.cronsSkillsWidth)
-  const setCronsListWidth = useLayoutStore(state => state.setCronsListWidth)
-  const setCronsSkillsWidth = useLayoutStore(state => state.setCronsSkillsWidth)
-  const hydrateFromStorage = useLayoutStore(state => state.hydrateFromStorage)
-
-  const [skillsIndex, setSkillsIndex] = useState<string[]>([])
+  const [skills, setSkills] = useState<string[]>([])
 
   useEffect(() => {
-    hydrateFromStorage()
     void loadJobs()
-  }, [hydrateFromStorage, loadJobs])
+  }, [loadJobs])
 
+  // Lightweight skill names fetch for PromptComposer autocomplete
   useEffect(() => {
-    const loadSkills = async () => {
-      try {
-        const response = await fetch('/api/tree')
-        if (!response.ok) return
-
-        const data = (await response.json()) as TreeData
-        const names = new Set<string>()
-
-        for (const agent of data.agents || []) {
-          for (const skill of agent.skills || []) {
-            names.add(skillFolderName(skill.path))
-          }
-        }
-
-        setSkillsIndex([...names].sort((a, b) => a.localeCompare(b)))
-      } catch {
-        setSkillsIndex([])
-      }
-    }
-
-    void loadSkills()
+    fetch('/api/skills-index')
+      .then(r => r.json())
+      .then(data => setSkills((data.skills || []).map((s: { name: string }) => s.name).sort()))
+      .catch(() => {})
   }, [])
-
-  const { handleProps: listResizeHandle } = useResizablePane({
-    value: listWidth,
-    onChange: setCronsListWidth,
-    min: 180,
-    max: 420,
-    resetTo: 220,
-  })
-
-  const { handleProps: skillsResizeHandle } = useResizablePane({
-    value: skillsWidth,
-    onChange: setCronsSkillsWidth,
-    min: 260,
-    max: 520,
-    enabled: skillsOpen,
-    direction: -1,
-    resetTo: 360,
-  })
-
-  const cycleTab = useCallback((direction: 1 | -1) => {
-    if (openJobIds.length < 2 || !activeJobId) return
-    const idx = openJobIds.indexOf(activeJobId)
-    const next = (idx + direction + openJobIds.length) % openJobIds.length
-    setActiveJobId(openJobIds[next])
-  }, [activeJobId, openJobIds, setActiveJobId])
-
-  useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key !== 'Tab') return
-
-      // Never steal Tab from inputs / textareas / contenteditable
-      const tag = (e.target as HTMLElement)?.tagName
-      const isEditable = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT'
-        || (e.target as HTMLElement)?.isContentEditable
-
-      if (isEditable && !e.ctrlKey && !e.metaKey) return
-
-      e.preventDefault()
-      cycleTab(e.shiftKey ? -1 : 1)
-    }
-
-    window.addEventListener('keydown', onKeyDown)
-    return () => window.removeEventListener('keydown', onKeyDown)
-  }, [cycleTab])
 
   const activeJob = useMemo(
     () => jobs.find(job => job.id === activeJobId) ?? null,
     [activeJobId, jobs],
   )
 
-  const skillsReservedWidth = skillsOpen ? skillsWidth : 40
-  const pageStyle: CSSProperties = {
-    ['--crons-skills-space' as string]: `${skillsReservedWidth}px`,
-  }
+  // Auto-select first job if none active
+  useEffect(() => {
+    if (!activeJobId && jobs.length > 0) {
+      setActiveJobId(jobs[0].id)
+    }
+  }, [activeJobId, jobs, setActiveJobId])
 
   return (
-    <div className={`crons-page${skillsOpen ? ' skills-open' : ' skills-collapsed'}`} style={pageStyle}>
-      <div className="crons-layout">
-        <div className="crons-list-col" style={{ width: `${listWidth}px` }}>
-          <div className="crons-list-header">
-            <span className="crons-list-label">CRON JOBS</span>
-            <button className="crons-new-btn" onClick={() => void createJob()}>+ New</button>
-          </div>
-          <div className="cron-list-scroll">
-            {loading ? (
-              <div className="crons-loading">Loading...</div>
-            ) : jobs.length === 0 ? (
-              <div className="crons-loading">No cron jobs</div>
-            ) : jobs.map(job => (
-              <CronListItem
-                key={job.id}
-                job={job}
-                selected={openJobIds.includes(job.id) && job.id === activeJobId}
-                onSelect={() => openJob(job.id)}
-                onToggle={item => void toggleJobEnabled(item)}
-              />
-            ))}
-          </div>
+    <div className="crons-layout">
+      {/* ── Vertical sidebar ── */}
+      <div className="crons-sidebar">
+        <div className="crons-sidebar-header">
+          <span className="crons-sidebar-title">Cron Jobs</span>
+          <span className="crons-sidebar-count">{jobs.length}</span>
         </div>
-
-        <div className="resize-handle-vertical crons-list-resize" {...listResizeHandle} aria-label="Resize cron list">
-          <span className="resize-grip" aria-hidden="true">⋮</span>
-        </div>
-
-        <div className="crons-main-col">
-          <div className="cron-tabs">
-            {openJobIds.map(id => {
-              const job = jobs.find(entry => entry.id === id)
-              if (!job) return null
-              return (
-                <div
-                  key={id}
-                  className={`cron-tab${id === activeJobId ? ' active' : ''}`}
-                  onClick={() => setActiveJobId(id)}
-                >
-                  <span className="cron-tab-name">{job.name}</span>
-                  <button
-                    className="cron-tab-close"
-                    onClick={event => {
-                      event.stopPropagation()
-                      closeJob(id)
-                    }}
-                  >
-                    ×
-                  </button>
-                </div>
-              )
-            })}
-          </div>
-
-          {activeJob ? (
-            <CronDetail
-              ref={detailRef}
-              job={activeJob}
-              skills={skillsIndex}
-              onOpenSkills={() => setSkillsOpen(true)}
-              onSave={updated => void saveJob(updated)}
-              onDelete={id => void deleteJob(id)}
-            />
-          ) : (
-            <div className="crons-empty">← Select a cron job</div>
-          )}
-        </div>
-
-        <div
-          className={`crons-skills-rail${skillsOpen ? '' : ' collapsed'}`}
-          style={{ width: `${skillsOpen ? skillsWidth : 40}px` }}
-        >
-          {skillsOpen && (
-            <div className="resize-handle-vertical crons-skills-resize" {...skillsResizeHandle} aria-label="Resize skills panel">
-              <span className="resize-grip" aria-hidden="true">⋮</span>
-            </div>
-          )}
-          {skillsOpen ? (
-            <SkillsDrawer
-              open={true}
-              onClose={() => setSkillsOpen(false)}
-              onInsertSkill={name => detailRef.current?.insertSkill(name)}
-            />
-          ) : (
+        <div className="crons-sidebar-items">
+          {loading ? (
+            <span className="crons-sidebar-loading">Loading...</span>
+          ) : jobs.length === 0 ? (
+            <span className="crons-sidebar-empty">No cron jobs yet</span>
+          ) : jobs.map(job => (
             <button
-              type="button"
-              className="skills-rail-handle"
-              onClick={() => setSkillsOpen(true)}
-              aria-label="Open skills"
+              key={job.id}
+              className={`crons-sidebar-item${job.id === activeJobId ? ' active' : ''}`}
+              onClick={() => setActiveJobId(job.id)}
             >
-              SKILLS
+              <span className={`crons-sidebar-dot${job.enabled ? ' on' : ''}`} />
+              <div className="crons-sidebar-item-info">
+                <span className="crons-sidebar-item-name">{job.name}</span>
+                <span className="crons-sidebar-item-schedule">
+                  {job.schedule.kind === 'cron' ? job.schedule.expr : `every ${formatInterval(job.schedule.everyMs)}`}
+                </span>
+              </div>
             </button>
-          )}
+          ))}
         </div>
+        <button className="crons-sidebar-new" onClick={() => void createJob()}>
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1v10M1 6h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+          New Job
+        </button>
+      </div>
+
+      {/* ── Detail area ── */}
+      <div className="crons-body">
+        {activeJob ? (
+          <CronDetail
+            ref={detailRef}
+            job={activeJob}
+            skills={skills}
+            onSave={updated => void saveJob(updated)}
+            onDelete={id => void deleteJob(id)}
+          />
+        ) : (
+          <div className="crons-empty">
+            <span className="crons-empty-icon">⏱</span>
+            <span className="crons-empty-text">
+              {jobs.length === 0 ? 'Create your first cron job' : 'Select a cron job to edit'}
+            </span>
+          </div>
+        )}
       </div>
     </div>
   )
+}
+
+function formatInterval(ms?: number): string {
+  if (!ms) return '1m'
+  if (ms % 86400000 === 0) return `${ms / 86400000}d`
+  if (ms % 3600000 === 0) return `${ms / 3600000}h`
+  return `${Math.round(ms / 60000)}m`
 }

@@ -27,7 +27,6 @@ interface CronsStore {
   loading: boolean
   openJobIds: string[]
   activeJobId: string | null
-  skillsOpen: boolean
   loadJobs: () => Promise<void>
   createJob: () => Promise<void>
   saveJob: (updated: CronJob) => Promise<void>
@@ -36,7 +35,6 @@ interface CronsStore {
   openJob: (id: string) => void
   closeJob: (id: string) => void
   setActiveJobId: (id: string | null) => void
-  setSkillsOpen: (open: boolean) => void
 }
 
 export const useCronsStore = create<CronsStore>((set) => ({
@@ -44,7 +42,6 @@ export const useCronsStore = create<CronsStore>((set) => ({
   loading: true,
   openJobIds: [],
   activeJobId: null,
-  skillsOpen: false,
 
   loadJobs: async () => {
     set({ loading: true })
@@ -174,8 +171,6 @@ export const useCronsStore = create<CronsStore>((set) => ({
   },
 
   setActiveJobId: (id) => set({ activeJobId: id }),
-
-  setSkillsOpen: (open) => set({ skillsOpen: open }),
 }))
 
 export function getActiveCronJob(): CronJob | null {

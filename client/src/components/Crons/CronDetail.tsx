@@ -6,7 +6,6 @@ import { PromptComposer } from './PromptComposer'
 interface CronDetailProps {
   job: CronJob
   skills: string[]
-  onOpenSkills: () => void
   onSave: (updated: CronJob) => void
   onDelete: (id: string) => void
 }
@@ -65,12 +64,19 @@ function normalizeJob(job: CronJob): CronJob {
   }
 }
 
+function formatRelativeTime(ms: number): string {
+  const diff = Date.now() - ms
+  if (diff < 60000) return 'just now'
+  if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`
+  if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`
+  return `${Math.floor(diff / 86400000)}d ago`
+}
+
 export const CronDetail = forwardRef<CronDetailHandle, CronDetailProps>(function CronDetail(
-  { job, skills, onOpenSkills, onSave, onDelete },
+  { job, skills, onSave, onDelete },
   ref,
 ) {
   const promptRef = useRef<HTMLTextAreaElement | null>(null)
-
   const [agentOptions, setAgentOptions] = useState<TreeData['agents']>([])
 
   const initialEvery = useMemo(() => toEveryFields(job.schedule.everyMs), [job.id])
@@ -89,8 +95,6 @@ export const CronDetail = forwardRef<CronDetailHandle, CronDetailProps>(function
   const [deliveryMode, setDeliveryMode] = useState<'announce' | 'silent' | 'none'>(job.delivery?.mode || 'announce')
   const [wakeMode, setWakeMode] = useState(job.wakeMode || 'now')
 
-  const [advancedOpen, setAdvancedOpen] = useState(false)
-
   useEffect(() => {
     const loadTree = async () => {
       try {
@@ -102,7 +106,6 @@ export const CronDetail = forwardRef<CronDetailHandle, CronDetailProps>(function
         setAgentOptions([])
       }
     }
-
     void loadTree()
   }, [])
 
@@ -121,7 +124,6 @@ export const CronDetail = forwardRef<CronDetailHandle, CronDetailProps>(function
     setTimeoutSeconds(job.payload.timeoutSeconds ?? 300)
     setDeliveryMode(job.delivery?.mode || 'announce')
     setWakeMode(job.wakeMode || 'now')
-    setAdvancedOpen(false)
   }, [job])
 
   const selectedPreset = useMemo(() => {
@@ -132,25 +134,17 @@ export const CronDetail = forwardRef<CronDetailHandle, CronDetailProps>(function
   const insertSkill = useCallback((skillName: string) => {
     const cleanName = skillName.trim()
     if (!cleanName) return
-
     const tokenCore = `[skill: ${cleanName}]`
-
     setMessage(prev => {
       const node = promptRef.current
       const start = node?.selectionStart ?? prev.length
       const end = node?.selectionEnd ?? prev.length
-
       const before = prev.slice(0, start)
       const after = prev.slice(end)
-
       const needsLeadSpace = before.length > 0 && !/\s$/.test(before)
       const needsTrailSpace = after.length > 0 && !/^\s/.test(after)
-
-      // Insert as a token separated by spaces (prevents weird indentation/outdenting feel)
       const token = `${needsLeadSpace ? ' ' : ''}${tokenCore}${needsTrailSpace ? ' ' : ''}`
-
       const next = `${before}${token}${after}`
-
       requestAnimationFrame(() => {
         const focusNode = promptRef.current
         if (!focusNode) return
@@ -158,7 +152,6 @@ export const CronDetail = forwardRef<CronDetailHandle, CronDetailProps>(function
         focusNode.focus()
         focusNode.setSelectionRange(pos, pos)
       })
-
       return next
     })
   }, [])
@@ -186,24 +179,8 @@ export const CronDetail = forwardRef<CronDetailHandle, CronDetailProps>(function
         ? { mode: 'none' }
         : { ...(job.delivery || {}), mode: deliveryMode },
     }
-
     return normalizeJob(updated)
-  }, [
-    agentId,
-    cronExpr,
-    deliveryMode,
-    enabled,
-    everyUnit,
-    everyValue,
-    job,
-    message,
-    model,
-    name,
-    scheduleKind,
-    timeoutSeconds,
-    timezone,
-    wakeMode,
-  ])
+  }, [agentId, cronExpr, deliveryMode, enabled, everyUnit, everyValue, job, message, model, name, scheduleKind, timeoutSeconds, timezone, wakeMode])
 
   const isDirty = useMemo(() => {
     const before = normalizeJob(job)
@@ -212,147 +189,217 @@ export const CronDetail = forwardRef<CronDetailHandle, CronDetailProps>(function
   }, [buildUpdatedJob, job])
 
   const handleSave = () => {
-    if (!name.trim()) {
-      alert('Name is required')
-      return
-    }
-    if (!message.trim()) {
-      alert('Prompt is required')
-      return
-    }
+    if (!name.trim()) { alert('Name is required'); return }
+    if (!message.trim()) { alert('Prompt is required'); return }
     onSave(buildUpdatedJob())
   }
 
+  // Keyboard shortcut: Cmd/Ctrl+S
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+        e.preventDefault()
+        if (isDirty) handleSave()
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [isDirty, handleSave])
+
   return (
-    <div className="cron-detail-wrap">
-      <div className="crons-detail-topbar">
-        <div className="crons-topbar-left">
-          <span className="cron-topbar-label">CRON DETAIL</span>
-          {isDirty && <span className="cron-dirty-badge">UNSAVED</span>}
+    <div className="nd-wrap">
+      {/* ── Floating action bar ── */}
+      <div className="nd-action-bar">
+        <div className="nd-action-left">
+          {isDirty && <span className="nd-unsaved-pill">Unsaved changes</span>}
         </div>
-        <div className="crons-topbar-right">
-          <button type="button" className="btn-skill" onClick={onOpenSkills}>
-            Skills ▸
-          </button>
+        <div className="nd-action-right">
           <button
-            className="btn-delete"
-            onClick={() => {
-              if (confirm('Delete this cron job?')) onDelete(job.id)
-            }}
+            className="nd-btn nd-btn-danger"
+            onClick={() => { if (confirm('Delete this cron job?')) onDelete(job.id) }}
           >
             Delete
           </button>
-          <button className="btn-save" onClick={handleSave} disabled={!isDirty}>Save</button>
+          <button className="nd-btn nd-btn-primary" onClick={handleSave} disabled={!isDirty}>
+            {isDirty ? 'Save' : 'Saved'}
+          </button>
         </div>
       </div>
 
-      <div className="cron-detail-body">
-        <div className="cron-detail-inner">
+      {/* ── Document scroll area ── */}
+      <div className="nd-scroll">
+        <div className="nd-page">
+          {/* ── Title ── */}
           <input
-            className="cron-name-input"
+            className="nd-title"
             value={name}
-            onChange={event => setName(event.target.value)}
-            placeholder="job-name"
+            onChange={e => setName(e.target.value)}
+            placeholder="Untitled cron job"
+            spellCheck={false}
           />
 
-          <div className="cron-row-2">
-            <div className="cron-field">
-              <label className="cron-label">Enabled</label>
-              <div className="cron-inline-status">
-                <div className={`toggle-switch${enabled ? ' on' : ''}`} onClick={() => setEnabled(prev => !prev)} />
-                <span className="cron-inline-text">{enabled ? 'Active' : 'Paused'}</span>
-              </div>
+          {/* ── Status badge ── */}
+          <div className="nd-status-row">
+            <div className={`nd-status-badge ${enabled ? 'active' : 'paused'}`} onClick={() => setEnabled(p => !p)}>
+              <span className="nd-status-dot" />
+              {enabled ? 'Active' : 'Paused'}
             </div>
-
-            <div className="cron-field">
-              <label className="cron-label">Agent</label>
-              <select className="cron-select" value={agentId} onChange={event => setAgentId(event.target.value)}>
-                <option value="">None</option>
-                {agentOptions.map(agent => (
-                  <option key={agent.id} value={agent.id}>{agent.emoji} {agent.label}</option>
-                ))}
-              </select>
-            </div>
+            {job.state?.lastRunAtMs && (
+              <span className="nd-meta-text">
+                Last run {formatRelativeTime(job.state.lastRunAtMs)}
+                {job.state.lastRunStatus === 'error' && <span className="nd-run-error"> · Error</span>}
+                {job.state.lastRunStatus === 'ok' && <span className="nd-run-ok"> · OK</span>}
+              </span>
+            )}
           </div>
 
-          <div className="cron-field">
-            <label className="cron-label">SCHEDULE</label>
-            <div className="cf-row">
-              <button
-                className={`cf-tab${scheduleKind === 'cron' ? ' cf-tab-active' : ''}`}
-                onClick={() => setScheduleKind('cron')}
-              >
-                Cron expression
-              </button>
-              <button
-                className={`cf-tab${scheduleKind === 'every' ? ' cf-tab-active' : ''}`}
-                onClick={() => setScheduleKind('every')}
-              >
-                Every N minutes
-              </button>
-            </div>
-          </div>
-
-          {scheduleKind === 'cron' ? (
-            <div className="cron-row-2">
-              <div className="cron-field">
-                <label className="cron-label">Expression</label>
-                <input className="cron-input" value={cronExpr} onChange={event => setCronExpr(event.target.value)} />
-              </div>
-              <div className="cron-field">
-                <label className="cron-label">Preset</label>
-                <select
-                  className="cron-select"
-                  value={selectedPreset}
-                  onChange={event => {
-                    if (!event.target.value) return
-                    setCronExpr(event.target.value)
-                  }}
-                >
-                  {CRON_PRESETS.map(preset => (
-                    <option key={preset.label} value={preset.expr}>{preset.label}</option>
+          {/* ── Property table (Notion-style) ── */}
+          <div className="nd-props">
+            <div className="nd-prop-row">
+              <span className="nd-prop-label">Agent</span>
+              <div className="nd-prop-value">
+                <select className="nd-inline-select" value={agentId} onChange={e => setAgentId(e.target.value)}>
+                  <option value="">None</option>
+                  {agentOptions.map(agent => (
+                    <option key={agent.id} value={agent.id}>{agent.emoji} {agent.label}</option>
                   ))}
                 </select>
               </div>
             </div>
-          ) : (
-            <div className="cron-row-2">
-              <div className="cron-field">
-                <label className="cron-label">Repeat every</label>
-                <input
-                  className="cron-input"
-                  type="number"
-                  min={1}
-                  value={everyValue}
-                  onChange={event => setEveryValue(Number(event.target.value) || 1)}
-                />
+
+            <div className="nd-prop-row">
+              <span className="nd-prop-label">Schedule</span>
+              <div className="nd-prop-value">
+                <div className="nd-schedule-group">
+                  <div className="nd-pill-switch">
+                    <button
+                      className={`nd-pill-opt ${scheduleKind === 'cron' ? 'on' : ''}`}
+                      onClick={() => setScheduleKind('cron')}
+                    >
+                      Cron
+                    </button>
+                    <button
+                      className={`nd-pill-opt ${scheduleKind === 'every' ? 'on' : ''}`}
+                      onClick={() => setScheduleKind('every')}
+                    >
+                      Interval
+                    </button>
+                  </div>
+
+                  {scheduleKind === 'cron' ? (
+                    <div className="nd-sched-fields">
+                      <input
+                        className="nd-inline-input nd-mono"
+                        value={cronExpr}
+                        onChange={e => setCronExpr(e.target.value)}
+                        placeholder="0 9 * * *"
+                      />
+                      <select
+                        className="nd-inline-select nd-select-sm"
+                        value={selectedPreset}
+                        onChange={e => { if (e.target.value) setCronExpr(e.target.value) }}
+                      >
+                        {CRON_PRESETS.map(p => (
+                          <option key={p.label} value={p.expr}>{p.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                  ) : (
+                    <div className="nd-sched-fields">
+                      <span className="nd-sched-prefix">every</span>
+                      <input
+                        className="nd-inline-input nd-input-narrow"
+                        type="number"
+                        min={1}
+                        value={everyValue}
+                        onChange={e => setEveryValue(Number(e.target.value) || 1)}
+                      />
+                      <select
+                        className="nd-inline-select nd-select-sm"
+                        value={everyUnit}
+                        onChange={e => setEveryUnit(e.target.value as EveryUnit)}
+                      >
+                        <option value="minutes">minutes</option>
+                        <option value="hours">hours</option>
+                        <option value="days">days</option>
+                      </select>
+                    </div>
+                  )}
+                </div>
               </div>
-              <div className="cron-field">
-                <label className="cron-label">Unit</label>
-                <select
-                  className="cron-select"
-                  value={everyUnit}
-                  onChange={event => setEveryUnit(event.target.value as EveryUnit)}
-                >
-                  <option value="minutes">minutes</option>
-                  <option value="hours">hours</option>
-                  <option value="days">days</option>
+            </div>
+
+            <div className="nd-prop-row">
+              <span className="nd-prop-label">Timezone</span>
+              <div className="nd-prop-value">
+                <select className="nd-inline-select" value={timezone} onChange={e => setTimezone(e.target.value)}>
+                  {TZ_OPTIONS.map(tz => <option key={tz} value={tz}>{tz}</option>)}
                 </select>
               </div>
             </div>
-          )}
 
-          <div className="cron-field">
-            <label className="cron-label">Timezone</label>
-            <select className="cron-select" value={timezone} onChange={event => setTimezone(event.target.value)}>
-              {TZ_OPTIONS.map(tz => (
-                <option key={tz} value={tz}>{tz}</option>
-              ))}
-            </select>
+            <div className="nd-prop-row">
+              <span className="nd-prop-label">Model</span>
+              <div className="nd-prop-value">
+                <input
+                  className="nd-inline-input"
+                  value={model}
+                  onChange={e => setModel(e.target.value)}
+                  placeholder="default"
+                />
+              </div>
+            </div>
+
+            <div className="nd-prop-row">
+              <span className="nd-prop-label">Timeout</span>
+              <div className="nd-prop-value">
+                <input
+                  className="nd-inline-input nd-input-narrow"
+                  type="number"
+                  min={1}
+                  value={timeoutSeconds}
+                  onChange={e => setTimeoutSeconds(Number(e.target.value) || 1)}
+                />
+                <span className="nd-unit-suffix">seconds</span>
+              </div>
+            </div>
+
+            <div className="nd-prop-row">
+              <span className="nd-prop-label">Delivery</span>
+              <div className="nd-prop-value">
+                <select
+                  className="nd-inline-select nd-select-sm"
+                  value={deliveryMode}
+                  onChange={e => setDeliveryMode(e.target.value as 'announce' | 'silent' | 'none')}
+                >
+                  <option value="announce">Announce</option>
+                  <option value="silent">Silent</option>
+                  <option value="none">None</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="nd-prop-row">
+              <span className="nd-prop-label">Wake</span>
+              <div className="nd-prop-value">
+                <select className="nd-inline-select nd-select-sm" value={wakeMode} onChange={e => setWakeMode(e.target.value)}>
+                  <option value="now">Immediate</option>
+                  <option value="next">Next window</option>
+                </select>
+              </div>
+            </div>
           </div>
 
-          <div className="cron-field">
-            <label className="cron-label">PROMPT</label>
+          {/* ── Divider ── */}
+          <div className="nd-divider" />
+
+          {/* ── Prompt (main content) ── */}
+          <div className="nd-prompt-section">
+            <div className="nd-prompt-header">
+              <span className="nd-section-icon">⚡</span>
+              <span className="nd-section-title">Prompt</span>
+              <span className="nd-section-hint">What should this agent do when triggered?</span>
+            </div>
             <PromptComposer
               value={message}
               onChange={setMessage}
@@ -360,54 +407,6 @@ export const CronDetail = forwardRef<CronDetailHandle, CronDetailProps>(function
               skills={skills}
               textareaRef={promptRef}
             />
-          </div>
-
-          <div>
-            <button className="cron-advanced-toggle" onClick={() => setAdvancedOpen(prev => !prev)}>
-              <span>ADVANCED {advancedOpen ? '▴' : '▾'}</span>
-            </button>
-            <div className={`cron-advanced-body ${advancedOpen ? 'open' : 'closed'}`}>
-              <div className="cron-advanced-inner">
-                <div className="cron-row-2">
-                  <div className="cron-field">
-                    <label className="cron-label">Model</label>
-                    <input className="cron-input" value={model} onChange={event => setModel(event.target.value)} />
-                  </div>
-                  <div className="cron-field">
-                    <label className="cron-label">Timeout (seconds)</label>
-                    <input
-                      className="cron-input"
-                      type="number"
-                      min={1}
-                      value={timeoutSeconds}
-                      onChange={event => setTimeoutSeconds(Number(event.target.value) || 1)}
-                    />
-                  </div>
-                </div>
-
-                <div className="cron-row-2">
-                  <div className="cron-field">
-                    <label className="cron-label">Delivery mode</label>
-                    <select
-                      className="cron-select"
-                      value={deliveryMode}
-                      onChange={event => setDeliveryMode(event.target.value as 'announce' | 'silent' | 'none')}
-                    >
-                      <option value="announce">announce</option>
-                      <option value="silent">silent</option>
-                      <option value="none">none</option>
-                    </select>
-                  </div>
-                  <div className="cron-field">
-                    <label className="cron-label">Wake mode</label>
-                    <select className="cron-select" value={wakeMode} onChange={event => setWakeMode(event.target.value)}>
-                      <option value="now">now</option>
-                      <option value="next">next</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       </div>

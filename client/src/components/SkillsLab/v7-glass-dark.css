@@ -1,0 +1,514 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   VARIANT 3: "Glass: Dark Vibrancy"  (.cl-glass-3)
+   macOS dark-mode vibrancy + brand coral (#ff7a64) accent
+   Scoped override of v7-clay.css — layout/structure untouched
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ── Canvas ── */
+.cl-canvas.cl-glass-3 { background: #1a1816; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif; letter-spacing: -0.01em; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+
+/* Grid underlay — very faint coral */
+.cl-canvas.cl-glass-3::before { background-image: linear-gradient(rgba(255,122,100,0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(255,122,100,0.02) 1px, transparent 1px); background-size: 40px 40px; }
+
+/* ── Panels container ── */
+.cl-glass-3 .cl-panels { gap: 16px; }
+
+/* ── Base panel ── */
+.cl-glass-3 .cl-panel { background: rgba(38,36,33,0.72); backdrop-filter: blur(40px) saturate(180%); -webkit-backdrop-filter: blur(40px) saturate(180%); border: 1px solid rgba(255,255,255,0.06); border-radius: 14px; box-shadow: 0 2px 12px rgba(0,0,0,0.3), 0 0 0 0.5px rgba(255,255,255,0.04); transition: opacity 200ms ease-out, transform 200ms ease-out, border-color 200ms ease-out, box-shadow 200ms ease-out; }
+
+.cl-glass-3 .cl-panel.cl-visible { opacity: 1; transform: translateY(0); }
+
+.cl-glass-3 .cl-panel.cl-focused { border-color: rgba(255,122,100,0.35); box-shadow: 0 4px 20px rgba(0,0,0,0.35), 0 0 0 0.5px rgba(255,122,100,0.15); transform: translateY(-1px); }
+
+.cl-glass-3 .cl-panel.cl-dimmed { opacity: 0.45; }
+
+/* ── Panel header ── */
+.cl-glass-3 .cl-panel-header { background: rgba(255,122,100,0.08); backdrop-filter: blur(20px) saturate(150%); -webkit-backdrop-filter: blur(20px) saturate(150%); border-bottom: 1px solid rgba(255,255,255,0.04); border-radius: 14px 14px 0 0; padding: 14px 20px; }
+
+.cl-glass-3 .cl-panel-title-row { gap: 8px; }
+
+.cl-glass-3 .cl-panel-icon { color: #ff7a64; }
+
+.cl-glass-3 .cl-panel-title { font-size: 11px; font-weight: 600; color: #ff7a64; font-family: 'SF Mono', ui-monospace, monospace; letter-spacing: 0.12em; text-transform: uppercase; }
+
+.cl-glass-3 .cl-panel-badge { font-size: 10px; font-weight: 600; font-family: 'SF Mono', ui-monospace, monospace; color: #ff7a64; background: rgba(255,122,100,0.1); border: 1px solid rgba(255,122,100,0.15); border-radius: 10px; padding: 3px 10px; }
+
+/* ═══ Navigator Panel ═══ */
+
+/* ── Nav controls ── */
+.cl-glass-3 .cl-nav-controls { padding: 14px 20px 0; }
+
+.cl-glass-3 .cl-nav-tabs { border-bottom: 1px solid rgba(255,255,255,0.06); }
+
+.cl-glass-3 .cl-nav-tab { font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif; color: #5a5549; transition: color 200ms ease-out; }
+
+.cl-glass-3 .cl-nav-tab:hover { color: #b5a898; }
+
+.cl-glass-3 .cl-nav-tab.active { color: #ff7a64; }
+
+.cl-glass-3 .cl-nav-tab.active::after { height: 2px; background: #ff7a64; border-radius: 1px; bottom: -1px; }
+
+/* ── Search bar ── */
+.cl-glass-3 .cl-search-bar { background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; transition: border-color 200ms ease-out, box-shadow 200ms ease-out; }
+
+.cl-glass-3 .cl-search-bar:focus-within { border-color: rgba(255,122,100,0.4); box-shadow: 0 0 0 2px rgba(255,122,100,0.12); }
+
+.cl-glass-3 .cl-search-icon { color: #5a5549; }
+
+.cl-glass-3 .cl-search-input { color: #f5f0e8; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif; }
+
+.cl-glass-3 .cl-search-input::placeholder { color: #5a5549; }
+
+.cl-glass-3 .cl-search-clear { color: #5a5549; transition: color 200ms ease-out; }
+
+.cl-glass-3 .cl-search-clear:hover { color: #ff7a64; }
+
+/* ── Nav tree ── */
+.cl-glass-3 .cl-nav-tree::-webkit-scrollbar { width: 6px; }
+.cl-glass-3 .cl-nav-tree::-webkit-scrollbar-track { background: transparent; }
+.cl-glass-3 .cl-nav-tree::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 3px; }
+.cl-glass-3 .cl-nav-tree::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.14); }
+
+/* ── Agent rows ── */
+.cl-glass-3 .cl-agent-row { color: #b5a898; border-left: 3px solid transparent; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif; transition: all 200ms ease-out; }
+
+.cl-glass-3 .cl-agent-row:hover { background: rgba(255,122,100,0.06); }
+
+.cl-glass-3 .cl-agent-row.expanded { color: #f5f0e8; background: rgba(255,122,100,0.12); border-left-color: #ff7a64; }
+
+.cl-glass-3 .cl-chevron-icon { color: #5a5549; transition: transform 200ms ease-out, color 200ms ease-out; }
+
+.cl-glass-3 .cl-chevron-icon.open { color: #ff7a64; }
+
+.cl-glass-3 .cl-agent-name { color: inherit; }
+
+.cl-glass-3 .cl-agent-path { font-family: 'SF Mono', ui-monospace, monospace; color: #5a5549; }
+
+.cl-glass-3 .cl-agent-count { font-family: 'SF Mono', ui-monospace, monospace; color: #ff7a64; }
+
+/* ── Skill list ── */
+.cl-glass-3 .cl-skill-row { color: #b5a898; border-left: 3px solid transparent; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif; transition: all 200ms ease-out; }
+
+.cl-glass-3 .cl-skill-row:hover { background: rgba(255,122,100,0.05); color: #f5f0e8; }
+
+.cl-glass-3 .cl-skill-row.active { background: rgba(255,122,100,0.12); color: #f5f0e8; border-left-color: #ff7a64; }
+
+.cl-glass-3 .cl-skill-indicator { border-radius: 50%; background: rgba(255,255,255,0.1); transition: background 200ms ease-out, box-shadow 200ms ease-out; }
+
+.cl-glass-3 .cl-skill-row.active .cl-skill-indicator { background: #ff7a64; box-shadow: 0 0 6px rgba(255,122,100,0.4); }
+
+.cl-glass-3 .cl-skill-name { font-weight: 400; }
+
+.cl-glass-3 .cl-skill-dept-label { font-family: 'SF Mono', ui-monospace, monospace; color: #5a5549; }
+
+.cl-glass-3 .cl-no-results { color: #5a5549; }
+
+.cl-glass-3 .cl-show-more { font-family: 'SF Mono', ui-monospace, monospace; color: #ff7a64; }
+
+.cl-glass-3 .cl-show-more:hover { opacity: 1; }
+
+/* ── Source rows ── */
+.cl-glass-3 .cl-source-row { color: #b5a898; border-left: 3px solid transparent; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif; transition: all 200ms ease-out; }
+
+.cl-glass-3 .cl-source-row:hover { background: rgba(255,122,100,0.05); }
+
+.cl-glass-3 .cl-source-row.active { background: rgba(255,122,100,0.1); color: #f5f0e8; border-left-color: #ff7a64; }
+
+.cl-glass-3 .cl-source-dot { border-radius: 50%; }
+
+.cl-glass-3 .cl-source-name { color: inherit; }
+
+.cl-glass-3 .cl-source-count { font-family: 'SF Mono', ui-monospace, monospace; color: #ff7a64; }
+
+/* ── Department pills footer ── */
+.cl-glass-3 .cl-nav-depts { border-top: 1px solid rgba(255,255,255,0.06); }
+
+.cl-glass-3 .cl-dept-label { color: #ff7a64; font-family: 'SF Mono', ui-monospace, monospace; }
+
+.cl-glass-3 .cl-dept-pill { background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.06); border-radius: 20px; color: #b5a898; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif; transition: all 200ms ease-out; }
+
+.cl-glass-3 .cl-dept-pill:hover { border-color: rgba(255,122,100,0.3); color: #f5f0e8; transform: none; box-shadow: 0 1px 6px rgba(0,0,0,0.2); }
+
+.cl-glass-3 .cl-dept-pill.active { background: rgba(255,122,100,0.2); border-color: rgba(255,122,100,0.35); color: #ff7a64; box-shadow: 0 1px 8px rgba(255,122,100,0.15); }
+
+.cl-glass-3 .cl-dept-count { font-family: 'SF Mono', ui-monospace, monospace; color: #5a5549; }
+
+.cl-glass-3 .cl-dept-pill.active .cl-dept-count { color: rgba(255,122,100,0.6); }
+
+/* ═══ Editor Panel ═══ */
+.cl-glass-3 .cl-editor-header { background: rgba(255,122,100,0.08); backdrop-filter: blur(20px) saturate(150%); -webkit-backdrop-filter: blur(20px) saturate(150%); border-bottom: 1px solid rgba(255,255,255,0.04); border-radius: 14px 14px 0 0; }
+
+.cl-glass-3 .cl-back-btn { background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; color: #ff7a64; transition: all 200ms ease-out; }
+
+.cl-glass-3 .cl-back-btn:hover { background: rgba(0,0,0,0.45); transform: none; box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+
+.cl-glass-3 .cl-filename { font-family: 'SF Mono', ui-monospace, monospace; color: #ff7a64; font-weight: 600; }
+
+.cl-glass-3 .cl-file-meta { color: rgba(245,240,232,0.45); }
+
+/* ── CodeMirror wrapper ── */
+.cl-glass-3 .cl-cm-status { font-family: 'SF Mono', ui-monospace, monospace; color: #5a5549; border-bottom: 1px solid rgba(255,255,255,0.04); }
+
+.cl-glass-3 .cl-unsaved-dot { background: #ff7a64; border-radius: 2px; }
+
+.cl-glass-3 .cl-saved-flash { color: #ff7a64; }
+
+.cl-glass-3 .cl-cm-path { color: #5a5549; }
+
+/* ═══ Welcome State ═══ */
+.cl-glass-3 .cl-welcome { transition: opacity 200ms ease-out, transform 200ms ease-out; }
+
+.cl-glass-3 .cl-welcome-icon { color: #ff7a64; }
+
+.cl-glass-3 .cl-welcome-title { font-size: 30px; font-weight: 700; color: #f5f0e8; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif; text-transform: none; letter-spacing: -0.03em; text-shadow: none; }
+
+.cl-glass-3 .cl-welcome-sub { color: #5a5549; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif; }
+
+.cl-glass-3 .cl-stat { font-family: 'SF Mono', ui-monospace, monospace; color: #ff7a64; background: rgba(255,122,100,0.08); border: 1px solid rgba(255,122,100,0.15); border-radius: 8px; }
+
+/* ═══ Inspector Panel ═══ */
+
+/* ── Meta sections ── */
+.cl-glass-3 .cl-meta-section { border-bottom: 1px solid rgba(255,255,255,0.04); }
+
+.cl-glass-3 .cl-meta-row + .cl-meta-row { border-top: 1px solid rgba(255,255,255,0.04); }
+
+.cl-glass-3 .cl-meta-key { color: #ff7a64; font-family: 'SF Mono', ui-monospace, monospace; }
+
+.cl-glass-3 .cl-meta-val { color: #b5a898; }
+
+/* ── Meta groups ── */
+.cl-glass-3 .cl-meta-group { border-bottom: 1px solid rgba(255,255,255,0.04); }
+
+.cl-glass-3 .cl-meta-group-label { color: #ff7a64; font-family: 'SF Mono', ui-monospace, monospace; }
+
+/* ── Tags ── */
+.cl-glass-3 .cl-tag { color: #b5a898; background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.06); border-radius: 20px; font-family: 'SF Mono', ui-monospace, monospace; }
+
+/* ── Agent badges ── */
+.cl-glass-3 .cl-agent-badge { color: #b5a898; background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; }
+
+.cl-glass-3 .cl-meta-empty { color: #5a5549; }
+
+/* ── Source presence ── */
+.cl-glass-3 .cl-meta-source-row + .cl-meta-source-row { border-top: 1px solid rgba(255,255,255,0.04); }
+
+.cl-glass-3 .cl-meta-source-dot { border-radius: 50%; }
+
+.cl-glass-3 .cl-meta-source-name { color: #b5a898; }
+
+.cl-glass-3 .cl-meta-source-kind { font-family: 'SF Mono', ui-monospace, monospace; color: #5a5549; }
+
+.cl-glass-3 .cl-meta-source-kind.canonical { color: #ff7a64; }
+
+.cl-glass-3 .cl-meta-source-kind.symlink { color: #b5a898; }
+
+.cl-glass-3 .cl-meta-source-kind.copy { color: #b5a898; }
+
+.cl-glass-3 .cl-meta-source-kind.absent { color: rgba(255,255,255,0.1); }
+
+/* ── Action grid ── */
+.cl-glass-3 .cl-action-btn { background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; color: #b5a898; font-family: 'SF Mono', ui-monospace, monospace; transition: all 200ms ease-out; }
+
+.cl-glass-3 .cl-action-btn:hover { border-color: rgba(255,122,100,0.3); color: #f5f0e8; transform: none; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+
+.cl-glass-3 .cl-action-btn.cl-action-primary { background: rgba(255,122,100,0.2); border-color: rgba(255,122,100,0.35); color: #ff7a64; box-shadow: 0 2px 10px rgba(255,122,100,0.15); }
+
+.cl-glass-3 .cl-action-btn.cl-action-primary:hover { background: rgba(255,122,100,0.3); transform: none; box-shadow: 0 4px 14px rgba(255,122,100,0.2); }
+
+.cl-glass-3 .cl-action-btn.cl-action-danger { color: #5a5549; }
+
+.cl-glass-3 .cl-action-btn.cl-action-danger:hover { color: #ef4444; border-color: rgba(239,68,68,0.3); box-shadow: 0 2px 8px rgba(239,68,68,0.15); }
+
+.cl-glass-3 .cl-action-label { font-weight: 600; }
+
+/* ═══ Loading & Error States ═══ */
+.cl-glass-3 .cl-loading-state { color: #5a5549; font-family: 'SF Mono', ui-monospace, monospace; }
+
+.cl-glass-3 .cl-loading-state.cl-error { color: #ef4444; }
+
+.cl-glass-3 .cl-loading-spinner { border: 2px solid rgba(255,255,255,0.08); border-top-color: #ff7a64; border-radius: 50%; }
+
+/* ═══ Scrollbar styling ═══ */
+.cl-glass-3 .cl-meta-panel::-webkit-scrollbar, .cl-glass-3 .cl-editor-body::-webkit-scrollbar { width: 6px; }
+.cl-glass-3 .cl-meta-panel::-webkit-scrollbar-track, .cl-glass-3 .cl-editor-body::-webkit-scrollbar-track { background: transparent; }
+.cl-glass-3 .cl-meta-panel::-webkit-scrollbar-thumb, .cl-glass-3 .cl-editor-body::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 3px; }
+.cl-glass-3 .cl-meta-panel::-webkit-scrollbar-thumb:hover, .cl-glass-3 .cl-editor-body::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.14); }
+
+/* ═══ Top Bar — dark vibrancy adaptation ═══ */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* ── Focus ring global ── */
+.cl-glass-3 *:focus-visible { outline: none; box-shadow: 0 0 0 2px rgba(255,122,100,0.3); }
+
+
+/* ═══════════════════════════════════════════════════════════════════════
+   VARIANT 4: "Glass: Anthropic Scholarly"  (.cl-glass-4)
+   Light theme — Anthropic warm beige + Poppins headings + Lora body
+   #d97757 terracotta accent, frosted-glass panels, serif elegance
+   Scoped override of v7-clay.css — layout/structure untouched
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ── Canvas ── */
+.cl-canvas.cl-glass-4 { background: #faf9f5; font-family: 'Lora', 'Georgia', serif; letter-spacing: 0; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+
+/* Grid underlay — removed for scholarly clean look */
+.cl-canvas.cl-glass-4::before { background-image: none; background-size: 0; content: ''; }
+
+/* ── Panels container ── */
+.cl-glass-4 .cl-panels { gap: 16px; }
+
+/* ── Base panel ── */
+.cl-glass-4 .cl-panel { background: rgba(250,249,245,0.72); backdrop-filter: blur(40px) saturate(180%); -webkit-backdrop-filter: blur(40px) saturate(180%); border: 1px solid rgba(0,0,0,0.06); border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 0 0 0.5px rgba(0,0,0,0.03); transition: opacity 250ms ease-out, transform 250ms ease-out, border-color 250ms ease-out, box-shadow 250ms ease-out; }
+
+.cl-glass-4 .cl-panel.cl-visible { opacity: 1; transform: translateY(0); }
+
+.cl-glass-4 .cl-panel.cl-focused { border-color: rgba(217,119,87,0.25); box-shadow: 0 4px 16px rgba(217,119,87,0.08), 0 0 0 0.5px rgba(217,119,87,0.12); transform: translateY(-1px); }
+
+.cl-glass-4 .cl-panel.cl-dimmed { opacity: 0.45; }
+
+/* ── Panel header ── */
+.cl-glass-4 .cl-panel-header { background: rgba(217,119,87,0.06); backdrop-filter: blur(20px) saturate(150%); -webkit-backdrop-filter: blur(20px) saturate(150%); border-bottom: 1px solid rgba(0,0,0,0.04); border-radius: 12px 12px 0 0; padding: 14px 20px; }
+
+.cl-glass-4 .cl-panel-title-row { gap: 8px; }
+
+.cl-glass-4 .cl-panel-icon { color: #d97757; }
+
+.cl-glass-4 .cl-panel-title { font-size: 11px; font-weight: 600; color: #d97757; font-family: 'Poppins', -apple-system, sans-serif; letter-spacing: 0.1em; text-transform: uppercase; }
+
+.cl-glass-4 .cl-panel-badge { font-size: 10px; font-weight: 600; font-family: 'Source Code Pro', monospace; color: #d97757; background: rgba(217,119,87,0.08); border: 1px solid rgba(217,119,87,0.12); border-radius: 10px; padding: 3px 10px; }
+
+/* ═══ Navigator Panel ═══ */
+
+/* ── Nav controls ── */
+.cl-glass-4 .cl-nav-controls { padding: 14px 20px 0; }
+
+.cl-glass-4 .cl-nav-tabs { border-bottom: 1px solid rgba(0,0,0,0.06); }
+
+.cl-glass-4 .cl-nav-tab { font-family: 'Poppins', -apple-system, sans-serif; color: #9b9b91; font-weight: 500; transition: color 250ms ease-out; }
+
+.cl-glass-4 .cl-nav-tab:hover { color: #6b6b63; }
+
+.cl-glass-4 .cl-nav-tab.active { color: #d97757; }
+
+.cl-glass-4 .cl-nav-tab.active::after { height: 2px; background: #d97757; border-radius: 1px; bottom: -1px; }
+
+/* ── Search bar ── */
+.cl-glass-4 .cl-search-bar { background: rgba(255,255,255,0.6); border: 1px solid rgba(0,0,0,0.06); border-radius: 10px; transition: border-color 250ms ease-out, box-shadow 250ms ease-out; }
+
+.cl-glass-4 .cl-search-bar:focus-within { border-color: rgba(217,119,87,0.35); box-shadow: 0 0 0 2px rgba(217,119,87,0.1); }
+
+.cl-glass-4 .cl-search-icon { color: #9b9b91; }
+
+.cl-glass-4 .cl-search-input { color: #2d2d2a; font-family: 'Lora', 'Georgia', serif; }
+
+.cl-glass-4 .cl-search-input::placeholder { color: #9b9b91; }
+
+.cl-glass-4 .cl-search-clear { color: #9b9b91; transition: color 250ms ease-out; }
+
+.cl-glass-4 .cl-search-clear:hover { color: #d97757; }
+
+/* ── Nav tree ── */
+.cl-glass-4 .cl-nav-tree::-webkit-scrollbar { width: 6px; }
+.cl-glass-4 .cl-nav-tree::-webkit-scrollbar-track { background: transparent; }
+.cl-glass-4 .cl-nav-tree::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.08); border-radius: 3px; }
+.cl-glass-4 .cl-nav-tree::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.14); }
+
+/* ── Agent rows ── */
+.cl-glass-4 .cl-agent-row { color: #6b6b63; border-left: 3px solid transparent; font-family: 'Poppins', -apple-system, sans-serif; transition: all 250ms ease-out; }
+
+.cl-glass-4 .cl-agent-row:hover { background: rgba(217,119,87,0.04); }
+
+.cl-glass-4 .cl-agent-row.expanded { color: #2d2d2a; background: rgba(217,119,87,0.08); border-left-color: #d97757; }
+
+.cl-glass-4 .cl-chevron-icon { color: #9b9b91; transition: transform 250ms ease-out, color 250ms ease-out; }
+
+.cl-glass-4 .cl-chevron-icon.open { color: #d97757; }
+
+.cl-glass-4 .cl-agent-name { font-size: 13px; font-weight: 500; color: inherit; font-family: 'Poppins', -apple-system, sans-serif; }
+
+.cl-glass-4 .cl-agent-path { font-family: 'Source Code Pro', monospace; color: #9b9b91; }
+
+.cl-glass-4 .cl-agent-count { font-family: 'Source Code Pro', monospace; color: #d97757; }
+
+/* ── Skill list ── */
+.cl-glass-4 .cl-skill-row { color: #6b6b63; border-left: 3px solid transparent; font-family: 'Lora', 'Georgia', serif; transition: all 250ms ease-out; }
+
+.cl-glass-4 .cl-skill-row:hover { background: rgba(217,119,87,0.04); color: #2d2d2a; transform: translateY(-1px); box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
+
+.cl-glass-4 .cl-skill-row.active { background: rgba(217,119,87,0.08); color: #2d2d2a; border-left-color: #d97757; }
+
+.cl-glass-4 .cl-skill-indicator { border-radius: 50%; background: rgba(0,0,0,0.08); transition: background 250ms ease-out, box-shadow 250ms ease-out; }
+
+.cl-glass-4 .cl-skill-row.active .cl-skill-indicator { background: #d97757; box-shadow: 0 0 6px rgba(217,119,87,0.3); }
+
+.cl-glass-4 .cl-skill-name { font-weight: 400; font-style: italic; font-family: 'Lora', 'Georgia', serif; }
+
+.cl-glass-4 .cl-skill-dept-label { font-family: 'Source Code Pro', monospace; color: #9b9b91; }
+
+.cl-glass-4 .cl-no-results { color: #9b9b91; font-family: 'Lora', 'Georgia', serif; font-style: italic; }
+
+.cl-glass-4 .cl-show-more { font-family: 'Poppins', -apple-system, sans-serif; color: #d97757; font-weight: 500; text-transform: none; letter-spacing: 0; }
+
+.cl-glass-4 .cl-show-more:hover { opacity: 1; }
+
+/* ── Source rows ── */
+.cl-glass-4 .cl-source-row { color: #6b6b63; border-left: 3px solid transparent; font-family: 'Poppins', -apple-system, sans-serif; transition: all 250ms ease-out; }
+
+.cl-glass-4 .cl-source-row:hover { background: rgba(217,119,87,0.04); }
+
+.cl-glass-4 .cl-source-row.active { background: rgba(217,119,87,0.08); color: #2d2d2a; border-left-color: #d97757; }
+
+.cl-glass-4 .cl-source-dot { border-radius: 50%; }
+
+.cl-glass-4 .cl-source-name { color: inherit; font-family: 'Poppins', -apple-system, sans-serif; font-weight: 500; }
+
+.cl-glass-4 .cl-source-count { font-family: 'Source Code Pro', monospace; color: #d97757; }
+
+/* ── Department pills footer ── */
+.cl-glass-4 .cl-nav-depts { border-top: 1px solid rgba(0,0,0,0.06); }
+
+.cl-glass-4 .cl-dept-label { color: #d97757; font-family: 'Poppins', -apple-system, sans-serif; font-weight: 600; }
+
+.cl-glass-4 .cl-dept-pills { gap: 8px; }
+
+.cl-glass-4 .cl-dept-pill { background: rgba(255,255,255,0.6); border: 1px solid rgba(0,0,0,0.06); border-radius: 20px; color: #6b6b63; font-family: 'Poppins', -apple-system, sans-serif; font-weight: 500; transition: all 250ms ease-out; }
+
+.cl-glass-4 .cl-dept-pill:hover { border-color: rgba(217,119,87,0.25); color: #2d2d2a; transform: translateY(-1px); box-shadow: 0 2px 6px rgba(0,0,0,0.06); }
+
+.cl-glass-4 .cl-dept-pill.active { background: rgba(217,119,87,0.12); border-color: rgba(217,119,87,0.2); color: #d97757; box-shadow: 0 1px 4px rgba(217,119,87,0.1); }
+
+.cl-glass-4 .cl-dept-count { font-family: 'Source Code Pro', monospace; color: #9b9b91; }
+
+.cl-glass-4 .cl-dept-pill.active .cl-dept-count { color: rgba(217,119,87,0.6); }
+
+/* ═══ Editor Panel ═══ */
+.cl-glass-4 .cl-editor-header { background: rgba(217,119,87,0.06); backdrop-filter: blur(20px) saturate(150%); -webkit-backdrop-filter: blur(20px) saturate(150%); border-bottom: 1px solid rgba(0,0,0,0.04); border-radius: 12px 12px 0 0; }
+
+.cl-glass-4 .cl-back-btn { background: rgba(255,255,255,0.6); border: 1px solid rgba(0,0,0,0.06); border-radius: 8px; color: #d97757; transition: all 250ms ease-out; }
+
+.cl-glass-4 .cl-back-btn:hover { background: rgba(255,255,255,0.85); transform: none; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+
+.cl-glass-4 .cl-filename { font-family: 'Source Code Pro', monospace; color: #d97757; font-weight: 600; }
+
+.cl-glass-4 .cl-file-meta { color: rgba(45,45,42,0.5); font-family: 'Lora', 'Georgia', serif; }
+
+/* ── CodeMirror wrapper ── */
+.cl-glass-4 .cl-cm-status { font-family: 'Source Code Pro', monospace; color: #9b9b91; border-bottom: 1px solid rgba(0,0,0,0.04); }
+
+.cl-glass-4 .cl-unsaved-dot { background: #d97757; border-radius: 2px; }
+
+.cl-glass-4 .cl-saved-flash { color: #d97757; }
+
+.cl-glass-4 .cl-cm-path { color: #9b9b91; }
+
+/* ═══ Welcome State ═══ */
+.cl-glass-4 .cl-welcome { transition: opacity 250ms ease-out, transform 250ms ease-out; }
+
+.cl-glass-4 .cl-welcome-icon { color: #d97757; }
+
+.cl-glass-4 .cl-welcome-title { font-size: 30px; font-weight: 600; color: #2d2d2a; font-family: 'Poppins', -apple-system, sans-serif; text-transform: none; letter-spacing: -0.02em; text-shadow: none; }
+
+.cl-glass-4 .cl-welcome-sub { color: #6b6b63; font-family: 'Lora', 'Georgia', serif; font-style: italic; }
+
+.cl-glass-4 .cl-stat { font-family: 'Source Code Pro', monospace; color: #d97757; background: rgba(217,119,87,0.06); border: 1px solid rgba(217,119,87,0.1); border-radius: 8px; }
+
+/* ═══ Inspector Panel ═══ */
+
+/* ── Meta sections ── */
+.cl-glass-4 .cl-meta-section { border-bottom: 1px solid rgba(0,0,0,0.04); }
+
+.cl-glass-4 .cl-meta-row + .cl-meta-row { border-top: 1px solid rgba(0,0,0,0.04); }
+
+.cl-glass-4 .cl-meta-key { color: #d97757; font-family: 'Poppins', -apple-system, sans-serif; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; }
+
+.cl-glass-4 .cl-meta-val { color: #6b6b63; font-family: 'Lora', 'Georgia', serif; }
+
+/* ── Meta groups ── */
+.cl-glass-4 .cl-meta-group { border-bottom: 1px solid rgba(0,0,0,0.04); }
+
+.cl-glass-4 .cl-meta-group-label { color: #d97757; font-family: 'Poppins', -apple-system, sans-serif; font-weight: 600; }
+
+/* ── Tags ── */
+.cl-glass-4 .cl-tag { color: #6b6b63; background: rgba(255,255,255,0.6); border: 1px solid rgba(0,0,0,0.06); border-radius: 20px; font-family: 'Lora', 'Georgia', serif; font-style: italic; }
+
+/* ── Agent badges ── */
+.cl-glass-4 .cl-agent-badge { color: #6b6b63; background: rgba(255,255,255,0.6); border: 1px solid rgba(0,0,0,0.06); border-radius: 12px; font-family: 'Poppins', -apple-system, sans-serif; font-weight: 500; }
+
+.cl-glass-4 .cl-meta-empty { color: #9b9b91; font-family: 'Lora', 'Georgia', serif; font-style: italic; }
+
+/* ── Source presence ── */
+.cl-glass-4 .cl-meta-source-row + .cl-meta-source-row { border-top: 1px solid rgba(0,0,0,0.04); }
+
+.cl-glass-4 .cl-meta-source-dot { border-radius: 50%; }
+
+.cl-glass-4 .cl-meta-source-name { color: #6b6b63; font-family: 'Lora', 'Georgia', serif; }
+
+.cl-glass-4 .cl-meta-source-kind { font-family: 'Source Code Pro', monospace; color: #9b9b91; }
+
+.cl-glass-4 .cl-meta-source-kind.canonical { color: #d97757; }
+
+.cl-glass-4 .cl-meta-source-kind.symlink { color: #6b6b63; }
+
+.cl-glass-4 .cl-meta-source-kind.copy { color: #6b6b63; }
+
+.cl-glass-4 .cl-meta-source-kind.absent { color: rgba(0,0,0,0.15); }
+
+/* ── Action grid ── */
+.cl-glass-4 .cl-action-btn { background: rgba(255,255,255,0.6); border: 1px solid rgba(0,0,0,0.06); border-radius: 10px; color: #6b6b63; font-family: 'Poppins', -apple-system, sans-serif; font-weight: 500; text-transform: uppercase; letter-spacing: 0.04em; transition: all 250ms ease-out; }
+
+.cl-glass-4 .cl-action-btn:hover { border-color: rgba(217,119,87,0.2); color: #2d2d2a; transform: translateY(-1px); box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+
+.cl-glass-4 .cl-action-btn.cl-action-primary { background: #d97757; border-color: #d97757; color: #ffffff; box-shadow: 0 2px 8px rgba(217,119,87,0.2); }
+
+.cl-glass-4 .cl-action-btn.cl-action-primary:hover { background: #e08868; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(217,119,87,0.25); }
+
+.cl-glass-4 .cl-action-btn.cl-action-danger { color: #9b9b91; }
+
+.cl-glass-4 .cl-action-btn.cl-action-danger:hover { color: #ef4444; border-color: rgba(239,68,68,0.2); box-shadow: 0 2px 6px rgba(239,68,68,0.1); }
+
+.cl-glass-4 .cl-action-label { font-weight: 600; font-size: 10px; }
+
+/* ═══ Loading & Error States ═══ */
+.cl-glass-4 .cl-loading-state { color: #9b9b91; font-family: 'Poppins', -apple-system, sans-serif; text-transform: none; letter-spacing: 0; }
+
+.cl-glass-4 .cl-loading-state.cl-error { color: #ef4444; }
+
+.cl-glass-4 .cl-loading-spinner { border: 2px solid rgba(0,0,0,0.06); border-top-color: #d97757; border-radius: 50%; }
+
+/* ═══ Scrollbar styling ═══ */
+.cl-glass-4 .cl-meta-panel::-webkit-scrollbar, .cl-glass-4 .cl-editor-body::-webkit-scrollbar { width: 6px; }
+.cl-glass-4 .cl-meta-panel::-webkit-scrollbar-track, .cl-glass-4 .cl-editor-body::-webkit-scrollbar-track { background: transparent; }
+.cl-glass-4 .cl-meta-panel::-webkit-scrollbar-thumb, .cl-glass-4 .cl-editor-body::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.08); border-radius: 3px; }
+.cl-glass-4 .cl-meta-panel::-webkit-scrollbar-thumb:hover, .cl-glass-4 .cl-editor-body::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.14); }
+
+/* ═══ Top Bar — light scholarly adaptation ═══ */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* ── Focus ring global ── */
+.cl-glass-4 *:focus-visible { outline: none; box-shadow: 0 0 0 2px rgba(217,119,87,0.2); }

@@ -1,3 +1,4 @@
+import type { AppView } from '@/types'
 import { useCallback, useState } from 'react'
 import { usePanesStore } from '@/store/panes'
 import { useUIStore } from '@/store/ui'
@@ -6,8 +7,8 @@ import { BreadcrumbPath } from './BreadcrumbPath'
 
 interface TopBarProps {
   onRefresh?: () => Promise<void>
-  activeView: 'editor' | 'crons'
-  onViewSwitch: (view: 'editor' | 'crons') => void
+  activeView: AppView
+  onViewSwitch: (view: AppView) => void
 }
 
 export function TopBar({ onRefresh, activeView, onViewSwitch }: TopBarProps) {
@@ -68,6 +69,38 @@ export function TopBar({ onRefresh, activeView, onViewSwitch }: TopBarProps) {
           aria-selected={activeView === 'crons'}
         >
           Crons
+        </button>
+        <button
+          className={`view-btn${activeView === 'skills-lab' ? ' active' : ''}`}
+          onClick={() => onViewSwitch('skills-lab')}
+          role="tab"
+          aria-selected={activeView === 'skills-lab'}
+        >
+          Skills Lab
+        </button>
+        <button
+          className={`view-btn view-btn-variant${activeView === 'skills-lab-light' ? ' active' : ''}`}
+          onClick={() => onViewSwitch('skills-lab-light')}
+          role="tab"
+          aria-selected={activeView === 'skills-lab-light'}
+        >
+          /light
+        </button>
+        <button
+          className={`view-btn${activeView === 'canvas' ? ' active' : ''}`}
+          onClick={() => onViewSwitch('canvas')}
+          role="tab"
+          aria-selected={activeView === 'canvas'}
+        >
+          Canvas
+        </button>
+        <button
+          className={`view-btn${activeView === 'headquarters' ? ' active' : ''}`}
+          onClick={() => onViewSwitch('headquarters')}
+          role="tab"
+          aria-selected={activeView === 'headquarters'}
+        >
+          HQ
         </button>
       </div>
       <div className="topbar-center">

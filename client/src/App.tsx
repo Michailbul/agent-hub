@@ -12,6 +12,10 @@ import { Sidebar } from '@/components/Sidebar/Sidebar'
 import { PaneManager } from '@/components/Editor/PaneManager'
 import { Toast } from '@/components/Toast'
 import { CronsPanel } from '@/components/Crons/CronsPanel'
+import { CanvasView } from '@/components/Canvas/CanvasView'
+import { SkillsLab } from '@/components/SkillsLab/SkillsLab'
+import { HeadquartersPage } from '@/components/Headquarters/HeadquartersPage'
+import type { AppView } from '@/types'
 
 export function App() {
   const { isAuthenticated, isChecking, check } = useAuthStore()
@@ -19,7 +23,7 @@ export function App() {
   const { data: tree, refetch: refetchTree } = useTree()
   const addPane = usePanesStore(s => s.addPane)
   const panes = usePanesStore(s => s.panes)
-  const [activeView, setActiveView] = useState<'editor' | 'crons'>('editor')
+  const [activeView, setActiveView] = useState<AppView>('editor')
   const activePaneId = usePanesStore(s => s.activePaneId)
   const { flashSaved, toast } = useUIStore()
   const [dropVisible, setDropVisible] = useState(false)
@@ -139,10 +143,24 @@ export function App() {
   if (!isAuthenticated) return <><LoginForm /><Toast /></>
 
   return (
-    <div className="app">
-      <TopBar onRefresh={refetchTree} activeView={activeView} onViewSwitch={setActiveView} />
+    <div className={`app${activeView === 'skills-lab' ? ' app-skills-lab app-skills-lab-dark' : ''}${activeView === 'skills-lab-light' ? ' app-skills-lab app-skills-lab-light' : ''}`}>
+      <TopBar
+        onRefresh={async () => {
+          await refetchTree()
+        }}
+        activeView={activeView}
+        onViewSwitch={setActiveView}
+      />
       <div className="app-body">
-        {activeView === 'crons'
+        {activeView === 'canvas'
+          ? <CanvasView onNavigateToFiles={() => setActiveView('editor')} themeClass="cv-b1-anthro" />
+          : activeView === 'headquarters'
+          ? <HeadquartersPage />
+          : activeView === 'skills-lab'
+          ? <SkillsLab />
+          : activeView === 'skills-lab-light'
+          ? <SkillsLab variant="light" />
+          : activeView === 'crons'
           ? <CronsPanel />
           : <>
               <Sidebar tree={tree} />

@@ -16,8 +16,11 @@ export function FileItem({ file, activePath, agents = [] }: FileItemProps) {
   const [ctx, setCtx] = useState<{ x: number; y: number } | null>(null)
 
   const shortPath = file.path
-    .replace('/root/.openclaw/', '~/')
-    .replace('/root/.agents/', '~a/')
+    .replace(/^\/Users\/[^/]+\/\.openclaw\//, '~/openclaw/')
+    .replace(/^\/Users\/[^/]+\/\.agents\//, '~/agents/')
+    .replace(/^\/Users\/[^/]+\//, '~/')
+    .replace('/root/.openclaw/', '~/openclaw/')
+    .replace('/root/.agents/', '~/agents/')
     .replace('/root/work/laniameda/laniameda-hq/', '~/hq/')
 
   const handleClick = useCallback(
