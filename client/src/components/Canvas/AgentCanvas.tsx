@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useEffect } from 'react'
+import { useCallback, useMemo, useEffect, useState } from 'react'
 import {
   ReactFlow,
   Background,
@@ -17,6 +17,7 @@ import {
 import '@xyflow/react/dist/style.css'
 import { useCanvasStore } from '@/store/canvas'
 import { AgentNode, type AgentNodeData } from './AgentNode'
+import { SkillContextMenu } from './SkillContextMenu'
 
 const nodeTypes = { agent: AgentNode }
 
@@ -75,6 +76,9 @@ function AgentCanvasInner() {
   const setDropTargetAgent = useCanvasStore(s => s.setDropTargetAgent)
   const assignSkill = useCanvasStore(s => s.assignSkill)
 
+  // Context menu state
+  const [ctxMenu, setCtxMenu] = useState<{ skillId: string; variantPath: string; x: number; y: number } | null>(null)
+
   // Build nodes
   const initialNodes = useMemo((): Node[] => {
     if (!data) return []
@@ -83,7 +87,7 @@ function AgentCanvasInner() {
       const pos = saved[agent.id] || autoLayout(data.agents.length, i)
       const skills = agent.skills.slice(0, 10).map(skill => {
         const palette = data.paletteSkills.find(p => p.id === skill.id)
-        return { ...skill, department: palette?.department || 'Utility' }
+        return { ...skill, department: palette?.department || 'Utility', variantPath: palette?.variantPath || '' }
       })
       const subagentLabels = agent.subagents
         .map(subId => data.agents.find(a => a.id === subId)?.label)
@@ -108,6 +112,11 @@ function AgentCanvasInner() {
           onOpenSkills: (id: string) => { openInspectorToSkills(id) },
           onAddSkill: (id: string) => { openInspectorAndBrowser(id) },
           onPreviewSkill: (skillId: string) => previewSkill(skillId),
+          onSkillContextMenu: (e: React.MouseEvent, skillId: string, variantPath: string) => {
+            e.preventDefault()
+            e.stopPropagation()
+            setCtxMenu({ skillId, variantPath, x: e.clientX, y: e.clientY })
+          },
           onDragOver: (e: React.DragEvent, agentId: string) => {
             if (!e.dataTransfer.types.includes('application/x-canvas-skill')) return
             e.preventDefault()
@@ -209,6 +218,7 @@ function AgentCanvasInner() {
   if (!data) return null
 
   return (
+    <>
     <ReactFlow
       nodes={nodes}
       edges={edges}
@@ -245,6 +255,16 @@ function AgentCanvasInner() {
         style={{ background: '#fff', border: '1px solid rgba(55,53,47,.06)', borderRadius: 6 }}
       />
     </ReactFlow>
+    {ctxMenu && (
+      <SkillContextMenu
+        skillId={ctxMenu.skillId}
+        variantPath={ctxMenu.variantPath}
+        x={ctxMenu.x}
+        y={ctxMenu.y}
+        onClose={() => setCtxMenu(null)}
+      />
+    )}
+    </>
   )
 }
 

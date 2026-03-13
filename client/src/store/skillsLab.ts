@@ -79,6 +79,8 @@ interface SkillsLabStore {
   expandedTreeSources: Set<string>
   /** Loaded SKILL.md content keyed by skill id */
   skillContentCache: Record<string, string>
+  /** Starred/favorited skill IDs */
+  starredSkillIds: Set<string>
 
   setVariant: (v: LabVariant) => void
   setSearchQuery: (q: string) => void
@@ -98,6 +100,7 @@ interface SkillsLabStore {
   toggleExpandTreeSource: (id: string) => void
   loadFromAPI: () => Promise<void>
   loadSkillContent: (skillId: string) => Promise<string>
+  toggleStarSkill: (skillId: string) => Promise<void>
 
   filtered: () => UnifiedSkill[]
 }
@@ -200,6 +203,7 @@ export const useSkillsLabStore = create<SkillsLabStore>((set, get) => ({
   collapsedSources: new Set(),
   expandedTreeSources: new Set(),
   skillContentCache: {},
+  starredSkillIds: new Set(),
 
   setVariant: (v) => set({ variant: v }),
   setSearchQuery: (q) => set({ searchQuery: q }),
@@ -247,7 +251,8 @@ export const useSkillsLabStore = create<SkillsLabStore>((set, get) => ({
       const agents = mapAgents(data)
       const skills = mapSkills(data)
       const departments = [...new Set(skills.map(s => s.department))].sort()
-      set({ sources, agents, skills, departments, loading: false, loaded: true })
+      const starredSkillIds = new Set<string>(data.starredSkillIds || [])
+      set({ sources, agents, skills, departments, loading: false, loaded: true, starredSkillIds })
     } catch (e: any) {
       set({ loading: false, error: e.message })
     }
@@ -267,6 +272,22 @@ export const useSkillsLabStore = create<SkillsLabStore>((set, get) => ({
     } catch {
       return 'Failed to load content'
     }
+  },
+
+  toggleStarSkill: async (skillId: string) => {
+    const { starredSkillIds } = get()
+    const wasStarred = starredSkillIds.has(skillId)
+    const next = new Set(starredSkillIds)
+    if (wasStarred) next.delete(skillId); else next.add(skillId)
+    set({ starredSkillIds: next })
+    try {
+      const r = await fetch(wasStarred ? '/api/skills/unstar' : '/api/skills/star', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ skillId }),
+      })
+      if (!r.ok) set({ starredSkillIds }) // rollback
+    } catch { set({ starredSkillIds }) }
   },
 
   filtered: () => {

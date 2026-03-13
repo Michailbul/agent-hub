@@ -21,7 +21,7 @@ export interface AgentNodeData {
   label: string
   emoji: string
   role: string
-  skills: { id: string; name: string; department: string }[]
+  skills: { id: string; name: string; department: string; variantPath: string }[]
   skillCount: number
   subagentLabels: string[]
   isSelected: boolean
@@ -31,6 +31,7 @@ export interface AgentNodeData {
   onOpenSkills: (agentId: string) => void
   onAddSkill: (agentId: string) => void
   onPreviewSkill: (skillId: string) => void
+  onSkillContextMenu: (e: React.MouseEvent, skillId: string, variantPath: string) => void
   onDragOver: (e: React.DragEvent, agentId: string) => void
   onDragLeave: () => void
   onDrop: (e: React.DragEvent, agentId: string) => void
@@ -90,6 +91,7 @@ export const AgentNode = memo(function AgentNode({ data }: NodeProps) {
                   key={skill.id}
                   className="cv-card-skill"
                   onClick={(e) => { e.stopPropagation(); d.onPreviewSkill(skill.id) }}
+                  onContextMenu={(e) => d.onSkillContextMenu(e, skill.id, skill.variantPath)}
                 >
                   <span
                     className="cv-card-skill-dot"

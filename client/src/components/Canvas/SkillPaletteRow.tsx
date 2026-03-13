@@ -5,9 +5,10 @@ interface SkillPaletteRowProps {
   skill: PaletteSkill
   onAssign?: () => void
   onPreview?: () => void
+  onContextMenu?: (e: React.MouseEvent) => void
 }
 
-export function SkillPaletteRow({ skill, onAssign, onPreview }: SkillPaletteRowProps) {
+export function SkillPaletteRow({ skill, onAssign, onPreview, onContextMenu }: SkillPaletteRowProps) {
   const handleDragStart = useCallback((e: React.DragEvent) => {
     e.dataTransfer.setData(
       'application/x-canvas-skill',
@@ -28,6 +29,7 @@ export function SkillPaletteRow({ skill, onAssign, onPreview }: SkillPaletteRowP
       className="cv-palette-row"
       draggable
       onDragStart={handleDragStart}
+      onContextMenu={onContextMenu}
     >
       <span className={`cv-palette-dot${skill.installedAgentIds.length > 0 ? ' active' : ''}`} />
       <span className="cv-palette-grip">&#x2801;&#x2801;</span>

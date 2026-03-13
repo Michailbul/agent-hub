@@ -13,6 +13,7 @@ import {
   Trash2,
   ChevronRight,
   Feather,
+  Star,
 } from 'lucide-react'
 import './v11-kiln.css'
 
@@ -44,6 +45,8 @@ export function V11Kiln() {
   const loadFromAPI = useSkillsLabStore(s => s.loadFromAPI)
   const loadSkillContent = useSkillsLabStore(s => s.loadSkillContent)
   const skillContentCache = useSkillsLabStore(s => s.skillContentCache)
+  const starredSkillIds = useSkillsLabStore(s => s.starredSkillIds)
+  const toggleStarSkill = useSkillsLabStore(s => s.toggleStarSkill)
 
   const [navTab, setNavTab] = useState<NavTab>('agents')
   const [focusedPanel, setFocusedPanel] = useState<FocusedPanel>(null)
@@ -186,6 +189,13 @@ export function V11Kiln() {
                           <span className="kn-skill-indicator" />
                           <span className="kn-skill-name">{sk.displayName}</span>
                           <span className="kn-skill-dept-label">{sk.department}</span>
+                          <span
+                            className={`kn-star-btn${starredSkillIds.has(sk.id) ? ' starred' : ''}`}
+                            onClick={e => { e.stopPropagation(); toggleStarSkill(sk.id) }}
+                            title={starredSkillIds.has(sk.id) ? 'Unstar' : 'Star'}
+                          >
+                            <Star size={12} strokeWidth={1.5} fill={starredSkillIds.has(sk.id) ? 'currentColor' : 'none'} />
+                          </span>
                         </button>
                       ))}
                     </div>
@@ -237,6 +247,13 @@ export function V11Kiln() {
                             >
                               <span className="kn-skill-indicator" />
                               <span className="kn-skill-name">{sk.displayName}</span>
+                              <span
+                                className={`kn-star-btn${starredSkillIds.has(sk.id) ? ' starred' : ''}`}
+                                onClick={e => { e.stopPropagation(); toggleStarSkill(sk.id) }}
+                                title={starredSkillIds.has(sk.id) ? 'Unstar' : 'Star'}
+                              >
+                                <Star size={12} strokeWidth={1.5} fill={starredSkillIds.has(sk.id) ? 'currentColor' : 'none'} />
+                              </span>
                             </button>
                           ))}
                           {showToggle && !isTreeExpanded && (
@@ -338,6 +355,13 @@ export function V11Kiln() {
                 <Settings2 size={14} strokeWidth={1.5} className="kn-panel-icon" />
                 <h3 className="kn-panel-title">Inspector</h3>
               </div>
+              <button
+                className={`kn-star-toggle${starredSkillIds.has(selectedSkill.id) ? ' starred' : ''}`}
+                onClick={e => { e.stopPropagation(); toggleStarSkill(selectedSkill.id) }}
+                title={starredSkillIds.has(selectedSkill.id) ? 'Unstar skill' : 'Star skill'}
+              >
+                <Star size={14} strokeWidth={1.5} fill={starredSkillIds.has(selectedSkill.id) ? 'currentColor' : 'none'} />
+              </button>
             </header>
 
             <section className="kn-meta-section">

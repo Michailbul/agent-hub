@@ -4,6 +4,7 @@ import { AgentCanvas } from './AgentCanvas'
 import { SkillBrowser } from './SkillBrowser'
 import { SidePanel } from './SidePanel'
 import { AgentInspector } from './AgentInspector'
+import { SkillGraph } from './SkillGraph'
 
 interface CanvasViewProps {
   onNavigateToFiles?: (agentId: string) => void
@@ -18,6 +19,8 @@ export function CanvasView({ onNavigateToFiles, themeClass }: CanvasViewProps) {
   const setOnNavigateToFiles = useCanvasStore(s => s.setOnNavigateToFiles)
   const sidePanelMode = useCanvasStore(s => s.sidePanelMode)
   const browserOpen = useCanvasStore(s => s.browserOpen)
+  const canvasViewMode = useCanvasStore(s => s.canvasViewMode)
+  const setCanvasViewMode = useCanvasStore(s => s.setCanvasViewMode)
 
   useEffect(() => {
     void loadData()
@@ -58,14 +61,27 @@ export function CanvasView({ onNavigateToFiles, themeClass }: CanvasViewProps) {
   return (
     <div className={rootCls}>
       <div className="cv-chrome">
-        <span className="cv-chrome-title">Agent Canvas</span>
+        <div className="cv-chrome-tabs">
+          <button
+            className={`cv-chrome-tab${canvasViewMode === 'agents' ? ' active' : ''}`}
+            onClick={() => setCanvasViewMode('agents')}
+          >
+            Agents
+          </button>
+          <button
+            className={`cv-chrome-tab${canvasViewMode === 'skill-graph' ? ' active' : ''}`}
+            onClick={() => setCanvasViewMode('skill-graph')}
+          >
+            Skill Graph
+          </button>
+        </div>
         <span className="cv-chrome-right">{agentCount} agents · {skillCount} skills</span>
       </div>
       <div className="cv-body">
         <div className="cv-center">
-          <AgentCanvas />
+          {canvasViewMode === 'agents' ? <AgentCanvas /> : <SkillGraph />}
         </div>
-        {browserOpen && <SkillBrowser />}
+        {canvasViewMode === 'agents' && browserOpen && <SkillBrowser />}
         {sidePanelMode?.kind === 'agent-inspector' && <AgentInspector />}
         {sidePanelMode?.kind === 'skill-preview' && <SidePanel />}
       </div>

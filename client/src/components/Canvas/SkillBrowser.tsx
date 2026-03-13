@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
 import { useCanvasStore } from '@/store/canvas'
 import { SkillPaletteRow } from './SkillPaletteRow'
+import { SkillContextMenu } from './SkillContextMenu'
 import { CategoryFilter } from './CategoryFilter'
 import type { PaletteSkill } from '@/types/canvas'
 
@@ -15,14 +16,27 @@ export function SkillBrowser() {
   const selectedAgentId = useCanvasStore(s => s.selectedAgentId)
   const assignSkill = useCanvasStore(s => s.assignSkill)
   const previewSkill = useCanvasStore(s => s.previewSkill)
+  const sourceFilter = useCanvasStore(s => s.sourceFilter)
+  const setSourceFilter = useCanvasStore(s => s.setSourceFilter)
   const [search, setSearch] = useState('')
   const [collapsedDepts, setCollapsedDepts] = useState<Set<string>>(new Set())
+  const [ctxMenu, setCtxMenu] = useState<{ skillId: string; variantPath: string; x: number; y: number } | null>(null)
 
   const paletteSkills = data?.paletteSkills || []
   const q = search.trim().toLowerCase()
 
+  // Source counts for tabs
+  const ownCount = useMemo(() => paletteSkills.filter(s => s.isInMaster || s.sourceKind === 'workspace').length, [paletteSkills])
+  const libCount = useMemo(() => paletteSkills.filter(s => !s.isInMaster && s.sourceKind !== 'workspace').length, [paletteSkills])
+
   const filtered = useMemo(() => {
     let result = paletteSkills
+    // Source filter
+    if (sourceFilter === 'own') {
+      result = result.filter(s => s.isInMaster || s.sourceKind === 'workspace')
+    } else if (sourceFilter === 'library') {
+      result = result.filter(s => !s.isInMaster && s.sourceKind !== 'workspace')
+    }
     if (activeTags.size > 0) {
       result = result.filter(s => activeTags.has(s.department))
     }
@@ -34,7 +48,7 @@ export function SkillBrowser() {
       )
     }
     return result
-  }, [paletteSkills, q, activeTags])
+  }, [paletteSkills, q, activeTags, sourceFilter])
 
   const grouped = useMemo(() => {
     const map = new Map<string, PaletteSkill[]>()
@@ -92,6 +106,26 @@ export function SkillBrowser() {
             onChange={e => setSearch(e.target.value)}
           />
         </div>
+        <div className="cv-source-tabs">
+          <button
+            className={`cv-source-tab${sourceFilter === 'all' ? ' active' : ''}`}
+            onClick={() => setSourceFilter('all')}
+          >
+            All <span className="cv-source-tab-count">{paletteSkills.length}</span>
+          </button>
+          <button
+            className={`cv-source-tab${sourceFilter === 'own' ? ' active' : ''}`}
+            onClick={() => setSourceFilter('own')}
+          >
+            My Skills <span className="cv-source-tab-count">{ownCount}</span>
+          </button>
+          <button
+            className={`cv-source-tab${sourceFilter === 'library' ? ' active' : ''}`}
+            onClick={() => setSourceFilter('library')}
+          >
+            Library <span className="cv-source-tab-count">{libCount}</span>
+          </button>
+        </div>
         <CategoryFilter
           tags={allTags}
           activeTags={activeTags}
@@ -120,6 +154,10 @@ export function SkillBrowser() {
                   skill={skill}
                   onAssign={selectedAgentId ? () => handleAssign(skill) : undefined}
                   onPreview={() => previewSkill(skill.id)}
+                  onContextMenu={(e) => {
+                    e.preventDefault()
+                    setCtxMenu({ skillId: skill.id, variantPath: skill.variantPath, x: e.clientX, y: e.clientY })
+                  }}
                 />
               ))}
             </div>
@@ -131,6 +169,15 @@ export function SkillBrowser() {
           </div>
         )}
       </div>
+      {ctxMenu && (
+        <SkillContextMenu
+          skillId={ctxMenu.skillId}
+          variantPath={ctxMenu.variantPath}
+          x={ctxMenu.x}
+          y={ctxMenu.y}
+          onClose={() => setCtxMenu(null)}
+        />
+      )}
     </div>
   )
 }

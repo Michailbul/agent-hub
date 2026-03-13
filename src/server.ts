@@ -137,6 +137,7 @@ interface SkillFrontmatter {
   source: string | null;
   description: string | null;
   license: string | null;
+  department: string | null;
 }
 
 interface ParsedSkillDoc {
@@ -224,6 +225,7 @@ function parseSkillDocument(content: string): ParsedSkillDoc {
     source: null,
     description: null,
     license: null,
+    department: null,
   };
 
   if (!content.startsWith('---')) {
@@ -256,6 +258,7 @@ function parseSkillDocument(content: string): ParsedSkillDoc {
     if (key === 'source') frontmatter.source = value;
     if (key === 'description') frontmatter.description = value;
     if (key === 'license') frontmatter.license = value;
+    if (key === 'department') frontmatter.department = value;
   }
 
   return {
@@ -269,7 +272,7 @@ function parseSkillFrontmatter(filePath: string): SkillFrontmatter {
     const content = fs.readFileSync(filePath, 'utf8');
     return parseSkillDocument(content).frontmatter;
   } catch {
-    return { name: null, author: null, source: null, description: null, license: null };
+    return { name: null, author: null, source: null, description: null, license: null, department: null };
   }
 }
 
@@ -568,6 +571,12 @@ function buildSkillsIndex() {
       skill.variants.sort((left, right) => left.sourceRank - right.sourceRank || left.label.localeCompare(right.label));
       const preferred = skill.variants[0];
       const grouping = classifySkillGrouping(skill._groupingText.join('\n'));
+      // Frontmatter department overrides heuristic
+      if (preferred?.frontmatter.department) {
+        grouping.department = preferred.frontmatter.department;
+        grouping.confidence = 1.0;
+        grouping.source = 'frontmatter' as any;
+      }
       const installedAgentIds = agentIds.filter(agentId => skill._installed.has(agentId));
       const missingAgentIds = agentIds.filter(agentId => !skill._installed.has(agentId));
       const isInMaster = skill.variants.some(v => path.resolve(v.path).startsWith(resolvedMasterRoot + path.sep));
@@ -606,6 +615,19 @@ function buildSkillsIndex() {
       })),
     skills,
     folders,
+    starredSkillIds: (() => {
+      const config = readStarredSkillsConfig();
+      const liveIds = new Set(skills.map(s => s.id));
+      const valid = config.starred.filter(id => liveIds.has(id));
+      if (valid.length < config.starred.length) {
+        // Prune orphaned starred IDs (deleted/renamed skills)
+        const pruned = config.starred.filter(id => !liveIds.has(id));
+        for (const id of pruned) delete config.starredAt[id];
+        config.starred = valid;
+        writeStarredSkillsConfig(config);
+      }
+      return valid;
+    })(),
   };
 }
 
@@ -1051,6 +1073,69 @@ app.post('/api/skills/unassign', auth, (req, res) => {
   }
 });
 
+app.post('/api/skill/tag', auth, (req, res) => {
+  const { skillId, department } = req.body;
+  if (!skillId || !department) return res.status(400).json({ error: 'skillId and department required' });
+
+  const index = buildSkillsIndex();
+  const skill = index.skills.find(s => s.id === skillId);
+  if (!skill) return res.status(404).json({ error: 'Skill not found' });
+
+  // Use the preferred variant's SKILL.md
+  const variant = skill.variants[0];
+  if (!variant) return res.status(404).json({ error: 'No variant found' });
+  if (!isAllowed(variant.path)) return res.status(403).json({ error: 'Not allowed' });
+
+  // Resolve symlinks to write to the actual file
+  let targetPath = variant.path;
+  try {
+    const dir = path.dirname(targetPath);
+    if (fs.lstatSync(dir).isSymbolicLink()) {
+      targetPath = path.join(fs.realpathSync(dir), path.basename(targetPath));
+    }
+  } catch { /* use original path */ }
+
+  try {
+    const content = fs.readFileSync(targetPath, 'utf8');
+    let updated: string;
+
+    if (content.startsWith('---')) {
+      const lines = content.split('\n');
+      let endIndex = -1;
+      for (let i = 1; i < lines.length; i++) {
+        if (lines[i].trim() === '---') { endIndex = i; break; }
+      }
+      if (endIndex === -1) {
+        // Malformed frontmatter — wrap entire content
+        updated = `---\ndepartment: ${department}\n---\n${content}`;
+      } else {
+        // Check if department already exists in frontmatter
+        let found = false;
+        for (let i = 1; i < endIndex; i++) {
+          if (/^department:\s/.test(lines[i])) {
+            lines[i] = `department: ${department}`;
+            found = true;
+            break;
+          }
+        }
+        if (!found) {
+          // Insert before closing ---
+          lines.splice(endIndex, 0, `department: ${department}`);
+        }
+        updated = lines.join('\n');
+      }
+    } else {
+      // No frontmatter — add one
+      updated = `---\ndepartment: ${department}\n---\n${content}`;
+    }
+
+    fs.writeFileSync(targetPath, updated, 'utf8');
+    res.json({ ok: true, path: targetPath, department });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.get('/api/setup/status', (req, res) => {
   const cli = detectCLI();
   // needsSetup = false if: config file exists, OR env vars are set (VPS mode), OR agents were auto-discovered
@@ -1193,34 +1278,77 @@ function refreshSkillsReposAllowedRoots() {
 }
 refreshSkillsReposAllowedRoots();
 
-// Native folder picker — opens OS dialog, returns selected path
+// ── STARRED SKILLS CONFIG ────────────────────────────────
+const STARRED_SKILLS_CONFIG_PATH = path.join(path.dirname(CONFIG_PATH), 'starred-skills.config.json');
+
+function readStarredSkillsConfig(): { starred: string[]; starredAt: Record<string, string> } {
+  if (fs.existsSync(STARRED_SKILLS_CONFIG_PATH)) {
+    try { return JSON.parse(fs.readFileSync(STARRED_SKILLS_CONFIG_PATH, 'utf8')); }
+    catch { /* fall through */ }
+  }
+  return { starred: [], starredAt: {} };
+}
+
+function writeStarredSkillsConfig(config: ReturnType<typeof readStarredSkillsConfig>) {
+  fs.mkdirSync(path.dirname(STARRED_SKILLS_CONFIG_PATH), { recursive: true });
+  fs.writeFileSync(STARRED_SKILLS_CONFIG_PATH, JSON.stringify(config, null, 2), 'utf8');
+}
+
+app.post('/api/skills/star', auth, (req, res) => {
+  const { skillId } = req.body;
+  if (!skillId || typeof skillId !== 'string') return res.status(400).json({ error: 'skillId required' });
+  const config = readStarredSkillsConfig();
+  if (!config.starred.includes(skillId)) {
+    config.starred.push(skillId);
+    config.starredAt[skillId] = new Date().toISOString();
+    writeStarredSkillsConfig(config);
+  }
+  res.json({ ok: true, starred: config.starred });
+});
+
+app.post('/api/skills/unstar', auth, (req, res) => {
+  const { skillId } = req.body;
+  if (!skillId || typeof skillId !== 'string') return res.status(400).json({ error: 'skillId required' });
+  const config = readStarredSkillsConfig();
+  config.starred = config.starred.filter((id: string) => id !== skillId);
+  delete config.starredAt[skillId];
+  writeStarredSkillsConfig(config);
+  res.json({ ok: true, starred: config.starred });
+});
+
+// Native folder picker — opens OS dialog, returns selected path (async, non-blocking)
 app.get('/api/hq/pick-folder', auth, async (_req, res) => {
-  const { execSync } = await import('child_process');
+  const { exec } = await import('child_process');
   const platform = process.platform;
+
+  const runCmd = (cmd: string): Promise<string> =>
+    new Promise((resolve, reject) => {
+      exec(cmd, { encoding: 'utf8', timeout: 120000 }, (err, stdout) => {
+        if (err) return reject(err);
+        resolve(stdout.trim());
+      });
+    });
+
   try {
     let selected = '';
     if (platform === 'darwin') {
-      // macOS: use osascript to open native Finder folder picker
-      selected = execSync(
-        `osascript -e 'POSIX path of (choose folder with prompt "Select your HQ folder")'`,
-        { encoding: 'utf8', timeout: 60000 }
-      ).trim();
+      // macOS: activate to bring dialog to front, then open Finder folder picker
+      selected = await runCmd(
+        `osascript -e 'activate' -e 'POSIX path of (choose folder with prompt "Select your HQ folder")'`
+      );
     } else if (platform === 'linux') {
-      // Linux: try zenity, then kdialog
       try {
-        selected = execSync('zenity --file-selection --directory --title="Select your HQ folder"', { encoding: 'utf8', timeout: 60000 }).trim();
+        selected = await runCmd('zenity --file-selection --directory --title="Select your HQ folder"');
       } catch {
-        selected = execSync('kdialog --getexistingdirectory ~', { encoding: 'utf8', timeout: 60000 }).trim();
+        selected = await runCmd('kdialog --getexistingdirectory ~');
       }
     } else {
       return res.status(400).json({ error: 'Folder picker not supported on this platform. Enter path manually.' });
     }
     if (!selected) return res.status(400).json({ error: 'No folder selected' });
-    // Remove trailing slash
     selected = selected.replace(/\/+$/, '');
     res.json({ path: selected });
   } catch (e: any) {
-    // User cancelled the dialog
     res.status(400).json({ error: 'Folder selection cancelled' });
   }
 });

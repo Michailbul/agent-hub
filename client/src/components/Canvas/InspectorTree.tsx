@@ -77,7 +77,17 @@ function FTItem({ node, depth, isActive, onSelect, onRemove, isExpanded, onToggl
       <div
         className={`ft-row${isActive ? ' ft-active' : ''}${hovered ? ' ft-hovered' : ''}`}
         style={{ paddingLeft: `${depth * 16 + 8}px` }}
-        onClick={() => isFolder && !node.lazySkillId ? onToggleExpand?.() : onSelect(node)}
+        onClick={() => {
+          if (node.lazySkillId) {
+            // Skill folders: toggle expand AND select (loads SKILL.md)
+            onToggleExpand?.()
+            onSelect(node)
+          } else if (isFolder) {
+            onToggleExpand?.()
+          } else {
+            onSelect(node)
+          }
+        }}
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
       >
@@ -234,14 +244,12 @@ export function InspectorTree({ agentId }: InspectorTreeProps) {
       children: enrichedSkills.map(s => ({
         id: s.id,
         name: s.name,
-        type: 'file' as const,
-        extension: 'md',
+        type: 'folder' as const,
         itemKind: 'skill' as const,
         skillId: s.id,
         skillPath: s.variantPath,
         sublabel: s.department,
         removable: true,
-        // If skill has a variantPath, it's expandable
         lazySkillId: s.variantPath ? s.id : undefined,
         lazyVariantPath: s.variantPath || undefined,
       })),
@@ -318,7 +326,18 @@ export function InspectorTree({ agentId }: InspectorTreeProps) {
         const isExp = skillDirExpanded.has(node.lazySkillId)
         const dirFiles = skillDirFiles[node.lazySkillId] || []
 
-        const skillFileNodes: FTNode[] = dirFiles.map(f => ({
+        // SKILL.md as first child
+        const skillMdNode: FTNode = {
+          id: `${node.lazySkillId}__skill-md`,
+          name: 'SKILL.md',
+          type: 'file' as const,
+          extension: 'md',
+          itemKind: 'skill' as const,
+          skillId: node.lazySkillId!,
+          skillPath: node.lazyVariantPath!,
+        }
+
+        const otherFileNodes: FTNode[] = dirFiles.map(f => ({
           id: f.path,
           name: f.name,
           type: 'file' as const,
@@ -327,6 +346,8 @@ export function InspectorTree({ agentId }: InspectorTreeProps) {
           skillId: node.lazySkillId!,
           path: f.path,
         }))
+
+        const allChildren = [skillMdNode, ...otherFileNodes]
 
         return (
           <FTItem
@@ -338,8 +359,8 @@ export function InspectorTree({ agentId }: InspectorTreeProps) {
             onRemove={handleRemove}
             isExpanded={isExp}
             onToggleExpand={() => toggleSkillDir(node.lazySkillId!, node.lazyVariantPath!)}
-            childrenNodes={isExp && skillFileNodes.length > 0 ? (
-              skillFileNodes.map(sf => (
+            childrenNodes={isExp ? (
+              allChildren.map(sf => (
                 <FTItem
                   key={sf.id}
                   node={sf}

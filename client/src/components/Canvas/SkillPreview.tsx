@@ -8,7 +8,7 @@ export function SkillPreview() {
   const selectedAgentId = useCanvasStore(s => s.selectedAgentId)
   const assignSkill = useCanvasStore(s => s.assignSkill)
   const unassignSkill = useCanvasStore(s => s.unassignSkill)
-  const onNavigateToFiles = useCanvasStore(s => s.onNavigateToFiles)
+  const editSkillInInspector = useCanvasStore(s => s.editSkillInInspector)
   const [content, setContent] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
@@ -54,7 +54,8 @@ export function SkillPreview() {
   }
 
   const handleEdit = () => {
-    if (selectedAgentId) onNavigateToFiles?.(selectedAgentId)
+    if (!selectedAgentId || !skill) return
+    editSkillInInspector(selectedAgentId, skill.id, skill.variantPath)
   }
 
   return (

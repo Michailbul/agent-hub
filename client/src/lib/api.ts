@@ -143,6 +143,7 @@ export interface SkillsIndexData {
   agents: SkillsIndexAgent[]
   skills: SkillsIndexSkill[]
   folders: { name: string; root: string; sourceId: string }[]
+  starredSkillIds?: string[]
 }
 
 export async function fetchSkillsIndex(): Promise<SkillsIndexData> {

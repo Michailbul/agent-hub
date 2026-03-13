@@ -6,6 +6,17 @@
 
 /* ── PAGE ── */
 .hq-page {
+  /* Canvas-style light palette (surfaces + borders only — buttons keep warm ink/coral) */
+  --paper: #ffffff;
+  --surface-0: #ffffff;
+  --surface-1: #f7f6f3;
+  --surface-2: #f1f1ef;
+  --surface-3: #e8e7e4;
+  --surface-4: #dddcda;
+  --border-subtle: rgba(55,53,47,.06);
+  --border-default: rgba(55,53,47,.09);
+  --border-strong: rgba(55,53,47,.16);
+
   flex: 1;
   display: flex;
   flex-direction: column;

@@ -1169,3 +1169,33 @@
   color: #141311;
   border-color: #D97757;
 }
+
+/* ═══ Star Buttons ═══ */
+.kn-star-btn {
+  opacity: 0;
+  background: none;
+  border: none;
+  padding: 2px;
+  cursor: pointer;
+  color: #5a5a55;
+  transition: opacity 120ms ease, color 80ms ease;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+}
+.kn-skill-row:hover .kn-star-btn { opacity: 0.5; }
+.kn-star-btn:hover { opacity: 1 !important; color: #D97757; }
+.kn-star-btn.starred { opacity: 1; color: #D97757; }
+
+.kn-star-toggle {
+  background: none;
+  border: none;
+  padding: 4px;
+  cursor: pointer;
+  color: #5a5a55;
+  transition: color 80ms ease;
+  display: inline-flex;
+  align-items: center;
+}
+.kn-star-toggle:hover { color: #D97757; }
+.kn-star-toggle.starred { color: #D97757; }

@@ -4,11 +4,23 @@ This is the **open source product** — not the marketing site. The landing page
 
 ---
 
+## First-time setup? Read this skill
+
+**If you're setting up Agent Hub on this machine for the first time**, read the setup skill at:
+
+```
+skills/agent-hub-setup/SKILL.md
+```
+
+It walks you through the full setup — detecting the environment, discovering OpenClaw workspaces, generating config, setting up Docker or Node.js, and verifying the server runs. References inside the skill cover the full project overview, config schema, and path resolution logic.
+
+---
+
 ## Repo identity
 
 - **What:** Self-hosted web editor for AI agent instruction files and skills
 - **License:** MIT — free forever, open to contributions
-- **Stack:** Node.js + Express + vanilla JS (no build step for the server), TypeScript source in `src/`
+- **Stack:** Node.js 18+ / Express / TypeScript (server), React 19 / Vite / Zustand (client)
 - **Audience:** People who run OpenClaw, Claude Code, Codex, or any markdown-based AI agent setup
 
 ---
@@ -19,39 +31,33 @@ This is the **open source product** — not the marketing site. The landing page
 ```bash
 cd ~/work/agent-hub && git pull
 npm install
+cd client && npm install && cd ..
 ```
 
-### Development (plain server, no TS compile needed for UI changes)
+### Development
 ```bash
-node server.js  # runs existing plain JS server
-# or
-npm run build && node dist/server.js  # runs TypeScript compiled version
+npm run dev    # runs server (tsup watch) + client (Vite dev) concurrently
+# Server: http://localhost:4001
+# Client dev: http://localhost:5173 (Vite proxy)
 ```
 
-### After changes (MANDATORY workflow)
+### Production build
 ```bash
-npm run build                # compile src/ → dist/
+npm run build  # compiles server (tsup → dist/) + client (Vite → dist-client/)
+npm start      # runs dist/cli.js
+```
+
+### After changes (MANDATORY for VPS deploy)
+```bash
+npm run build
 git add -A && git commit -m "feat/fix: description"
-git push                     # push to origin
-docker compose up -d --build # deploy to VPS (reload container)
+git push
+# On VPS:
+cd /root/work/agent-hub && git pull && docker compose up -d --build
 # Live at: https://agent-hub.srv1439489.hstgr.cloud
 ```
 
-**⚠️ Do NOT skip docker deploy** — the Docker image caches the compiled files; pushing code without rebuilding the container means VPS won't see your changes.
-
-### Recent work (Ocean Crons Editor)
-
-**Branch:** `sprint/ocean-crons` (merged to master)  
-**Status:** Complete — Phase A–D all done, build passes, docker deployed  
-**What changed:**
-- Crons editor is now **centered, document-first** (max-width: 860px)
-- Left: resizable jobs list (180–420px, persisted)
-- Right: collapsible skills rail (40px→360px, persisted, markdown preview)
-- Prompt editor: min-height 320px, large document-like textarea
-- Keyboard nav: Tab/Shift+Tab cycles open cron tabs (safe focus rules)
-- Skills: click=preview, **+** button=insert (drag-drop enabled)
-
-See PRD at `/root/michael/prd-crons-ocean.md` for full spec.
+Do NOT skip `docker compose up -d --build` — the Docker image caches compiled files; pushing code without rebuilding the container means VPS won't see your changes.
 
 ---
 
@@ -60,18 +66,29 @@ See PRD at `/root/michael/prd-crons-ocean.md` for full spec.
 ```
 agent-hub/
   src/
-    server.ts         ← Express server (TypeScript source)
-    cli.ts            ← npx entrypoint, --tunnel, --no-open flags
-    setup-agent.ts    ← detects claude/codex CLI, spawns subprocess, streams SSE
-    setup-prompt.ts   ← premade prompt for workspace scanning
-  dist/               ← tsup compiled output (CJS, node18)
-  server.js           ← legacy plain JS server (used by Docker currently)
-  index.html          ← entire frontend — sidebar, editor, login, setup UI
-  Dockerfile
-  docker-compose.yml  ← VPS production config (Traefik labels, host network)
-  docker-compose.example.yml  ← template for end users
-  agent-hub.config.example.json  ← manual config template
-  TASK.md             ← build task spec (delete eventually)
+    server.ts              ← Express API server (routes, config, path resolution)
+    cli.ts                 ← CLI entrypoint (--no-open, --vps, --tunnel flags)
+    setup-agent.ts         ← Initial setup wizard (detects CLI, spawns subprocess)
+    setup-prompt.ts        ← Premade prompt for workspace scanning
+  client/
+    src/
+      App.tsx              ← React app with routing
+      components/          ← Canvas, Crons, HQ, Layout, Sidebar, SkillsLab
+      store/               ← Zustand stores (crons, canvas, hq, skills)
+      lib/                 ← API client, CodeMirror themes
+  dist/                    ← Compiled server (git-ignored)
+  dist-client/             ← Compiled React client
+  skills/
+    agent-hub-setup/       ← Setup skill (read this for full project context)
+      SKILL.md             ← 6-phase setup workflow
+      references/
+        project-overview.md  ← Full project context, tech stack, all API endpoints
+        config-schema.md     ← Config format with Docker + bare-metal examples
+        path-resolution.md   ← Exact auto-discovery logic from server.ts
+  Dockerfile               ← Multi-stage build (Node 22 Alpine)
+  docker-compose.example.yml  ← User template for Docker deployment
+  agent-hub.config.example.json  ← Config template
+  package.json             ← Root package (server deps + build scripts)
 ```
 
 ---
@@ -80,22 +97,43 @@ agent-hub/
 
 ### Before coding anything
 - Read `src/server.ts` to understand current API endpoints
-- Check `index.html` for existing JS/CSS patterns before adding new ones
+- Check `client/src/` for existing React component patterns
 - Run a build to confirm current state: `npm run build`
 
 ### API endpoints (current)
 ```
-GET  /api/tree              ← agents, skill libraries, studio tree
-GET  /api/file?path=        ← read file content
-POST /api/file              ← write file content { path, content }
-GET  /api/assign-targets    ← agent workspace targets for local file assign
+# Core
+POST /api/login             ← { password } → sets cookie
+POST /api/logout
 GET  /api/setup/status      ← { needsSetup, cli, configPath }
 GET  /api/setup/run         ← SSE stream: runs claude/codex setup agent
+POST /api/refresh           ← rescan agents/skills without restart
+
+# Files
+GET  /api/file?path=        ← read file content
+POST /api/file              ← write file { path, content }
+GET  /api/dir?path=         ← list directory entries
+
+# Agents & Tree
+GET  /api/tree              ← agents with instructions/memory/pm/skills, libraries, studio
+GET  /api/canvas/data       ← agent relationships, models, telegram, subagent edges
+GET  /api/assign-targets    ← agent workspace targets for file assignment
+
+# Skills
+GET  /api/skills/index      ← full skills index with variants, sources, grouping
 POST /api/skill/copy        ← copy skill dir { src, destDir }
 POST /api/skill/move        ← move skill dir { src, destDir }
 POST /api/skill/delete      ← delete skill dir { src }
-POST /api/login             ← { password } → sets cookie
-POST /api/logout
+POST /api/skill/rename      ← rename skill { src, newName }
+POST /api/skills/folder/create ← create skill folder { root, name }
+POST /api/skills/assign     ← install skill to agent { agentId, variantPath }
+POST /api/skills/unassign   ← remove skill from agent { agentId, skillId }
+
+# Cron Jobs
+GET    /api/crons           ← all cron jobs (from OPENCLAW_ROOT/cron/jobs.json)
+POST   /api/crons           ← create cron job
+PATCH  /api/crons/:id       ← update cron job
+DELETE /api/crons/:id       ← delete cron job
 ```
 
 ### Security rules (never break these)
@@ -103,19 +141,19 @@ POST /api/logout
 - Never expose paths outside allowed roots
 - `--dangerously-skip-permissions` cannot run as root — do NOT add to Docker CMD
 
-### Frontend (index.html)
-- All CSS is in `<style>` tag — use existing CSS variables (`--coral`, `--ink`, `--p`, etc.)
-- All JS is in `<script>` tag — vanilla only, no libraries beyond CodeMirror (CDN)
-- Use `mkEl()` helper for DOM creation
-- Use `toast(msg, type)` for user feedback
-- Pane state: `panes[]` array, `activePaneId` string, `renderPanes()` to re-render
+### Frontend (client/)
+- React 19 + TypeScript + Vite
+- State management: Zustand stores in `client/src/store/`
+- Editor: CodeMirror 6 for markdown, Tiptap for rich text
+- Diagrams: XYFlow (React Flow) for agent canvas
+- Styling: CSS variables, Inter + JetBrains Mono fonts
 
 ### Design system
+- V11 "Kiln" theme with teal + ink palette
 - Warm paper bg: `--p: #fffaf5`
 - Coral accent: `--coral: #ff7a64`
 - Brutalist card shadow: `var(--sh-b): 3px 3px 0 0 var(--ink)`
 - Hover lift: `transform: translate(-2px,-2px)` + shadow grows
-- Inter for UI, JetBrains Mono for labels/code/paths
 
 ---
 
@@ -143,12 +181,11 @@ We need a structured workspace view with clear separation:
 - **Skill fundamentals** (libraries + installed skills)
 - Clear operations to connect them (install/copy/move/remove skills per agent)
 
-### Avoid “forms are the past” UX
-- Do NOT build a templated “form builder” experience for skill creation.
+### Avoid "forms are the past" UX
+- Do NOT build a templated "form builder" experience for skill creation.
 - We are AI-native: creation should be driven by editing + AI assistance (chat-driven creation later), not rigid forms.
 - Crons have some structure, but even there we should avoid over-forming the UX; use composable blocks/chips where possible.
 
 ### Future (not immediate) but aligned
 - Chat-driven skill creation/editing via Claude CLI / Codex CLI (nice, but not priority right now).
-- UI-only grouping of agents into **departments** (org structure) even if it doesn’t change runtime behavior yet.
-
+- UI-only grouping of agents into **departments** (org structure) even if it doesn't change runtime behavior yet.

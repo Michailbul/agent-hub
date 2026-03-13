@@ -48,6 +48,9 @@ export interface PaletteSkill {
   installedAgentIds: string[]
   department: string
   purpose: string
+  sourceKind: string    // 'library' | 'workspace' | 'linked'
+  sourceLabel: string   // human-readable source name
+  isInMaster: boolean   // true if in AGENTS_SKILLS_ROOT
 }
 
 export interface AgentFiles {

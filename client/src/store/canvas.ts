@@ -15,12 +15,14 @@ interface CanvasStore {
   activeTags: Set<string>
   allTags: string[]
   canvasTheme: CanvasTheme
+  canvasViewMode: 'agents' | 'skill-graph'
 
   // Panel state
   browserOpen: boolean
   sidePanelMode: SidePanelMode
   previewSkillId: string | null
   agentSkillFilter: Set<string>
+  sourceFilter: 'all' | 'own' | 'library'
 
   // Inspector state
   inspectorActiveItem: InspectorActiveItem
@@ -39,6 +41,8 @@ interface CanvasStore {
   setOnNavigateToFiles: (cb: ((agentId: string) => void) | null) => void
   assignSkill: (agentId: string, variantPath: string) => Promise<void>
   unassignSkill: (agentId: string, skillId: string) => Promise<void>
+  updateSkillTag: (skillId: string, department: string) => Promise<void>
+  setSourceFilter: (filter: 'all' | 'own' | 'library') => void
   toggleTag: (tag: string) => void
   clearTags: () => void
   toggleBrowser: () => void
@@ -48,11 +52,13 @@ interface CanvasStore {
   toggleAgentSkillFilter: (tag: string) => void
   clearAgentSkillFilter: () => void
   setCanvasTheme: (theme: CanvasTheme) => void
+  setCanvasViewMode: (mode: 'agents' | 'skill-graph') => void
 
   // Inspector actions
   openInspector: (agentId: string) => void
   openInspectorToSkills: (agentId: string) => void
   openInspectorAndBrowser: (agentId: string) => void
+  editSkillInInspector: (agentId: string, skillId: string, skillPath: string) => void
   closeInspector: () => void
   setInspectorItem: (item: InspectorActiveItem) => void
   toggleInspectorSection: (sectionId: string) => void
@@ -79,10 +85,12 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
   activeTags: new Set(),
   allTags: [],
   canvasTheme: 'default' as CanvasTheme,
+  canvasViewMode: 'agents' as const,
   browserOpen: false,
   sidePanelMode: null,
   previewSkillId: null,
   agentSkillFilter: new Set(),
+  sourceFilter: 'all' as const,
 
   // Inspector defaults
   inspectorActiveItem: null,
@@ -111,15 +119,21 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
       const treeData: TreeData = await treeRes.json()
 
       // Build palette skills from skills-index
-      const paletteSkills: PaletteSkill[] = (skillsIndex.skills || []).map((s: any) => ({
-        id: s.id,
-        name: s.name,
-        summary: s.summary || '',
-        variantPath: s.variants?.[0]?.path || '',
-        installedAgentIds: s.installedAgentIds || [],
-        department: s.grouping?.department || 'Utility',
-        purpose: s.grouping?.purpose || '',
-      }))
+      const paletteSkills: PaletteSkill[] = (skillsIndex.skills || []).map((s: any) => {
+        const pref = s.variants?.[0]
+        return {
+          id: s.id,
+          name: s.name,
+          summary: s.summary || '',
+          variantPath: pref?.path || '',
+          installedAgentIds: s.installedAgentIds || [],
+          department: s.grouping?.department || 'Utility',
+          purpose: s.grouping?.purpose || '',
+          sourceKind: pref?.kind || 'library',
+          sourceLabel: pref?.sourceLabel || '',
+          isInMaster: s.isInMaster ?? false,
+        }
+      })
 
       // Build unique tags from departments
       const allTags = [...new Set(paletteSkills.map(s => s.department))].sort()
@@ -200,6 +214,21 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
     await get().loadData()
   },
 
+  updateSkillTag: async (skillId, department) => {
+    const res = await fetch('/api/skill/tag', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ skillId, department }),
+    })
+    if (!res.ok) {
+      const j = await res.json().catch(() => ({}))
+      throw new Error(j.error || 'Tag update failed')
+    }
+    await get().loadData()
+  },
+
+  setSourceFilter: (filter) => set({ sourceFilter: filter }),
+
   toggleTag: (tag) => set(s => {
     const next = new Set(s.activeTags)
     if (next.has(tag)) next.delete(tag)
@@ -230,6 +259,7 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
   clearAgentSkillFilter: () => set({ agentSkillFilter: new Set() }),
 
   setCanvasTheme: (theme) => set({ canvasTheme: theme }),
+  setCanvasViewMode: (mode) => set({ canvasViewMode: mode }),
 
   // ── Inspector actions ──
 
@@ -278,6 +308,24 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
       browserOpen: true,
     }
   }),
+
+  editSkillInInspector: (agentId, skillId, skillPath) => {
+    const collapsed = new Set(get().inspectorCollapsed)
+    collapsed.delete('skills')
+    set({
+      sidePanelMode: { kind: 'agent-inspector', agentId },
+      selectedAgentId: agentId,
+      inspectorActiveItem: { kind: 'skill', skillId, skillPath },
+      inspectorFileContent: null,
+      inspectorEditContent: null,
+      inspectorFileDirty: false,
+      inspectorFileLoading: false,
+      previewSkillId: null,
+      inspectorCollapsed: collapsed,
+    })
+    // Load the skill file
+    void get().loadInspectorFile(skillPath)
+  },
 
   closeInspector: () => set({
     sidePanelMode: null,
