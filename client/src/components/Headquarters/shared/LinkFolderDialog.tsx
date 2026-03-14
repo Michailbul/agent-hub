@@ -4,7 +4,9 @@ import { useHQStore } from '@/store/hq'
 export function LinkFolderDialog() {
   const {
     linkDialogOpen, linkForm, setLinkForm, submitLink, closeLinkDialog,
-    pickFolder, pickingFolder,
+    pickFolder, pickingFolder, browsePathOpen, browseCurrentPath,
+    browseParentPath, browseEntries, browseError, browseToPath,
+    chooseBrowsedPath, closePathBrowser,
   } = useHQStore()
 
   const handleSubmit = useCallback((e: React.FormEvent) => {
@@ -44,13 +46,69 @@ export function LinkFolderDialog() {
                 onClick={pickFolder}
                 disabled={pickingFolder}
               >
-                {pickingFolder ? '...' : 'Browse'}
+                {pickingFolder ? '...' : 'Browse path'}
               </button>
             </div>
             <span className="hq-field-hint">
-              Click Browse to open the system folder picker, or type a path
+              Browse server folders here, or type an absolute server path manually
             </span>
           </div>
+
+          {browsePathOpen && (
+            <div className="hq-folder-browser">
+              <div className="hq-folder-browser-bar">
+                <span className="hq-folder-browser-label">
+                  {browseCurrentPath || 'Available roots'}
+                </span>
+                <div className="hq-folder-browser-actions">
+                  <button
+                    type="button"
+                    className="hq-btn-ghost"
+                    onClick={() => browseParentPath ? browseToPath(browseParentPath) : browseToPath(null)}
+                    disabled={pickingFolder || (!browseParentPath && !browseCurrentPath)}
+                  >
+                    Up
+                  </button>
+                  <button
+                    type="button"
+                    className="hq-btn-primary"
+                    onClick={() => browseCurrentPath && chooseBrowsedPath(browseCurrentPath)}
+                    disabled={!browseCurrentPath}
+                  >
+                    Use this folder
+                  </button>
+                  <button type="button" className="hq-btn-ghost" onClick={closePathBrowser}>
+                    Close
+                  </button>
+                </div>
+              </div>
+
+              {browseError && (
+                <div className="hq-folder-browser-empty">{browseError}</div>
+              )}
+
+              {!browseError && browseEntries.length === 0 && !pickingFolder && (
+                <div className="hq-folder-browser-empty">No subfolders here</div>
+              )}
+
+              {!browseError && browseEntries.length > 0 && (
+                <div className="hq-folder-browser-list">
+                  {browseEntries.map(entry => (
+                    <button
+                      key={entry.path}
+                      type="button"
+                      className="hq-folder-browser-entry"
+                      onClick={() => browseToPath(entry.path)}
+                      disabled={pickingFolder}
+                    >
+                      <span className="hq-folder-browser-entry-name">📁 {entry.name}</span>
+                      <span className="hq-folder-browser-entry-path">{entry.path}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           <label className="hq-field">
             <span className="hq-field-label">Name</span>

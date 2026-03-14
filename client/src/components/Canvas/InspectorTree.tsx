@@ -71,11 +71,12 @@ function FTItem({ node, depth, isActive, onSelect, onRemove, isExpanded, onToggl
   const ext = node.extension || extOf(node.name)
   const icon = getExtIcon(ext)
   const open = isExpanded ?? false
+  const rowClassName = `ft-row${isActive ? ' ft-active' : ''}${hovered ? ' ft-hovered' : ''}${node.removable ? ' ft-row-removable' : ''}`
 
   return (
     <div className="ft-node">
       <div
-        className={`ft-row${isActive ? ' ft-active' : ''}${hovered ? ' ft-hovered' : ''}`}
+        className={rowClassName}
         style={{ paddingLeft: `${depth * 16 + 8}px` }}
         onClick={() => {
           if (node.lazySkillId) {
@@ -130,7 +131,15 @@ function FTItem({ node, depth, isActive, onSelect, onRemove, isExpanded, onToggl
         {/* Badges / actions */}
         {node.sublabel && <span className="ft-badge">{node.sublabel}</span>}
         {node.removable && node.skillId && (
-          <span className="ft-remove" onClick={(e) => { e.stopPropagation(); onRemove?.(e, node.skillId!) }} title="Remove">✕</span>
+          <button
+            type="button"
+            className="ft-remove"
+            onClick={(e) => { e.stopPropagation(); onRemove?.(e, node.skillId!) }}
+            title={`Remove ${node.name}`}
+            aria-label={`Remove ${node.name}`}
+          >
+            ✕
+          </button>
         )}
 
         {/* Section action (+ Add / Close) */}
@@ -144,7 +153,7 @@ function FTItem({ node, depth, isActive, onSelect, onRemove, isExpanded, onToggl
         )}
 
         {/* Hover dot */}
-        <div className={`ft-dot${hovered ? ' ft-dot-show' : ''}`} />
+        {!node.removable && <div className={`ft-dot${hovered ? ' ft-dot-show' : ''}`} />}
       </div>
 
       {/* Children */}

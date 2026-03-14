@@ -95,8 +95,7 @@ export function SkillsInventory() {
 
   const handleCreateFolder = async () => {
     if (!newFolderName.trim()) { setCreatingFolder(false); return }
-    // Pick the first library source root for folder creation
-    const libSource = sources.find(s => s.kind === 'library')
+    const libSource = sources.find(s => s.isMaster) || sources.find(s => s.kind === 'library')
     if (!libSource) return
     try {
       await createFolder(libSource.root, newFolderName.trim())

@@ -16,6 +16,7 @@ import {
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 import { useCanvasStore } from '@/store/canvas'
+import { useUIStore } from '@/store/ui'
 import { AgentNode, type AgentNodeData } from './AgentNode'
 import { SkillContextMenu } from './SkillContextMenu'
 
@@ -68,6 +69,7 @@ function autoLayout(agentCount: number, index: number): { x: number; y: number }
 function AgentCanvasInner() {
   const data = useCanvasStore(s => s.data)
   const selectedAgentId = useCanvasStore(s => s.selectedAgentId)
+  const inspectorActiveItem = useCanvasStore(s => s.inspectorActiveItem)
   const previewSkill = useCanvasStore(s => s.previewSkill)
   const openInspector = useCanvasStore(s => s.openInspector)
   const openInspectorToSkills = useCanvasStore(s => s.openInspectorToSkills)
@@ -75,14 +77,35 @@ function AgentCanvasInner() {
   const dropTargetAgentId = useCanvasStore(s => s.dropTargetAgentId)
   const setDropTargetAgent = useCanvasStore(s => s.setDropTargetAgent)
   const assignSkill = useCanvasStore(s => s.assignSkill)
+  const unassignSkill = useCanvasStore(s => s.unassignSkill)
+  const deleteAgent = useCanvasStore(s => s.deleteAgent)
+  const deletingAgentId = useCanvasStore(s => s.deletingAgentId)
+  const toast = useUIStore(s => s.toast)
 
   // Context menu state
   const [ctxMenu, setCtxMenu] = useState<{ skillId: string; variantPath: string; x: number; y: number } | null>(null)
+
+  const handleDeleteAgent = useCallback(async (agentId: string, label: string) => {
+    const confirmed = window.confirm(
+      `Delete agent "${label}"?\n\nThis permanently removes its workspace, installed skills, cron jobs, and OpenClaw config references.`,
+    )
+    if (!confirmed) return
+
+    try {
+      await deleteAgent(agentId)
+      toast(`Deleted ${label}`, 'success')
+    } catch (err) {
+      toast(`Delete failed: ${err instanceof Error ? err.message : err}`, 'error')
+    }
+  }, [deleteAgent, toast])
 
   // Build nodes
   const initialNodes = useMemo((): Node[] => {
     if (!data) return []
     const saved = loadPositions()
+    const activeSkillId = inspectorActiveItem?.kind === 'skill' || inspectorActiveItem?.kind === 'skill-file'
+      ? inspectorActiveItem.skillId
+      : null
     return data.agents.map((agent, i) => {
       const pos = saved[agent.id] || autoLayout(data.agents.length, i)
       const skills = agent.skills.slice(0, 10).map(skill => {
@@ -103,15 +126,25 @@ function AgentCanvasInner() {
           emoji: agent.emoji,
           role: agent.role,
           skills,
+          activeSkillId: agent.id === selectedAgentId ? activeSkillId : null,
           skillCount: agent.skillCount,
           subagentLabels,
           isSelected: agent.id === selectedAgentId,
           isDropTarget: agent.id === dropTargetAgentId,
+          isDeleting: agent.id === deletingAgentId,
           onSelect: (id: string) => { openInspector(id) },
           onOpenInspector: (id: string) => { openInspector(id) },
           onOpenSkills: (id: string) => { openInspectorToSkills(id) },
           onAddSkill: (id: string) => { openInspectorAndBrowser(id) },
+          onDeleteAgent: (id: string, label: string) => {
+            void handleDeleteAgent(id, label)
+          },
           onPreviewSkill: (skillId: string) => previewSkill(skillId),
+          onRemoveSkill: (agentId: string, skillId: string) => {
+            void unassignSkill(agentId, skillId).catch(err => {
+              console.error('Skill unassign failed:', err)
+            })
+          },
           onSkillContextMenu: (e: React.MouseEvent, skillId: string, variantPath: string) => {
             e.preventDefault()
             e.stopPropagation()
@@ -140,7 +173,7 @@ function AgentCanvasInner() {
       }
     })
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data, selectedAgentId, dropTargetAgentId])
+  }, [data, selectedAgentId, inspectorActiveItem, dropTargetAgentId, deletingAgentId, openInspector, openInspectorAndBrowser, openInspectorToSkills, handleDeleteAgent, previewSkill, setDropTargetAgent, assignSkill, unassignSkill])
 
   // Build edges from subagent relationships
   const initialEdges = useMemo((): Edge[] => {

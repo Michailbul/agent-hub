@@ -62,4 +62,4 @@ export interface AssignTarget {
 }
 
 export type FilterSource = 'all' | 'studio' | 'community' | 'openclaw'
-export type AppView = 'editor' | 'crons' | 'skills-lab' | 'skills-lab-light' | 'canvas' | 'headquarters'
+export type AppView = 'editor' | 'crons' | 'skills-lab' | 'canvas' | 'headquarters' | 'shadcn-ui-1' | 'shadcn-ui-2'

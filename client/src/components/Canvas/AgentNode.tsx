@@ -1,4 +1,4 @@
-import { memo, useState } from 'react'
+import { memo, useEffect, useState } from 'react'
 import { Handle, Position } from '@xyflow/react'
 import type { NodeProps } from '@xyflow/react'
 
@@ -22,15 +22,19 @@ export interface AgentNodeData {
   emoji: string
   role: string
   skills: { id: string; name: string; department: string; variantPath: string }[]
+  activeSkillId: string | null
   skillCount: number
   subagentLabels: string[]
   isSelected: boolean
   isDropTarget: boolean
+  isDeleting: boolean
   onSelect: (agentId: string) => void
   onOpenInspector: (agentId: string) => void
   onOpenSkills: (agentId: string) => void
   onAddSkill: (agentId: string) => void
+  onDeleteAgent: (agentId: string, label: string) => void
   onPreviewSkill: (skillId: string) => void
+  onRemoveSkill: (agentId: string, skillId: string) => void
   onSkillContextMenu: (e: React.MouseEvent, skillId: string, variantPath: string) => void
   onDragOver: (e: React.DragEvent, agentId: string) => void
   onDragLeave: () => void
@@ -42,6 +46,11 @@ const MAX_VISIBLE_SKILLS = 4
 export const AgentNode = memo(function AgentNode({ data }: NodeProps) {
   const d = data as unknown as AgentNodeData
   const [skillsExpanded, setSkillsExpanded] = useState(false)
+
+  useEffect(() => {
+    if (d.activeSkillId) setSkillsExpanded(true)
+  }, [d.activeSkillId])
+
   const visibleSkills = skillsExpanded ? d.skills : d.skills.slice(0, MAX_VISIBLE_SKILLS)
   const remaining = d.skills.length - MAX_VISIBLE_SKILLS
 
@@ -89,7 +98,7 @@ export const AgentNode = memo(function AgentNode({ data }: NodeProps) {
               {visibleSkills.map(skill => (
                 <div
                   key={skill.id}
-                  className="cv-card-skill"
+                  className={`cv-card-skill${d.activeSkillId === skill.id ? ' active' : ''}`}
                   onClick={(e) => { e.stopPropagation(); d.onPreviewSkill(skill.id) }}
                   onContextMenu={(e) => d.onSkillContextMenu(e, skill.id, skill.variantPath)}
                 >
@@ -98,6 +107,18 @@ export const AgentNode = memo(function AgentNode({ data }: NodeProps) {
                     style={{ background: getDeptColor(skill.department) }}
                   />
                   <span className="cv-card-skill-name">{skill.name}</span>
+                  <button
+                    type="button"
+                    className="cv-card-skill-remove"
+                    title={`Remove ${skill.name} from ${d.label}`}
+                    aria-label={`Remove ${skill.name} from ${d.label}`}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      d.onRemoveSkill(d.agentId, skill.id)
+                    }}
+                  >
+                    ×
+                  </button>
                 </div>
               ))}
               {!skillsExpanded && remaining > 0 && (
@@ -132,6 +153,17 @@ export const AgentNode = memo(function AgentNode({ data }: NodeProps) {
           title="Inspect agent"
         >
           Inspect
+        </button>
+        <button
+          className="cv-card-delete-btn"
+          onClick={(e) => {
+            e.stopPropagation()
+            d.onDeleteAgent(d.agentId, d.label)
+          }}
+          title={`Delete ${d.label}`}
+          disabled={d.isDeleting}
+        >
+          {d.isDeleting ? 'Deleting...' : 'Delete'}
         </button>
       </div>
     </div>

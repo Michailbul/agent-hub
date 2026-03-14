@@ -2,13 +2,13 @@ import { V11Kiln } from './V11Kiln'
 import { V11KilnLight } from './V11KilnLight'
 
 interface SkillsLabProps {
-  variant?: 'light'
+  theme?: 'light' | 'dark'
 }
 
-export function SkillsLab({ variant }: SkillsLabProps) {
+export function SkillsLab({ theme = 'light' }: SkillsLabProps) {
   return (
     <div className="sl-root">
-      {variant === 'light' ? <V11KilnLight /> : <V11Kiln />}
+      {theme === 'light' ? <V11KilnLight /> : <V11Kiln />}
     </div>
   )
 }

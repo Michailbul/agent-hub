@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useState } from 'react'
+import { useEffect, useCallback, useState, lazy, Suspense } from 'react'
 import { useAuthStore } from '@/store/auth'
 import { usePanesStore } from '@/store/panes'
 import { useUIStore } from '@/store/ui'
@@ -17,13 +17,31 @@ import { SkillsLab } from '@/components/SkillsLab/SkillsLab'
 import { HeadquartersPage } from '@/components/Headquarters/HeadquartersPage'
 import type { AppView } from '@/types'
 
+const ShadcnSkillsLab1 = lazy(() => import('@/components/SkillsLab/ShadcnSkillsLab1').then(m => ({ default: m.ShadcnSkillsLab1 })))
+const ShadcnSkillsLab2 = lazy(() => import('@/components/SkillsLab/ShadcnSkillsLab2').then(m => ({ default: m.ShadcnSkillsLab2 })))
+
 export function App() {
   const { isAuthenticated, isChecking, check } = useAuthStore()
   const { needsSetup, checking: setupChecking } = useSetup()
   const { data: tree, refetch: refetchTree } = useTree()
   const addPane = usePanesStore(s => s.addPane)
   const panes = usePanesStore(s => s.panes)
-  const [activeView, setActiveView] = useState<AppView>('editor')
+  const [activeView, setActiveViewRaw] = useState<AppView>(() => {
+    const path = window.location.pathname
+    if (path === '/shadcn-ui-1') return 'shadcn-ui-1'
+    if (path === '/shadcn-ui-2') return 'shadcn-ui-2'
+    return 'editor'
+  })
+  const setActiveView = useCallback((view: AppView) => {
+    setActiveViewRaw(view)
+    const path = view === 'shadcn-ui-1' ? '/shadcn-ui-1'
+      : view === 'shadcn-ui-2' ? '/shadcn-ui-2' : '/'
+    window.history.pushState(null, '', path)
+  }, [])
+  const [skillsLabTheme, setSkillsLabTheme] = useState<'dark' | 'light'>(() => {
+    if (typeof window === 'undefined') return 'dark'
+    return window.localStorage.getItem('skills-lab-theme') === 'dark' ? 'dark' : 'light'
+  })
   const activePaneId = usePanesStore(s => s.activePaneId)
   const { flashSaved, toast } = useUIStore()
   const [dropVisible, setDropVisible] = useState(false)
@@ -73,6 +91,10 @@ export function App() {
     window.addEventListener('beforeunload', handler)
     return () => window.removeEventListener('beforeunload', handler)
   }, [panes])
+
+  useEffect(() => {
+    window.localStorage.setItem('skills-lab-theme', skillsLabTheme)
+  }, [skillsLabTheme])
 
   // Local file drop handling
   const handleDragEnter = useCallback((e: React.DragEvent) => {
@@ -142,24 +164,30 @@ export function App() {
   if (needsSetup) return <><SetupOverlay /><Toast /></>
   if (!isAuthenticated) return <><LoginForm /><Toast /></>
 
+  const shadcnFallback = <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--t3)' }}>Loading…</div>
+
   return (
-    <div className={`app${activeView === 'skills-lab' ? ' app-skills-lab app-skills-lab-dark' : ''}${activeView === 'skills-lab-light' ? ' app-skills-lab app-skills-lab-light' : ''}`}>
+    <div className={`app${activeView === 'skills-lab' ? ` app-skills-lab app-skills-lab-${skillsLabTheme}` : ''}`}>
       <TopBar
         onRefresh={async () => {
           await refetchTree()
         }}
         activeView={activeView}
         onViewSwitch={setActiveView}
+        skillsLabTheme={skillsLabTheme}
+        onToggleSkillsLabTheme={() => setSkillsLabTheme(current => current === 'dark' ? 'light' : 'dark')}
       />
       <div className="app-body">
-        {activeView === 'canvas'
+        {activeView === 'shadcn-ui-1'
+          ? <Suspense fallback={shadcnFallback}><ShadcnSkillsLab1 /></Suspense>
+          : activeView === 'shadcn-ui-2'
+          ? <Suspense fallback={shadcnFallback}><ShadcnSkillsLab2 /></Suspense>
+          : activeView === 'canvas'
           ? <CanvasView onNavigateToFiles={() => setActiveView('editor')} themeClass="cv-b1-anthro" />
           : activeView === 'headquarters'
           ? <HeadquartersPage />
           : activeView === 'skills-lab'
-          ? <SkillsLab />
-          : activeView === 'skills-lab-light'
-          ? <SkillsLab variant="light" />
+          ? <SkillsLab theme={skillsLabTheme} />
           : activeView === 'crons'
           ? <CronsPanel />
           : <>

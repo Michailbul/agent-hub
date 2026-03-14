@@ -22,5 +22,11 @@ export function useTree() {
 
   useEffect(() => { void load() }, [load])
 
+  useEffect(() => {
+    const handleDataChanged = () => { void load() }
+    window.addEventListener('agent-hub:data-changed', handleDataChanged)
+    return () => window.removeEventListener('agent-hub:data-changed', handleDataChanged)
+  }, [load])
+
   return { data, loading, error, refetch: load }
 }

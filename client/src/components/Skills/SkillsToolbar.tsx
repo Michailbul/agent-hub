@@ -16,6 +16,7 @@ export function SkillsToolbar({ totalCount, unsyncedCount }: SkillsToolbarProps)
   const setSyncFilter = useSkillsStore(s => s.setSyncFilter)
   const repos = useSkillsStore(s => s.repos)
   const pullRepo = useSkillsStore(s => s.pullRepo)
+  const beginCreateSkill = useSkillsStore(s => s.beginCreateSkill)
 
   const [pullingId, setPullingId] = useState<string | null>(null)
 
@@ -37,6 +38,9 @@ export function SkillsToolbar({ totalCount, unsyncedCount }: SkillsToolbarProps)
           <span className="sk-toolbar-heading">Skills</span>
           <span className="sk-toolbar-count">{totalCount}</span>
         </div>
+        <button className="sk-toolbar-create" onClick={() => beginCreateSkill()}>
+          New Skill
+        </button>
         <div className="sk-search-wrap">
           <input
             className="sk-search"

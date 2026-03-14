@@ -1,8 +1,10 @@
 import express from 'express';
+import AdmZip from 'adm-zip';
 import cookieParser from 'cookie-parser';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
+import { spawn } from 'child_process';
 import { detectCLI, runSetupAgent } from './setup-agent';
 
 const app = express();
@@ -130,6 +132,7 @@ let AGENTS, SKILL_LIBRARIES, STUDIO, ALLOWED_ROOTS;
 
 type SkillEcosystem = 'agents' | 'agent' | 'codex' | 'cursor' | 'claude' | 'openclaw' | 'workspace' | 'repo';
 type SkillSourceKind = 'library' | 'workspace' | 'linked';
+type SkillInstallMethod = 'zip' | 'npx' | 'create' | 'unknown';
 
 interface SkillFrontmatter {
   name: string | null;
@@ -179,12 +182,42 @@ interface SkillsIndexSkill {
   installedAgentIds: string[];
   missingAgentIds: string[];
   isInMaster: boolean;
+  addedAt: string | null;
+  addedVia: SkillInstallMethod | null;
   grouping: {
     purpose: string;
     department: string;
     confidence: number;
     source: 'heuristic';
   };
+}
+
+interface SkillDeleteImpact {
+  agentId: string;
+  label: string;
+  emoji: string;
+  path: string;
+  isSymlink: boolean;
+}
+
+interface SkillDeletePreview {
+  skillId: string;
+  skillName: string;
+  action: 'delete-library' | 'unassign-agent' | 'blocked';
+  allowed: boolean;
+  message: string;
+  sourceId: string;
+  sourceLabel: string;
+  sourceKind: SkillSourceKind;
+  sourceEcosystem: SkillEcosystem;
+  variantPath: string;
+  impactedInstalls: SkillDeleteImpact[];
+  otherLibraryVariants: Array<{
+    sourceId: string;
+    sourceLabel: string;
+    kind: SkillSourceKind;
+    path: string;
+  }>;
 }
 
 interface SkillsRepoEntry {
@@ -206,12 +239,50 @@ function uniqPaths(paths: string[]): string[] {
   return [...new Set(paths.map(item => path.resolve(item)))];
 }
 
+function isWithinRoots(targetPath: string, roots: string[]): boolean {
+  const resolved = path.resolve(targetPath);
+  return roots.some(root => {
+    const resolvedRoot = path.resolve(root);
+    return resolved.startsWith(resolvedRoot + path.sep) || resolved === resolvedRoot;
+  });
+}
+
 function slugify(input: string): string {
   return input
     .toLowerCase()
     .trim()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
+}
+
+function escapeDoubleQuotedYamlValue(value: string): string {
+  return value.replace(/\s+/g, ' ').trim().replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+}
+
+function buildInitialSkillDocument(name: string, description: string, body?: string | null): string {
+  if (typeof body === 'string' && body.trim()) {
+    return body;
+  }
+
+  const safeName = name.trim() || 'New Skill';
+  const safeDescription = description.trim() || 'Describe what this skill does and when to use it';
+
+  return `---
+name: "${escapeDoubleQuotedYamlValue(safeName)}"
+description: "${escapeDoubleQuotedYamlValue(safeDescription)}"
+---
+
+# ${safeName}
+
+## When to use
+- Describe the trigger conditions.
+
+## Workflow
+- Describe the core steps.
+
+## Notes
+- Add constraints, caveats, or resources.
+`;
 }
 
 function isSkippableSkillDir(dirName: string): boolean {
@@ -312,6 +383,295 @@ function removeDirectoryRecursive(targetDir: string) {
     else fs.unlinkSync(entryPath);
   }
   fs.rmdirSync(targetDir);
+}
+
+function removePathRecursive(targetPath: string) {
+  if (!fs.existsSync(targetPath)) return;
+  const stat = fs.lstatSync(targetPath);
+  if (stat.isSymbolicLink() || stat.isFile()) {
+    fs.unlinkSync(targetPath);
+    return;
+  }
+  removeDirectoryRecursive(targetPath);
+}
+
+function isWithinRoot(targetPath: string, rootPath: string) {
+  const resolvedTarget = path.resolve(targetPath);
+  const resolvedRoot = path.resolve(rootPath);
+  return resolvedTarget === resolvedRoot || resolvedTarget.startsWith(resolvedRoot + path.sep);
+}
+
+function writeJsonFileWithBackup(filePath: string, data: any) {
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+  if (fs.existsSync(filePath)) {
+    fs.copyFileSync(filePath, `${filePath}.bak`);
+  }
+  fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf8');
+}
+
+function removeEmptyParentDirectories(startDir: string, stopDir: string) {
+  let current = path.resolve(startDir);
+  const limit = path.resolve(stopDir);
+
+  while (current.startsWith(limit + path.sep)) {
+    try {
+      if (!fs.existsSync(current)) break;
+      if (fs.readdirSync(current).length > 0) break;
+      fs.rmdirSync(current);
+      current = path.dirname(current);
+    } catch {
+      break;
+    }
+  }
+}
+
+const SKILL_INSTALLS_CONFIG_PATH = path.join(path.dirname(CONFIG_PATH), 'skills-installs.config.json');
+const MAX_SKILL_UPLOAD_BYTES = 25 * 1024 * 1024;
+const MAX_ZIP_ENTRY_BYTES = 10 * 1024 * 1024;
+const MAX_ZIP_TOTAL_BYTES = 50 * 1024 * 1024;
+const MAX_ZIP_ENTRIES = 500;
+const MAX_COMMAND_OUTPUT_BYTES = 128 * 1024;
+
+function readSkillInstallsConfig(): { installs: Record<string, { addedAt: string; addedVia: SkillInstallMethod; sourceLabel?: string | null; command?: string | null }> } {
+  if (fs.existsSync(SKILL_INSTALLS_CONFIG_PATH)) {
+    try { return JSON.parse(fs.readFileSync(SKILL_INSTALLS_CONFIG_PATH, 'utf8')); }
+    catch { /* fall through */ }
+  }
+  return { installs: {} };
+}
+
+function writeSkillInstallsConfig(config: ReturnType<typeof readSkillInstallsConfig>) {
+  fs.mkdirSync(path.dirname(SKILL_INSTALLS_CONFIG_PATH), { recursive: true });
+  fs.writeFileSync(SKILL_INSTALLS_CONFIG_PATH, JSON.stringify(config, null, 2), 'utf8');
+}
+
+function recordSkillInstallMetadata(skillId: string, meta: { addedVia: SkillInstallMethod; sourceLabel?: string | null; command?: string | null }) {
+  const config = readSkillInstallsConfig();
+  config.installs[skillId] = {
+    addedAt: new Date().toISOString(),
+    addedVia: meta.addedVia,
+    sourceLabel: meta.sourceLabel || null,
+    command: meta.command || null,
+  };
+  writeSkillInstallsConfig(config);
+}
+
+function normalizeZipEntryPath(entryName: string): string {
+  const normalized = path.posix.normalize(entryName.replace(/\\/g, '/')).replace(/^\/+/, '');
+  if (!normalized || normalized === '.' || normalized.startsWith('../') || normalized.includes('/../')) {
+    throw new Error(`Unsafe zip entry path: ${entryName}`);
+  }
+  return normalized;
+}
+
+function extractZipBuffer(zipBuffer: Buffer, destinationRoot: string) {
+  if (zipBuffer.length === 0) throw new Error('ZIP file is empty');
+  if (zipBuffer.length > MAX_SKILL_UPLOAD_BYTES) throw new Error('ZIP file exceeds upload limit');
+
+  const archive = new AdmZip(zipBuffer);
+  const entries = archive.getEntries();
+  if (entries.length === 0) throw new Error('ZIP file has no entries');
+  if (entries.length > MAX_ZIP_ENTRIES) throw new Error('ZIP file contains too many entries');
+
+  let totalBytes = 0;
+  for (const entry of entries) {
+    const normalized = normalizeZipEntryPath(entry.entryName);
+    if (normalized.startsWith('__MACOSX/')) continue;
+
+    const outputPath = path.join(destinationRoot, normalized);
+    if (!isWithinRoot(outputPath, destinationRoot)) {
+      throw new Error(`Blocked zip entry outside destination: ${entry.entryName}`);
+    }
+
+    if (entry.isDirectory) {
+      fs.mkdirSync(outputPath, { recursive: true });
+      continue;
+    }
+
+    const data = entry.getData();
+    totalBytes += data.length;
+    if (data.length > MAX_ZIP_ENTRY_BYTES) throw new Error(`ZIP entry is too large: ${entry.entryName}`);
+    if (totalBytes > MAX_ZIP_TOTAL_BYTES) throw new Error('ZIP contents exceed extraction limit');
+
+    fs.mkdirSync(path.dirname(outputPath), { recursive: true });
+    fs.writeFileSync(outputPath, data);
+  }
+}
+
+function findSkillDirectories(rootDir: string): string[] {
+  const found = new Set<string>();
+  const walk = (dirPath: string, depth: number) => {
+    if (depth > 4) return;
+    if (fs.existsSync(path.join(dirPath, 'SKILL.md'))) {
+      found.add(path.resolve(dirPath));
+      return;
+    }
+
+    const entries = fs.readdirSync(dirPath, { withFileTypes: true })
+      .filter(entry => entry.isDirectory() && !entry.name.startsWith('.') && entry.name !== 'node_modules');
+
+    for (const entry of entries) {
+      walk(path.join(dirPath, entry.name), depth + 1);
+    }
+  };
+
+  walk(rootDir, 0);
+  return [...found].sort();
+}
+
+function parseCommandTokens(command: string): string[] {
+  const tokens: string[] = [];
+  let current = '';
+  let quote: '"' | '\'' | null = null;
+
+  for (let index = 0; index < command.length; index += 1) {
+    const char = command[index];
+    if (quote) {
+      if (char === quote) {
+        quote = null;
+      } else if (char === '\\' && quote === '"' && index + 1 < command.length) {
+        current += command[index + 1];
+        index += 1;
+      } else {
+        current += char;
+      }
+      continue;
+    }
+
+    if (char === '"' || char === '\'') {
+      quote = char as '"' | '\'';
+      continue;
+    }
+
+    if (/\s/.test(char)) {
+      if (current) {
+        tokens.push(current);
+        current = '';
+      }
+      continue;
+    }
+
+    current += char;
+  }
+
+  if (quote) throw new Error('Command contains unmatched quotes');
+  if (current) tokens.push(current);
+  return tokens;
+}
+
+function validateNpxCommand(command: string): string[] {
+  const trimmed = command.trim();
+  if (!trimmed) throw new Error('Command is required');
+  if (!trimmed.startsWith('npx ')) throw new Error('Only npx commands are supported');
+  if (/[;&|><`]/.test(trimmed) || trimmed.includes('$(')) {
+    throw new Error('Command contains blocked shell operators');
+  }
+
+  const tokens = parseCommandTokens(trimmed);
+  if (tokens[0] !== 'npx') throw new Error('Only npx commands are supported');
+  if (tokens.length < 2) throw new Error('npx command is incomplete');
+  return tokens;
+}
+
+function installSkillFromDirectory(skillDir: string, options: { addedVia: SkillInstallMethod; sourceLabel?: string | null; command?: string | null; fallbackName?: string | null }) {
+  const skillPath = path.join(skillDir, 'SKILL.md');
+  if (!fs.existsSync(skillPath)) throw new Error('Imported bundle is missing SKILL.md');
+
+  const parsed = parseSkillDocument(fs.readFileSync(skillPath, 'utf8'));
+  const fallback = options.fallbackName || path.basename(skillDir);
+  const directoryName = slugify(parsed.frontmatter.name || fallback || 'skill');
+  if (!directoryName) throw new Error('Could not derive a destination folder name for the imported skill');
+
+  const targetDir = path.join(AGENTS_SKILLS_ROOT, directoryName);
+  if (fs.existsSync(targetDir)) throw new Error(`Skill "${directoryName}" already exists in the master library`);
+
+  fs.mkdirSync(path.dirname(targetDir), { recursive: true });
+  copyDirectory(skillDir, targetDir);
+
+  const skillId = slugify(directoryName);
+  recordSkillInstallMetadata(skillId, {
+    addedVia: options.addedVia,
+    sourceLabel: options.sourceLabel,
+    command: options.command,
+  });
+
+  return {
+    skillId,
+    skillPath: path.join(targetDir, 'SKILL.md'),
+    directoryName,
+    directoryPath: targetDir,
+    name: parsed.frontmatter.name || directoryName,
+  };
+}
+
+function installSkillBundleFromZip(zipBuffer: Buffer, fileName: string) {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'agent-hub-skill-zip-'));
+  try {
+    extractZipBuffer(zipBuffer, tempRoot);
+    const skillDirs = findSkillDirectories(tempRoot);
+    if (skillDirs.length === 0) throw new Error('No SKILL.md bundle found in ZIP');
+    if (skillDirs.length > 1) throw new Error('ZIP should contain exactly one skill bundle');
+    return installSkillFromDirectory(skillDirs[0], {
+      addedVia: 'zip',
+      sourceLabel: fileName,
+      fallbackName: fileName.replace(/\.zip$/i, ''),
+    });
+  } finally {
+    removePathRecursive(tempRoot);
+  }
+}
+
+async function installSkillBundleFromCommand(command: string) {
+  const tokens = validateNpxCommand(command);
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'agent-hub-skill-cmd-'));
+  let output = '';
+
+  try {
+    await new Promise<void>((resolve, reject) => {
+      const child = spawn(tokens[0], tokens.slice(1), {
+        cwd: tempRoot,
+        env: {
+          ...process.env,
+          AGENT_HUB_SKILLS_DIR: tempRoot,
+          INIT_CWD: tempRoot,
+        },
+        stdio: ['ignore', 'pipe', 'pipe'],
+      });
+
+      const append = (chunk: Buffer) => {
+        if (output.length >= MAX_COMMAND_OUTPUT_BYTES) return;
+        output += chunk.toString('utf8');
+        if (output.length > MAX_COMMAND_OUTPUT_BYTES) {
+          output = `${output.slice(0, MAX_COMMAND_OUTPUT_BYTES)}\n...[truncated]`;
+        }
+      };
+
+      child.stdout.on('data', append);
+      child.stderr.on('data', append);
+      child.on('error', reject);
+      child.on('exit', code => {
+        if (code === 0) resolve();
+        else reject(new Error(`Command exited with code ${code || 1}`));
+      });
+    });
+
+    const skillDirs = findSkillDirectories(tempRoot);
+    if (skillDirs.length === 0) throw new Error('Command finished without producing a skill bundle in the working directory');
+    if (skillDirs.length > 1) throw new Error('Command produced multiple skill bundles; import one skill at a time');
+
+    const installed = installSkillFromDirectory(skillDirs[0], {
+      addedVia: 'npx',
+      command,
+      fallbackName: tokens[1],
+    });
+
+    return {
+      ...installed,
+      output: output.trim(),
+    };
+  } finally {
+    removePathRecursive(tempRoot);
+  }
 }
 
 function buildSkillSourceDescriptors(): SkillSourceDescriptor[] {
@@ -472,6 +832,7 @@ function buildSkillsIndex() {
   const sources = buildSkillSourceDescriptors();
   const skillsMap = new Map<string, SkillsIndexSkill & { _installed: Set<string>; _groupingText: string[] }>();
   const foldersSet = new Map<string, { name: string; root: string; sourceId: string }>();
+  const installsConfig = readSkillInstallsConfig();
 
   const addSkillEntry = (
     source: SkillSourceDescriptor,
@@ -580,6 +941,18 @@ function buildSkillsIndex() {
       const installedAgentIds = agentIds.filter(agentId => skill._installed.has(agentId));
       const missingAgentIds = agentIds.filter(agentId => !skill._installed.has(agentId));
       const isInMaster = skill.variants.some(v => path.resolve(v.path).startsWith(resolvedMasterRoot + path.sep));
+      const installMeta = installsConfig.installs[skill.id];
+      let fallbackAddedAt: string | null = null;
+      if (!installMeta) {
+        const masterVariant = skill.variants.find(variant => path.resolve(variant.path).startsWith(resolvedMasterRoot + path.sep)) || preferred;
+        if (masterVariant) {
+          try {
+            fallbackAddedAt = fs.statSync(path.dirname(masterVariant.path)).mtime.toISOString();
+          } catch {
+            fallbackAddedAt = null;
+          }
+        }
+      }
 
       return {
         id: skill.id,
@@ -589,12 +962,20 @@ function buildSkillsIndex() {
         installedAgentIds,
         missingAgentIds,
         isInMaster,
+        addedAt: installMeta?.addedAt || fallbackAddedAt,
+        addedVia: installMeta?.addedVia || null,
         grouping,
       };
     })
     .sort((left, right) => left.name.localeCompare(right.name));
 
   const folders = [...foldersSet.values()].sort((a, b) => a.name.localeCompare(b.name));
+  const liveIds = new Set(skills.map(skill => skill.id));
+  const staleInstallIds = Object.keys(installsConfig.installs).filter(skillId => !liveIds.has(skillId));
+  if (staleInstallIds.length > 0) {
+    for (const skillId of staleInstallIds) delete installsConfig.installs[skillId];
+    writeSkillInstallsConfig(installsConfig);
+  }
 
   return {
     sources: sources.map(source => ({
@@ -603,6 +984,7 @@ function buildSkillsIndex() {
       ecosystem: source.ecosystem,
       root: source.root,
       kind: source.kind,
+      isMaster: path.resolve(source.root) === path.resolve(AGENTS_SKILLS_ROOT),
     })),
     agents: AGENTS
       .filter(agent => agent.skillsRoot)
@@ -617,7 +999,6 @@ function buildSkillsIndex() {
     folders,
     starredSkillIds: (() => {
       const config = readStarredSkillsConfig();
-      const liveIds = new Set(skills.map(s => s.id));
       const valid = config.starred.filter(id => liveIds.has(id));
       if (valid.length < config.starred.length) {
         // Prune orphaned starred IDs (deleted/renamed skills)
@@ -633,6 +1014,123 @@ function buildSkillsIndex() {
 
 function getAgentById(agentId: string) {
   return AGENTS.find(agent => agent.id === agentId && agent.skillsRoot);
+}
+
+function buildSkillDeletePreview(skillId: string, sourceId?: string): SkillDeletePreview {
+  const index = buildSkillsIndex();
+  const skill = index.skills.find(item => item.id === skillId);
+  if (!skill) throw new Error('Skill not found');
+
+  const variant = sourceId
+    ? skill.variants.find(item => item.sourceId === sourceId)
+    : skill.variants[0];
+  if (!variant) throw new Error('Skill variant not found');
+
+  const variantDir = path.dirname(variant.path);
+  const impactedInstalls: SkillDeleteImpact[] = [];
+
+  for (const workspaceVariant of skill.variants.filter(item => item.kind === 'workspace')) {
+    const agentId = workspaceVariant.sourceId.replace(/^workspace-/, '');
+    const agent = getAgentById(agentId);
+    if (!agent) continue;
+
+    const workspaceDir = path.dirname(workspaceVariant.path);
+    let isSymlink = false;
+    let pointsToVariant = false;
+
+    try {
+      isSymlink = fs.lstatSync(workspaceDir).isSymbolicLink();
+      if (isSymlink) {
+        pointsToVariant = path.resolve(fs.realpathSync(workspaceDir)) === path.resolve(variantDir);
+      }
+    } catch {
+      isSymlink = false;
+      pointsToVariant = false;
+    }
+
+    if (variant.kind === 'workspace') {
+      if (workspaceVariant.sourceId !== variant.sourceId) continue;
+      impactedInstalls.push({
+        agentId: agent.id,
+        label: agent.label,
+        emoji: agent.emoji,
+        path: workspaceVariant.path,
+        isSymlink,
+      });
+      continue;
+    }
+
+    if (!isSymlink || !pointsToVariant) continue;
+    impactedInstalls.push({
+      agentId: agent.id,
+      label: agent.label,
+      emoji: agent.emoji,
+      path: workspaceVariant.path,
+      isSymlink,
+    });
+  }
+
+  const otherLibraryVariants = skill.variants
+    .filter(item => item.kind !== 'workspace' && item.sourceId !== variant.sourceId)
+    .map(item => ({
+      sourceId: item.sourceId,
+      sourceLabel: item.sourceLabel,
+      kind: item.kind,
+      path: item.path,
+    }));
+
+  if (variant.kind === 'workspace') {
+    const install = impactedInstalls[0];
+    if (!install) throw new Error('Skill is not installed for this agent');
+    return {
+      skillId: skill.id,
+      skillName: skill.name,
+      action: 'unassign-agent',
+      allowed: true,
+      message: `Remove this skill from ${install.label}.`,
+      sourceId: variant.sourceId,
+      sourceLabel: variant.sourceLabel,
+      sourceKind: variant.kind,
+      sourceEcosystem: variant.ecosystem,
+      variantPath: variant.path,
+      impactedInstalls,
+      otherLibraryVariants,
+    };
+  }
+
+  if (variant.kind === 'linked') {
+    return {
+      skillId: skill.id,
+      skillName: skill.name,
+      action: 'blocked',
+      allowed: false,
+      message: 'Linked repository skills should be deleted in their source repository.',
+      sourceId: variant.sourceId,
+      sourceLabel: variant.sourceLabel,
+      sourceKind: variant.kind,
+      sourceEcosystem: variant.ecosystem,
+      variantPath: variant.path,
+      impactedInstalls,
+      otherLibraryVariants,
+    };
+  }
+
+  return {
+    skillId: skill.id,
+    skillName: skill.name,
+    action: 'delete-library',
+    allowed: true,
+    message: impactedInstalls.length > 0
+      ? `Delete the ${variant.sourceLabel} source and remove ${impactedInstalls.length} linked agent install(s).`
+      : `Delete the ${variant.sourceLabel} source only.`,
+    sourceId: variant.sourceId,
+    sourceLabel: variant.sourceLabel,
+    sourceKind: variant.kind,
+    sourceEcosystem: variant.ecosystem,
+    variantPath: variant.path,
+    impactedInstalls,
+    otherLibraryVariants,
+  };
 }
 
 function initAgents() {
@@ -674,11 +1172,21 @@ app.use(express.json({ limit: '10mb' }));
 app.use(cookieParser());
 
 function isAllowed(filePath) {
-  const resolved = path.resolve(filePath);
-  return ALLOWED_ROOTS.some(r => {
-    const rr = path.resolve(r);
-    return resolved.startsWith(rr + path.sep) || resolved === rr;
-  });
+  return isWithinRoots(filePath, ALLOWED_ROOTS);
+}
+
+function getHQBrowseRoots(): string[] {
+  return uniqPaths([
+    HOME_DIR,
+    OPENCLAW_ROOT,
+    path.dirname(OPENCLAW_ROOT),
+    AGENTS_SKILLS_ROOT,
+    path.dirname(AGENTS_SKILLS_ROOT),
+    path.dirname(CONFIG_PATH),
+    ...AGENTS.map(a => a.root),
+    ...AGENTS.filter(a => a.skillsRoot).map(a => a.skillsRoot),
+    ...(STUDIO ? [STUDIO.root] : []),
+  ].filter(Boolean));
 }
 
 const STUDIO_SKILLS_LIST = new Set(['laniameda-kb','andromeda-messages','enhance-prompt','design-md','stitch-loop']);
@@ -778,6 +1286,60 @@ app.get('/api/skills/index', auth, (_req, res) => {
     res.json(buildSkillsIndex());
   } catch (e: any) {
     res.status(500).json({ error: e.message });
+  }
+});
+
+app.post('/api/skills/delete-preview', auth, (req, res) => {
+  const { skillId, sourceId } = req.body || {};
+  if (!skillId) return res.status(400).json({ error: 'skillId required' });
+
+  try {
+    const preview = buildSkillDeletePreview(skillId, sourceId);
+    if (!isAllowed(preview.variantPath)) return res.status(403).json({ error: 'Not allowed' });
+    if (preview.impactedInstalls.some(install => !isAllowed(install.path))) {
+      return res.status(403).json({ error: 'Not allowed' });
+    }
+    res.json(preview);
+  } catch (e: any) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+app.post('/api/skills/delete', auth, (req, res) => {
+  const { skillId, sourceId } = req.body || {};
+  if (!skillId) return res.status(400).json({ error: 'skillId required' });
+
+  try {
+    const preview = buildSkillDeletePreview(skillId, sourceId);
+    if (!preview.allowed) return res.status(400).json({ error: preview.message });
+    if (!isAllowed(preview.variantPath)) return res.status(403).json({ error: 'Not allowed' });
+    if (preview.impactedInstalls.some(install => !isAllowed(install.path))) {
+      return res.status(403).json({ error: 'Not allowed' });
+    }
+
+    if (preview.action === 'unassign-agent') {
+      removePathRecursive(path.dirname(preview.variantPath));
+      return res.json({
+        ok: true,
+        action: preview.action,
+        removedVariantPath: preview.variantPath,
+        removedInstallCount: 1,
+      });
+    }
+
+    removePathRecursive(path.dirname(preview.variantPath));
+    for (const install of preview.impactedInstalls) {
+      removePathRecursive(path.dirname(install.path));
+    }
+
+    res.json({
+      ok: true,
+      action: preview.action,
+      removedVariantPath: preview.variantPath,
+      removedInstallCount: preview.impactedInstalls.length,
+    });
+  } catch (e: any) {
+    res.status(400).json({ error: e.message });
   }
 });
 
@@ -884,6 +1446,124 @@ app.get('/api/assign-targets', auth, (req, res) => {
     files: resolveFiles(a.root, a.files).map(f => ({ label: f.label, path: f.path })),
   }));
   res.json(targets);
+});
+
+app.delete('/api/agents/:id', auth, (req, res) => {
+  const agentId = req.params.id;
+  if (!agentId) return res.status(400).json({ error: 'agentId required' });
+
+  const agent = AGENTS.find((item: any) => item.id === agentId);
+  if (!agent?.root) return res.status(404).json({ error: 'Agent not found' });
+
+  const protectedRoots = [
+    OPENCLAW_ROOT,
+    AGENTS_SKILLS_ROOT,
+    OPENCLAW_SKILLS_ROOT,
+    ...SKILL_LIBRARIES.map((lib: any) => lib.root),
+    ...(STUDIO?.root ? [STUDIO.root] : []),
+  ]
+    .filter(Boolean)
+    .map((item: string) => path.resolve(item));
+
+  const agentRoot = path.resolve(agent.root);
+  if (!isAllowed(agentRoot)) return res.status(403).json({ error: 'Not allowed' });
+  if (protectedRoots.includes(agentRoot)) {
+    return res.status(400).json({ error: 'Refusing to delete a protected root' });
+  }
+
+  const ocPath = path.join(OPENCLAW_ROOT, 'openclaw.json');
+  let ocConfig: any = null;
+  let ocAgent: any = null;
+
+  if (fs.existsSync(ocPath)) {
+    try {
+      ocConfig = JSON.parse(fs.readFileSync(ocPath, 'utf8'));
+      ocAgent = (ocConfig.agents?.list || []).find((item: any) => item.id === agentId) || null;
+    } catch (e: any) {
+      return res.status(500).json({ error: `Failed to parse openclaw.json: ${e.message}` });
+    }
+  }
+
+  const extraPaths = uniqPaths([
+    ocAgent?.workspace,
+    ocAgent?.agentDir,
+  ].filter(Boolean) as string[])
+    .map(item => path.resolve(item))
+    .filter(item => item !== agentRoot)
+    .filter(item => isWithinRoot(item, OPENCLAW_ROOT))
+    .filter(item => !protectedRoots.includes(item));
+
+  try {
+    const deletedPaths = new Set<string>();
+
+    if (fs.existsSync(agentRoot)) {
+      removePathRecursive(agentRoot);
+      deletedPaths.add(agentRoot);
+    }
+
+    for (const extraPath of extraPaths) {
+      if (!fs.existsSync(extraPath)) continue;
+      removePathRecursive(extraPath);
+      deletedPaths.add(extraPath);
+      removeEmptyParentDirectories(path.dirname(extraPath), OPENCLAW_ROOT);
+    }
+
+    if (ocConfig) {
+      const scrubAgentRefs = (value: any, trail: string[] = []): any => {
+        if (Array.isArray(value)) {
+          const isAgentList = trail.length === 2 && trail[0] === 'agents' && trail[1] === 'list';
+          return value
+            .filter((entry: any) => {
+              if (!entry || typeof entry !== 'object') return true;
+              if (isAgentList) return entry.id !== agentId;
+              if ('agentId' in entry && entry.agentId === agentId) return false;
+              return true;
+            })
+            .map((entry: any) => scrubAgentRefs(entry, trail));
+        }
+
+        if (value && typeof value === 'object') {
+          const next: Record<string, any> = {};
+          for (const [key, child] of Object.entries(value)) {
+            if (key === 'allowAgents' && Array.isArray(child)) {
+              next[key] = child.filter((entry: any) => entry !== agentId);
+            } else {
+              next[key] = scrubAgentRefs(child, [...trail, key]);
+            }
+          }
+          return next;
+        }
+
+        return value;
+      };
+
+      writeJsonFileWithBackup(ocPath, scrubAgentRefs(ocConfig));
+    }
+
+    const cronData = readCronJobs();
+    const nextJobs = (cronData.jobs || []).filter((job: any) => job.agentId !== agentId);
+    if (nextJobs.length !== (cronData.jobs || []).length) {
+      writeCronJobs({ ...cronData, jobs: nextJobs });
+    }
+
+    if (CONFIG && Array.isArray(CONFIG.agents)) {
+      const nextAgents = CONFIG.agents.filter((item: any) => item.id !== agentId);
+      if (nextAgents.length !== CONFIG.agents.length) {
+        CONFIG = { ...CONFIG, agents: nextAgents };
+        writeJsonFileWithBackup(CONFIG_PATH, CONFIG);
+      }
+    }
+
+    initAgents();
+
+    res.json({
+      ok: true,
+      agentId,
+      deletedPaths: [...deletedPaths],
+    });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 // Skill operations
@@ -1005,6 +1685,95 @@ app.post('/api/skills/folder/create', auth, (req, res) => {
     res.json({ ok: true, path: folderPath });
   } catch (e: any) {
     res.status(500).json({ error: e.message });
+  }
+});
+
+app.post('/api/skills/create', auth, (req, res) => {
+  const { root, folder, name, description, body } = req.body;
+  if (!root || !name || !description) {
+    return res.status(400).json({ error: 'root, name, and description are required' });
+  }
+
+  const resolvedRoot = path.resolve(root);
+  const masterRoot = path.resolve(AGENTS_SKILLS_ROOT);
+
+  if (!isAllowed(resolvedRoot)) return res.status(403).json({ error: 'Not allowed' });
+  if (resolvedRoot !== masterRoot) return res.status(403).json({ error: 'Skills can only be created in the master library' });
+  if (!fs.existsSync(resolvedRoot) || !fs.statSync(resolvedRoot).isDirectory()) {
+    return res.status(400).json({ error: 'Invalid root directory' });
+  }
+
+  const trimmedName = String(name).trim();
+  const trimmedDescription = String(description).trim();
+  if (!trimmedName) return res.status(400).json({ error: 'Skill name is required' });
+  if (!trimmedDescription) return res.status(400).json({ error: 'Skill description is required' });
+
+  let parentDir = resolvedRoot;
+  if (typeof folder === 'string' && folder.trim()) {
+    const folderName = folder.trim();
+    if (folderName.includes('/') || folderName.includes('\\')) {
+      return res.status(400).json({ error: 'Folder must be a direct child of the root' });
+    }
+    parentDir = path.resolve(path.join(resolvedRoot, folderName));
+    if (path.dirname(parentDir) !== resolvedRoot) {
+      return res.status(400).json({ error: 'Folder must be a direct child of the root' });
+    }
+    if (!fs.existsSync(parentDir) || !fs.statSync(parentDir).isDirectory()) {
+      return res.status(400).json({ error: 'Selected folder does not exist' });
+    }
+  }
+
+  const directoryName = slugify(trimmedName);
+  if (!directoryName) return res.status(400).json({ error: 'Invalid skill name' });
+
+  const directoryPath = path.join(parentDir, directoryName);
+  if (fs.existsSync(directoryPath)) {
+    return res.status(409).json({ error: 'A skill with that name already exists' });
+  }
+
+  try {
+    fs.mkdirSync(directoryPath, { recursive: true });
+    const skillPath = path.join(directoryPath, 'SKILL.md');
+    fs.writeFileSync(skillPath, buildInitialSkillDocument(trimmedName, trimmedDescription, body), 'utf8');
+    recordSkillInstallMetadata(slugify(directoryName), { addedVia: 'create', sourceLabel: 'skills-lab' });
+    res.json({ ok: true, skillPath, directoryPath, directoryName });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post('/api/skills/install/zip', auth, express.raw({
+  type: ['application/zip', 'application/x-zip-compressed', 'application/octet-stream'],
+  limit: `${MAX_SKILL_UPLOAD_BYTES}b`,
+}), (req, res) => {
+  const body = Buffer.isBuffer(req.body) ? req.body : Buffer.from([]);
+  const headerName = req.headers['x-skill-filename'];
+  const fileName = Array.isArray(headerName) ? headerName[0] : headerName;
+  const safeName = typeof fileName === 'string' && fileName.trim() ? path.basename(fileName) : 'skill.zip';
+
+  try {
+    const installed = installSkillBundleFromZip(body, safeName);
+    initAgents();
+    res.json({ ok: true, ...installed });
+  } catch (e: any) {
+    const message = e instanceof Error ? e.message : 'ZIP install failed';
+    const status = /already exists/i.test(message) ? 409 : 400;
+    res.status(status).json({ error: message });
+  }
+});
+
+app.post('/api/skills/install/command', auth, async (req, res) => {
+  const { command } = req.body || {};
+  if (typeof command !== 'string') return res.status(400).json({ error: 'command is required' });
+
+  try {
+    const installed = await installSkillBundleFromCommand(command);
+    initAgents();
+    res.json({ ok: true, ...installed });
+  } catch (e: any) {
+    const message = e instanceof Error ? e.message : 'Command install failed';
+    const status = /already exists/i.test(message) ? 409 : 400;
+    res.status(status).json({ error: message });
   }
 });
 
@@ -1367,6 +2136,61 @@ app.get('/api/hq/config', auth, (_req, res) => {
     return { ...s, fileCount, exists: fs.existsSync(resolved) };
   });
   res.json({ sources });
+});
+
+app.get('/api/hq/browse', auth, (req, res) => {
+  const browseRoots = getHQBrowseRoots();
+  const rawPath = typeof req.query.path === 'string' ? req.query.path : '';
+
+  if (!rawPath) {
+    const entries = browseRoots
+      .filter(rootPath => fs.existsSync(rootPath))
+      .map(rootPath => ({
+        name: rootPath === HOME_DIR ? 'Home' : path.basename(rootPath) || rootPath,
+        path: rootPath,
+        isDir: true,
+      }));
+    return res.json({ currentPath: null, parentPath: null, entries });
+  }
+
+  const resolved = path.resolve(expandPath(rawPath));
+  if (!isWithinRoots(resolved, browseRoots)) {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
+  if (!fs.existsSync(resolved)) {
+    return res.status(404).json({ error: 'Not found' });
+  }
+
+  let stats;
+  try {
+    stats = fs.statSync(resolved);
+  } catch {
+    return res.status(404).json({ error: 'Not found' });
+  }
+
+  if (!stats.isDirectory()) {
+    return res.status(400).json({ error: 'Path is not a directory' });
+  }
+
+  const parentCandidate = path.dirname(resolved);
+  const parentPath = parentCandidate !== resolved && isWithinRoots(parentCandidate, browseRoots)
+    ? parentCandidate
+    : null;
+
+  try {
+    const entries = fs.readdirSync(resolved, { withFileTypes: true })
+      .filter(entry => entry.isDirectory() && !entry.name.startsWith('.'))
+      .map(entry => ({
+        name: entry.name,
+        path: path.join(resolved, entry.name),
+        isDir: true,
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+
+    res.json({ currentPath: resolved, parentPath, entries });
+  } catch {
+    res.status(404).json({ error: 'Not found' });
+  }
 });
 
 app.post('/api/hq/link', auth, (req, res) => {

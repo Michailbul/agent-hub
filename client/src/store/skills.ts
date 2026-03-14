@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { fetchFile } from '@/lib/api'
 
 export interface IndexVariant {
   sourceId: string
@@ -47,6 +48,7 @@ export interface IndexSource {
   ecosystem: string
   root: string
   kind: string
+  isMaster?: boolean
 }
 
 export interface IndexAgent {
@@ -61,6 +63,47 @@ export interface IndexFolder {
   name: string
   root: string
   sourceId: string
+}
+
+export interface CreateSkillDraft {
+  root: string | null
+  folder: string | null
+  name: string
+  description: string
+  body: string
+  bodyTouched: boolean
+}
+
+interface CreateSkillResult {
+  ok: true
+  skillPath: string
+  directoryPath: string
+  directoryName: string
+}
+
+function buildSkillTemplate(name: string, description: string) {
+  const safeName = name.replace(/\s+/g, ' ').trim() || 'New Skill'
+  const safeDescription = description.replace(/\s+/g, ' ').trim() || 'Describe what this skill does and when to use it'
+  return `---
+name: "${safeName.replace(/"/g, '\\"')}"
+description: "${safeDescription.replace(/"/g, '\\"')}"
+---
+
+# ${safeName}
+
+## When to use
+- Describe the trigger conditions.
+
+## Workflow
+- Describe the core steps.
+
+## Notes
+- Add constraints, caveats, or resources.
+`
+}
+
+function getMasterSource(sources: IndexSource[]) {
+  return sources.find(source => source.isMaster) || sources.find(source => source.kind === 'library' && source.ecosystem === 'agents') || null
 }
 
 interface SkillsStore {
@@ -82,6 +125,8 @@ interface SkillsStore {
   editingPath: string | null
   editingDirty: boolean
   renamingSkillId: string | null
+  creatingSkill: boolean
+  createSkillDraft: CreateSkillDraft
 
   draggedSkill: { id: string; variantPath: string } | null
   dropTargetAgentId: string | null
@@ -99,10 +144,14 @@ interface SkillsStore {
   setActiveSource: (sourceId: string | null) => void
   setSearchQuery: (q: string) => void
   toggleFolder: (folderName: string) => void
+  beginCreateSkill: () => void
+  cancelCreateSkill: () => void
+  updateCreateSkillDraft: (patch: Partial<CreateSkillDraft>) => void
 
   loadSkillContent: (path: string) => Promise<void>
   setEditingContent: (content: string) => void
   saveSkillContent: () => Promise<void>
+  createSkill: () => Promise<CreateSkillResult>
 
   assignSkill: (agentId: string, variantPath: string) => Promise<void>
   unassignSkill: (agentId: string, skillId: string) => Promise<void>
@@ -136,6 +185,15 @@ export const useSkillsStore = create<SkillsStore>((set, get) => ({
   editingPath: null,
   editingDirty: false,
   renamingSkillId: null,
+  creatingSkill: false,
+  createSkillDraft: {
+    root: null,
+    folder: null,
+    name: '',
+    description: '',
+    body: buildSkillTemplate('', ''),
+    bodyTouched: false,
+  },
 
   draggedSkill: null,
   dropTargetAgentId: null,
@@ -224,7 +282,7 @@ export const useSkillsStore = create<SkillsStore>((set, get) => ({
 
   selectSkill: (id) => {
     const { skills } = get()
-    set({ selectedSkillId: id, editingContent: null, editingPath: null, editingDirty: false })
+    set({ selectedSkillId: id, editingContent: null, editingPath: null, editingDirty: false, creatingSkill: false })
     if (id) {
       const skill = skills.find(s => s.id === id)
       if (skill?.variants[0]?.path) {
@@ -243,12 +301,50 @@ export const useSkillsStore = create<SkillsStore>((set, get) => ({
     return { expandedFolders: next }
   }),
 
+  beginCreateSkill: () => {
+    const masterSource = getMasterSource(get().sources)
+    set({
+      creatingSkill: true,
+      selectedSkillId: null,
+      editingContent: null,
+      editingPath: null,
+      editingDirty: false,
+      renamingSkillId: null,
+      createSkillDraft: {
+        root: masterSource?.root || null,
+        folder: null,
+        name: '',
+        description: '',
+        body: buildSkillTemplate('', ''),
+        bodyTouched: false,
+      },
+    })
+  },
+
+  cancelCreateSkill: () => set({
+    creatingSkill: false,
+    createSkillDraft: {
+      root: getMasterSource(get().sources)?.root || null,
+      folder: null,
+      name: '',
+      description: '',
+      body: buildSkillTemplate('', ''),
+      bodyTouched: false,
+    },
+  }),
+
+  updateCreateSkillDraft: (patch) => set(state => {
+    const nextDraft: CreateSkillDraft = { ...state.createSkillDraft, ...patch }
+    if (!nextDraft.bodyTouched && (patch.name !== undefined || patch.description !== undefined || patch.bodyTouched !== undefined)) {
+      nextDraft.body = buildSkillTemplate(nextDraft.name, nextDraft.description)
+    }
+    return { createSkillDraft: nextDraft }
+  }),
+
   loadSkillContent: async (skillPath) => {
     try {
-      const res = await fetch(`/api/file?path=${encodeURIComponent(skillPath)}`)
-      if (!res.ok) throw new Error('Failed to load skill content')
-      const data = await res.json()
-      set({ editingContent: data.content || '', editingPath: skillPath, editingDirty: false })
+      const content = await fetchFile(skillPath)
+      set({ editingContent: content, editingPath: skillPath, editingDirty: false })
     } catch {
       set({ editingContent: null, editingPath: null })
     }
@@ -267,6 +363,42 @@ export const useSkillsStore = create<SkillsStore>((set, get) => ({
     if (!res.ok) throw new Error('Save failed')
     set({ editingDirty: false })
     await get().loadSkills()
+  },
+
+  createSkill: async () => {
+    const { createSkillDraft } = get()
+    const payload = {
+      root: createSkillDraft.root,
+      folder: createSkillDraft.folder,
+      name: createSkillDraft.name.trim(),
+      description: createSkillDraft.description.trim(),
+      body: createSkillDraft.body,
+    }
+    const res = await fetch('/api/skills/create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+    if (!res.ok) {
+      const j = await res.json().catch(() => ({}))
+      throw new Error(j.error || 'Create skill failed')
+    }
+    const data: CreateSkillResult = await res.json()
+    await get().loadSkills()
+    const created = get().skills.find(skill => skill.variants.some(variant => variant.path === data.skillPath))
+    set({
+      creatingSkill: false,
+      createSkillDraft: {
+        root: getMasterSource(get().sources)?.root || null,
+        folder: null,
+        name: '',
+        description: '',
+        body: buildSkillTemplate('', ''),
+        bodyTouched: false,
+      },
+    })
+    if (created) get().selectSkill(created.id)
+    return data
   },
 
   assignSkill: async (agentId, variantPath) => {

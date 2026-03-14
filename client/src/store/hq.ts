@@ -1,6 +1,20 @@
 import { create } from 'zustand'
 import type { HQSource, HQFileNode } from '@/types/hq'
-import { fetchHQConfig, fetchHQTree, linkHQFolder, unlinkHQFolder, fetchFile, saveFile } from '@/lib/api'
+import {
+  browseHQDirectories,
+  fetchHQConfig,
+  fetchHQTree,
+  linkHQFolder,
+  unlinkHQFolder,
+  fetchFile,
+  saveFile,
+} from '@/lib/api'
+
+interface HQBrowseEntry {
+  name: string
+  path: string
+  isDir: boolean
+}
 
 interface HQStore {
   /* data */
@@ -19,6 +33,11 @@ interface HQStore {
   linkDialogOpen: boolean
   linkForm: { name: string; path: string; description: string }
   pickingFolder: boolean
+  browsePathOpen: boolean
+  browseCurrentPath: string | null
+  browseParentPath: string | null
+  browseEntries: HQBrowseEntry[]
+  browseError: string | null
 
   /* actions */
   loadConfig: () => Promise<void>
@@ -35,6 +54,9 @@ interface HQStore {
   closeLinkDialog: () => void
   setLinkForm: (partial: Partial<HQStore['linkForm']>) => void
   pickFolder: () => Promise<void>
+  browseToPath: (path?: string | null) => Promise<void>
+  chooseBrowsedPath: (path: string) => void
+  closePathBrowser: () => void
   submitLink: () => Promise<void>
   unlinkSource: (id: string) => Promise<void>
 }
@@ -54,6 +76,11 @@ export const useHQStore = create<HQStore>((set, get) => ({
   linkDialogOpen: false,
   linkForm: { name: '', path: '', description: '' },
   pickingFolder: false,
+  browsePathOpen: false,
+  browseCurrentPath: null,
+  browseParentPath: null,
+  browseEntries: [],
+  browseError: null,
 
   loadConfig: async () => {
     set({ loading: true })
@@ -130,30 +157,82 @@ export const useHQStore = create<HQStore>((set, get) => ({
   }),
 
   /* Link dialog */
-  openLinkDialog: () => set({ linkDialogOpen: true, linkForm: { name: '', path: '', description: '' }, pickingFolder: false }),
-  closeLinkDialog: () => set({ linkDialogOpen: false }),
+  openLinkDialog: () => set({
+    linkDialogOpen: true,
+    linkForm: { name: '', path: '', description: '' },
+    pickingFolder: false,
+    browsePathOpen: false,
+    browseCurrentPath: null,
+    browseParentPath: null,
+    browseEntries: [],
+    browseError: null,
+  }),
+  closeLinkDialog: () => set({
+    linkDialogOpen: false,
+    browsePathOpen: false,
+    browseCurrentPath: null,
+    browseParentPath: null,
+    browseEntries: [],
+    browseError: null,
+  }),
   setLinkForm: (partial) => set(s => ({ linkForm: { ...s.linkForm, ...partial } })),
 
   pickFolder: async () => {
-    set({ pickingFolder: true })
+    const initialPath = get().linkForm.path.trim() || null
+    await get().browseToPath(initialPath)
+  },
+
+  browseToPath: async (folderPath = null) => {
+    set({ pickingFolder: true, browsePathOpen: true, browseError: null })
     try {
-      const r = await fetch('/api/hq/pick-folder')
-      if (!r.ok) {
-        const j = await r.json()
-        // User cancelled — not an error, just do nothing
-        if (j.error === 'Folder selection cancelled') { set({ pickingFolder: false }); return }
-        throw new Error(j.error)
-      }
-      const { path: folderPath } = await r.json()
-      const name = folderPath.split('/').filter(Boolean).pop() || 'HQ'
-      set(s => ({
+      const { currentPath, parentPath, entries } = await browseHQDirectories(folderPath)
+      set({
         pickingFolder: false,
-        linkForm: { ...s.linkForm, path: folderPath, name: s.linkForm.name || name },
-      }))
-    } catch {
-      set({ pickingFolder: false })
+        browsePathOpen: true,
+        browseCurrentPath: currentPath,
+        browseParentPath: parentPath,
+        browseEntries: Array.isArray(entries) ? entries.filter(entry => entry.isDir) : [],
+        browseError: null,
+      })
+    } catch (error) {
+      if (folderPath) {
+        await get().browseToPath(null)
+        return
+      }
+      set({
+        pickingFolder: false,
+        browsePathOpen: true,
+        browseCurrentPath: null,
+        browseParentPath: null,
+        browseEntries: [],
+        browseError: error instanceof Error ? error.message : 'Could not browse folders',
+      })
     }
   },
+
+  chooseBrowsedPath: (folderPath) => {
+    const name = folderPath.split('/').filter(Boolean).pop() || 'HQ'
+    set(s => ({
+      browsePathOpen: false,
+      browseCurrentPath: null,
+      browseParentPath: null,
+      browseEntries: [],
+      browseError: null,
+      linkForm: {
+        ...s.linkForm,
+        path: folderPath,
+        name: s.linkForm.name || name,
+      },
+    }))
+  },
+
+  closePathBrowser: () => set({
+    browsePathOpen: false,
+    browseCurrentPath: null,
+    browseParentPath: null,
+    browseEntries: [],
+    browseError: null,
+  }),
 
   submitLink: async () => {
     const { linkForm } = get()

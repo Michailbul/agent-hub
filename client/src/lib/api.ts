@@ -114,6 +114,8 @@ export interface SkillsIndexSkill {
   installedAgentIds: string[]
   missingAgentIds: string[]
   isInMaster: boolean
+  addedAt: string | null
+  addedVia: 'zip' | 'npx' | 'create' | 'unknown' | null
   grouping: {
     purpose: string
     department: string
@@ -128,6 +130,7 @@ export interface SkillsIndexSource {
   ecosystem: string
   root: string
   kind: string
+  isMaster?: boolean
 }
 
 export interface SkillsIndexAgent {
@@ -150,6 +153,41 @@ export async function fetchSkillsIndex(): Promise<SkillsIndexData> {
   const r = await fetch('/api/skills/index')
   if (!r.ok) throw new Error('Failed to fetch skills index')
   return r.json()
+}
+
+export interface SkillInstallResult {
+  ok: true
+  skillId: string
+  skillPath: string
+  directoryName: string
+  directoryPath: string
+  name: string
+  output?: string
+}
+
+export async function installSkillZip(file: File): Promise<SkillInstallResult> {
+  const r = await fetch('/api/skills/install/zip', {
+    method: 'POST',
+    headers: {
+      'Content-Type': file.type || 'application/zip',
+      'x-skill-filename': file.name,
+    },
+    body: file,
+  })
+  const payload = await r.json().catch(() => ({}))
+  if (!r.ok) throw new Error(payload.error || 'ZIP install failed')
+  return payload as SkillInstallResult
+}
+
+export async function installSkillCommand(command: string): Promise<SkillInstallResult> {
+  const r = await fetch('/api/skills/install/command', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ command }),
+  })
+  const payload = await r.json().catch(() => ({}))
+  if (!r.ok) throw new Error(payload.error || 'Command install failed')
+  return payload as SkillInstallResult
 }
 
 // ── HQ API ──────────────────────────────────────────────────
@@ -184,6 +222,69 @@ export async function fetchHQTree(folderPath: string): Promise<{ files: any[] }>
   const r = await fetch('/api/hq/tree?path=' + encodeURIComponent(folderPath))
   if (!r.ok) throw new Error('Failed to fetch directory tree')
   return r.json()
+}
+
+export interface HQBrowseEntry {
+  name: string
+  path: string
+  isDir: boolean
+}
+
+export interface HQBrowseResponse {
+  currentPath: string | null
+  parentPath: string | null
+  entries: HQBrowseEntry[]
+}
+
+function getParentPath(folderPath: string): string | null {
+  if (!folderPath || folderPath === '/') return null
+
+  const normalized = folderPath.replace(/\/+$/, '')
+  const lastSlash = normalized.lastIndexOf('/')
+  if (lastSlash <= 0) return normalized.startsWith('/') ? '/' : null
+  return normalized.slice(0, lastSlash)
+}
+
+function normalizeHQBrowsePayload(payload: any, requestedPath?: string | null): HQBrowseResponse {
+  const rawEntries = Array.isArray(payload?.entries)
+    ? payload.entries
+    : Array.isArray(payload?.files)
+      ? payload.files
+      : []
+
+  const entries = rawEntries
+    .filter((entry: any) => entry && typeof entry.path === 'string' && typeof entry.name === 'string')
+    .map((entry: any) => ({
+      name: entry.name,
+      path: entry.path,
+      isDir: Boolean(entry.isDir ?? true),
+    }))
+
+  const currentPath = typeof payload?.currentPath === 'string'
+    ? payload.currentPath
+    : (requestedPath ?? null)
+
+  const parentPath = typeof payload?.parentPath === 'string'
+    ? payload.parentPath
+    : (currentPath ? getParentPath(currentPath) : null)
+
+  return { currentPath, parentPath, entries }
+}
+
+export async function browseHQDirectories(folderPath?: string | null): Promise<HQBrowseResponse> {
+  const query = folderPath ? '?path=' + encodeURIComponent(folderPath) : ''
+  const r = await fetch('/api/hq/browse' + query)
+  const payload = await r.json().catch(() => ({}))
+  if (r.ok) return normalizeHQBrowsePayload(payload, folderPath)
+
+  if (folderPath) {
+    const fallback = await fetch('/api/dir?path=' + encodeURIComponent(folderPath))
+    const fallbackPayload = await fallback.json().catch(() => ({}))
+    if (fallback.ok) return normalizeHQBrowsePayload(fallbackPayload, folderPath)
+    throw new Error(fallbackPayload.error || payload.error || 'Failed to browse directories')
+  }
+
+  throw new Error(payload.error || 'Failed to browse directories')
 }
 
 // ── Skills Repos API ─────────────────────────────────────────

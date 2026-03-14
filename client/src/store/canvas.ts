@@ -9,6 +9,7 @@ interface CanvasStore {
   data: CanvasData | null
   loading: boolean
   error: string | null
+  deletingAgentId: string | null
   selectedAgentId: string | null
   dropTargetAgentId: string | null
   onNavigateToFiles: ((agentId: string) => void) | null
@@ -41,6 +42,7 @@ interface CanvasStore {
   setOnNavigateToFiles: (cb: ((agentId: string) => void) | null) => void
   assignSkill: (agentId: string, variantPath: string) => Promise<void>
   unassignSkill: (agentId: string, skillId: string) => Promise<void>
+  deleteAgent: (agentId: string) => Promise<void>
   updateSkillTag: (skillId: string, department: string) => Promise<void>
   setSourceFilter: (filter: 'all' | 'own' | 'library') => void
   toggleTag: (tag: string) => void
@@ -79,6 +81,7 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
   data: null,
   loading: false,
   error: null,
+  deletingAgentId: null,
   selectedAgentId: null,
   dropTargetAgentId: null,
   onNavigateToFiles: null,
@@ -212,6 +215,37 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
       throw new Error(j.error || 'Unassign failed')
     }
     await get().loadData()
+  },
+
+  deleteAgent: async (agentId) => {
+    set({ deletingAgentId: agentId })
+    try {
+      const res = await fetch(`/api/agents/${encodeURIComponent(agentId)}`, {
+        method: 'DELETE',
+      })
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}))
+        throw new Error(j.error || 'Agent delete failed')
+      }
+
+      set(s => ({
+        browserOpen: s.selectedAgentId === agentId ? false : s.browserOpen,
+        sidePanelMode: s.sidePanelMode?.kind === 'agent-inspector' && s.sidePanelMode.agentId === agentId
+          ? null
+          : s.sidePanelMode,
+        inspectorActiveItem: null,
+        inspectorFileContent: null,
+        inspectorEditContent: null,
+        inspectorFileDirty: false,
+        inspectorFileLoading: false,
+        previewSkillId: null,
+      }))
+
+      await get().loadData()
+      window.dispatchEvent(new Event('agent-hub:data-changed'))
+    } finally {
+      set({ deletingAgentId: null })
+    }
   },
 
   updateSkillTag: async (skillId, department) => {

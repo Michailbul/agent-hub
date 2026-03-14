@@ -3,15 +3,32 @@ import { useCallback, useState } from 'react'
 import { usePanesStore } from '@/store/panes'
 import { useUIStore } from '@/store/ui'
 import { saveFile } from '@/lib/api'
+import { Package } from 'lucide-react'
 import { BreadcrumbPath } from './BreadcrumbPath'
 
 interface TopBarProps {
   onRefresh?: () => Promise<void>
   activeView: AppView
   onViewSwitch: (view: AppView) => void
+  skillsLabTheme?: 'dark' | 'light'
+  onToggleSkillsLabTheme?: () => void
 }
 
-export function TopBar({ onRefresh, activeView, onViewSwitch }: TopBarProps) {
+const navItems: { view: AppView; label: string }[] = [
+  { view: 'editor', label: 'Files' },
+  { view: 'crons', label: 'Crons' },
+  { view: 'skills-lab', label: 'Skills Lab' },
+  { view: 'canvas', label: 'Canvas' },
+  { view: 'headquarters', label: 'HQ' },
+]
+
+export function TopBar({
+  onRefresh,
+  activeView,
+  onViewSwitch,
+  skillsLabTheme = 'light',
+  onToggleSkillsLabTheme,
+}: TopBarProps) {
   const panes = usePanesStore(s => s.panes)
   const activePaneId = usePanesStore(s => s.activePaneId)
   const { flashSaved, toast } = useUIStore()
@@ -50,63 +67,35 @@ export function TopBar({ onRefresh, activeView, onViewSwitch }: TopBarProps) {
   return (
     <div className="topbar">
       <div className="topbar-brand">
-        <span className="topbar-brand-icon">⚙️</span>
+        <Package size={16} strokeWidth={1.5} className="topbar-brand-icon" />
         Agent Hub
       </div>
       <div className="view-switcher" role="tablist" aria-label="Mode switcher">
-        <button
-          className={`view-btn${activeView === 'editor' ? ' active' : ''}`}
-          onClick={() => onViewSwitch('editor')}
-          role="tab"
-          aria-selected={activeView === 'editor'}
-        >
-          Files
-        </button>
-        <button
-          className={`view-btn${activeView === 'crons' ? ' active' : ''}`}
-          onClick={() => onViewSwitch('crons')}
-          role="tab"
-          aria-selected={activeView === 'crons'}
-        >
-          Crons
-        </button>
-        <button
-          className={`view-btn${activeView === 'skills-lab' ? ' active' : ''}`}
-          onClick={() => onViewSwitch('skills-lab')}
-          role="tab"
-          aria-selected={activeView === 'skills-lab'}
-        >
-          Skills Lab
-        </button>
-        <button
-          className={`view-btn view-btn-variant${activeView === 'skills-lab-light' ? ' active' : ''}`}
-          onClick={() => onViewSwitch('skills-lab-light')}
-          role="tab"
-          aria-selected={activeView === 'skills-lab-light'}
-        >
-          /light
-        </button>
-        <button
-          className={`view-btn${activeView === 'canvas' ? ' active' : ''}`}
-          onClick={() => onViewSwitch('canvas')}
-          role="tab"
-          aria-selected={activeView === 'canvas'}
-        >
-          Canvas
-        </button>
-        <button
-          className={`view-btn${activeView === 'headquarters' ? ' active' : ''}`}
-          onClick={() => onViewSwitch('headquarters')}
-          role="tab"
-          aria-selected={activeView === 'headquarters'}
-        >
-          HQ
-        </button>
+        {navItems.map(item => (
+          <button
+            key={item.view}
+            className={`view-btn${activeView === item.view ? ' active' : ''}`}
+            onClick={() => onViewSwitch(item.view)}
+            role="tab"
+            aria-selected={activeView === item.view}
+          >
+            {item.label}
+          </button>
+        ))}
       </div>
       <div className="topbar-center">
         <BreadcrumbPath />
       </div>
       <div className="topbar-actions">
+        {activeView === 'skills-lab' && onToggleSkillsLabTheme && (
+          <button
+            className="tb-btn-ghost"
+            onClick={onToggleSkillsLabTheme}
+            title="Toggle Skills Lab theme"
+          >
+            {skillsLabTheme === 'dark' ? 'Dark' : 'Light'}
+          </button>
+        )}
         <button
           className="tb-btn-ghost"
           onClick={handleRefresh}
@@ -117,7 +106,7 @@ export function TopBar({ onRefresh, activeView, onViewSwitch }: TopBarProps) {
           {refreshing ? 'Scanning…' : 'Refresh'}
         </button>
         {activePane?.isDirty && !activePane.isLocal && (
-          <button className="tb-btn-save" onClick={handleSave}>↑ Save</button>
+          <button className="tb-btn-save" onClick={handleSave}>Save</button>
         )}
       </div>
     </div>
