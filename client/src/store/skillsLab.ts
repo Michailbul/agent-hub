@@ -303,7 +303,17 @@ function mapSkills(data: SkillsIndexData): UnifiedSkill[] {
       previewPath: preferred?.previewPath || null,
       sourceVariants,
       sourceVariantCount: libraryVariants.length,
-      isDuplicate: libraryVariants.length > 1,
+      // A skill is only a duplicate if the same ecosystem has it more than once
+      // (e.g. two browser-use folders inside .claude/skills). Cross-ecosystem
+      // presence (.claude + .codex + .openclaw) is intentional — not a duplicate.
+      isDuplicate: (() => {
+        const ecosystemCounts: Record<string, number> = {}
+        for (const v of libraryVariants) {
+          const eco = v.ecosystem || v.sourceId
+          ecosystemCounts[eco] = (ecosystemCounts[eco] || 0) + 1
+        }
+        return Object.values(ecosystemCounts).some(count => count > 1)
+      })(),
       isCustom: sk.isCustom ?? false,
       originCategory: sk.originCategory ?? 'community',
       familyKey: null,
