@@ -4,7 +4,9 @@ import {
   fetchFile,
   installSkillZip,
   installSkillCommand,
+  fetchClaudePlugins,
   type SkillsIndexData,
+  type ClaudePlugin,
 } from '@/lib/api'
 
 /* ═══ Types ═══ */
@@ -127,7 +129,7 @@ export const SKILL_CONTENT: Record<string, string> = {}
 export type LabVariant = 'skills-1'
 export type SortField = 'name' | 'department'
 export type SortDir = 'asc' | 'desc'
-export type SkillsLabScope = 'all' | 'claude'
+export type SidebarMode = 'agents' | 'claude-code'
 export type SkillsLabSavedView = 'all' | 'starred' | 'recent'
 
 interface SkillsLabStore {
@@ -142,21 +144,18 @@ interface SkillsLabStore {
   error: string | null
 
   searchQuery: string
-  activeScope: SkillsLabScope
+  sidebarMode: SidebarMode
+  expandedAgentNavIds: Set<string>
   activeSavedView: SkillsLabSavedView
   activeSourceFilter: string | null
   activeAgentFilter: string | null
   activeFamilyFilter: string | null
   duplicateOnly: boolean
   activeDepartments: Set<string>
-  selectedSkillIds: Set<string>
   expandedSkillId: string | null
   activeSkillFile: string | null
-  expandedAgentId: string | null
   sortField: SortField
   sortDir: SortDir
-  collapsedSources: Set<string>
-  expandedTreeSources: Set<string>
   skillFileTreeCache: Record<string, SkillFile[]>
   expandedSkillFolders: Set<string>
   loadingSkillTreeRoot: string | null
@@ -164,13 +163,18 @@ interface SkillsLabStore {
   skillContentCache: Record<string, string>
   /** Starred/favorited skill IDs */
   starredSkillIds: Set<string>
+  plugins: ClaudePlugin[]
+  pluginsLoading: boolean
+  pluginsLoaded: boolean
+  activePluginFilter: string | null
   installBusy: boolean
   installError: string | null
   installLastOutput: string | null
 
   setVariant: (v: LabVariant) => void
   setSearchQuery: (q: string) => void
-  setActiveScope: (scope: SkillsLabScope) => void
+  setSidebarMode: (mode: SidebarMode) => void
+  toggleAgentNavExpanded: (agentId: string) => void
   setActiveSavedView: (view: SkillsLabSavedView) => void
   setActiveSourceFilter: (id: string | null) => void
   setActiveAgentFilter: (id: string | null) => void
@@ -179,15 +183,9 @@ interface SkillsLabStore {
   toggleDepartment: (dept: string) => void
   clearDepartments: () => void
   clearAllFilters: () => void
-  toggleSelectSkill: (id: string) => void
-  selectAll: () => void
-  clearSelection: () => void
   setExpandedSkill: (id: string | null) => void
   setActiveSkillFile: (path: string | null) => void
-  setExpandedAgentId: (id: string | null) => void
   setSort: (field: SortField) => void
-  toggleSourceCollapse: (id: string) => void
-  toggleExpandTreeSource: (id: string) => void
   toggleSkillFolder: (path: string) => void
   loadSkillFileTree: (rootPath: string) => Promise<void>
   loadFromAPI: (force?: boolean) => Promise<void>
@@ -195,6 +193,8 @@ interface SkillsLabStore {
   assignSkill: (agentId: string, variantPath: string) => Promise<void>
   unassignSkill: (agentId: string, skillId: string) => Promise<void>
   toggleStarSkill: (skillId: string) => Promise<void>
+  loadPlugins: (force?: boolean) => Promise<void>
+  setActivePluginFilter: (id: string | null) => void
   installFromZip: (file: File) => Promise<void>
   installFromCommand: (command: string) => Promise<void>
   clearInstallFeedback: () => void
@@ -412,6 +412,26 @@ function getRemovableDuplicateVariants(skills: UnifiedSkill[]): Array<{ skillId:
   })
 }
 
+/* ═══ Search index cache ═══ */
+let _searchIndexCache = new WeakMap<UnifiedSkill, string>()
+let _searchIndexSources: SkillSource[] = []
+let _searchIndexAgents: LabAgent[] = []
+
+function getCachedSearchIndex(skill: UnifiedSkill, sources: SkillSource[], agents: LabAgent[]): string {
+  // Invalidate cache if sources/agents changed
+  if (sources !== _searchIndexSources || agents !== _searchIndexAgents) {
+    _searchIndexCache = new WeakMap()
+    _searchIndexSources = sources
+    _searchIndexAgents = agents
+  }
+  let index = _searchIndexCache.get(skill)
+  if (!index) {
+    index = buildSkillSearchIndex(skill, sources, agents)
+    _searchIndexCache.set(skill, index)
+  }
+  return index
+}
+
 /* ═══ Store ═══ */
 
 export const useSkillsLabStore = create<SkillsLabStore>((set, get) => ({
@@ -426,36 +446,57 @@ export const useSkillsLabStore = create<SkillsLabStore>((set, get) => ({
   error: null,
 
   searchQuery: '',
-  activeScope: 'all',
+  sidebarMode: 'agents',
+  expandedAgentNavIds: new Set(),
   activeSavedView: 'all',
   activeSourceFilter: null,
   activeAgentFilter: null,
   activeFamilyFilter: null,
   duplicateOnly: false,
   activeDepartments: new Set(),
-  selectedSkillIds: new Set(),
   expandedSkillId: null,
   activeSkillFile: null,
-  expandedAgentId: null,
   sortField: 'name',
   sortDir: 'asc',
-  collapsedSources: new Set(),
-  expandedTreeSources: new Set(),
   skillFileTreeCache: {},
   expandedSkillFolders: new Set(),
   loadingSkillTreeRoot: null,
   skillContentCache: {},
   starredSkillIds: new Set(),
+  plugins: [],
+  pluginsLoading: false,
+  pluginsLoaded: false,
+  activePluginFilter: null,
   installBusy: false,
   installError: null,
   installLastOutput: null,
 
   setVariant: (v) => set({ variant: v }),
   setSearchQuery: (q) => set({ searchQuery: q }),
-  setActiveScope: (scope) => set({ activeScope: scope }),
+  setSidebarMode: (mode) => set({
+    sidebarMode: mode,
+    // Clear all filters to prevent confusing empty results
+    searchQuery: '',
+    activeSavedView: null,
+    activeDepartments: new Set(),
+    activeSourceFilter: null,
+    activeAgentFilter: null,
+    activeFamilyFilter: null,
+    activePluginFilter: null,
+    duplicateOnly: false,
+  }),
+  toggleAgentNavExpanded: (agentId) => set(s => {
+    const next = new Set(s.expandedAgentNavIds)
+    if (next.has(agentId)) next.delete(agentId); else next.add(agentId)
+    return { expandedAgentNavIds: next }
+  }),
   setActiveSavedView: (view) => set({ activeSavedView: view }),
   setActiveSourceFilter: (id) => set(s => ({ activeSourceFilter: s.activeSourceFilter === id ? null : id })),
-  setActiveAgentFilter: (id) => set(s => ({ activeAgentFilter: s.activeAgentFilter === id ? null : id })),
+  setActiveAgentFilter: (id) => set(s => ({
+    activeAgentFilter: s.activeAgentFilter === id ? null : id,
+    // Auto-clear dept filters when switching agents to prevent confusing empty results
+    activeDepartments: s.activeAgentFilter !== id ? new Set() : s.activeDepartments,
+  })),
   setActiveFamilyFilter: (id) => set(s => ({ activeFamilyFilter: s.activeFamilyFilter === id ? null : id })),
   toggleDuplicateOnly: () => set(s => ({ duplicateOnly: !s.duplicateOnly })),
   toggleDepartment: (dept) => set(s => {
@@ -468,37 +509,20 @@ export const useSkillsLabStore = create<SkillsLabStore>((set, get) => ({
     activeSourceFilter: null,
     activeAgentFilter: null,
     activeFamilyFilter: null,
+    activePluginFilter: null,
     duplicateOnly: false,
     activeDepartments: new Set(),
     searchQuery: '',
   }),
-  toggleSelectSkill: (id) => set(s => {
-    const next = new Set(s.selectedSkillIds)
-    if (next.has(id)) next.delete(id); else next.add(id)
-    return { selectedSkillIds: next }
-  }),
-  selectAll: () => set(s => ({ selectedSkillIds: new Set(s.filtered().map(sk => sk.id)) })),
-  clearSelection: () => set({ selectedSkillIds: new Set() }),
   setExpandedSkill: (id) => set(s => ({
     expandedSkillId: s.expandedSkillId === id ? null : id,
     activeSkillFile: null,
   })),
   setActiveSkillFile: (path) => set({ activeSkillFile: path }),
-  setExpandedAgentId: (id) => set(s => ({ expandedAgentId: s.expandedAgentId === id ? null : id })),
   setSort: (field) => set(s => ({
     sortField: field,
     sortDir: s.sortField === field && s.sortDir === 'asc' ? 'desc' : 'asc',
   })),
-  toggleSourceCollapse: (id) => set(s => {
-    const next = new Set(s.collapsedSources)
-    if (next.has(id)) next.delete(id); else next.add(id)
-    return { collapsedSources: next }
-  }),
-  toggleExpandTreeSource: (id) => set(s => {
-    const next = new Set(s.expandedTreeSources)
-    if (next.has(id)) next.delete(id); else next.add(id)
-    return { expandedTreeSources: next }
-  }),
   toggleSkillFolder: (path) => set(s => {
     const next = new Set(s.expandedSkillFolders)
     if (next.has(path)) next.delete(path); else next.add(path)
@@ -616,6 +640,23 @@ export const useSkillsLabStore = create<SkillsLabStore>((set, get) => ({
       if (!r.ok) set({ starredSkillIds }) // rollback
     } catch { set({ starredSkillIds }) }
   },
+
+  loadPlugins: async (force = false) => {
+    const { pluginsLoaded, pluginsLoading } = get()
+    if (!force && (pluginsLoaded || pluginsLoading)) return
+    set({ pluginsLoading: true })
+    try {
+      const data = await fetchClaudePlugins()
+      set({ plugins: data.plugins, pluginsLoading: false, pluginsLoaded: true })
+    } catch {
+      set({ pluginsLoading: false, pluginsLoaded: true, plugins: [] })
+    }
+  },
+
+  setActivePluginFilter: (id) => set(s => ({
+    activePluginFilter: s.activePluginFilter === id ? null : id,
+    activeDepartments: new Set(),
+  })),
 
   installFromZip: async (file) => {
     set({ installBusy: true, installError: null, installLastOutput: null })
@@ -760,7 +801,6 @@ export const useSkillsLabStore = create<SkillsLabStore>((set, get) => ({
       sources,
       agents,
       searchQuery,
-      activeScope,
       activeSavedView,
       activeSourceFilter,
       activeAgentFilter,
@@ -770,10 +810,25 @@ export const useSkillsLabStore = create<SkillsLabStore>((set, get) => ({
       sortField,
       sortDir,
     } = get()
+    const { sidebarMode, activePluginFilter, plugins } = get()
     let result = skills
 
-    if (activeScope === 'claude') {
-      result = result.filter(s => Boolean(s.sourceVariants.claude))
+    // Claude Code mode: scope to skills with a claude ecosystem variant
+    if (sidebarMode === 'claude-code') {
+      result = result.filter(skill =>
+        Object.values(skill.sourceVariants).some(v => v.ecosystem === 'claude'),
+      )
+      // If a plugin filter is active, further narrow to skills whose directory name matches plugin skills
+      if (activePluginFilter) {
+        const plugin = plugins.find(p => p.id === activePluginFilter)
+        if (plugin) {
+          const pluginDirNames = new Set(plugin.skills.map(s => s.directoryName))
+          result = result.filter(skill => {
+            const dirName = skill.id.split('/').pop() || skill.name
+            return pluginDirNames.has(dirName) || pluginDirNames.has(skill.name)
+          })
+        }
+      }
     }
 
     if (activeSavedView === 'starred') {
@@ -784,7 +839,7 @@ export const useSkillsLabStore = create<SkillsLabStore>((set, get) => ({
     if (searchQuery) {
       const searchTerms = normalizeSearchTerms(searchQuery)
       result = result.filter(skill => {
-        const searchIndex = buildSkillSearchIndex(skill, sources, agents)
+        const searchIndex = getCachedSearchIndex(skill, sources, agents)
         return searchTerms.every(term => searchIndex.includes(term))
       })
     }

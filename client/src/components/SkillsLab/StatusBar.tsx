@@ -3,9 +3,10 @@ type StatusBarProps = {
   total: number
   scope: string
   hasFilters: boolean
+  onResetFilters?: () => void
 }
 
-export function StatusBar({ filtered, total, scope, hasFilters }: StatusBarProps) {
+export function StatusBar({ filtered, total, scope, hasFilters, onResetFilters }: StatusBarProps) {
   return (
     <div className="kl-status-bar">
       <div className="kl-status-bar-section">
@@ -13,10 +14,17 @@ export function StatusBar({ filtered, total, scope, hasFilters }: StatusBarProps
         <span>{filtered}/{total} skills</span>
       </div>
       <div className="kl-status-bar-section">
-        <span>{scope === 'claude' ? 'Claude Code' : 'All libraries'}</span>
+        <span>{scope === 'agents' ? 'Agents' : scope === 'claude-code' ? 'Claude Code' : scope}</span>
       </div>
       {hasFilters && (
-        <span className="kl-status-bar-filtered">Filtered</span>
+        <>
+          <span className="kl-status-bar-filtered">Filtered</span>
+          {onResetFilters && (
+            <button className="kl-status-bar-reset" onClick={onResetFilters}>
+              Reset filters
+            </button>
+          )}
+        </>
       )}
       <div className="kl-status-bar-kbd">
         <kbd>Cmd+K</kbd> Search

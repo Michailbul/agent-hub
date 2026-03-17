@@ -367,7 +367,12 @@ function copyDirectory(fromDir: string, toDir: string) {
   for (const entry of fs.readdirSync(fromDir, { withFileTypes: true })) {
     const sourcePath = path.join(fromDir, entry.name);
     const targetPath = path.join(toDir, entry.name);
-    if (entry.isDirectory()) {
+    const stat = fs.lstatSync(sourcePath);
+    if (stat.isSymbolicLink()) {
+      // Recreate symlink rather than following it
+      const linkTarget = fs.readlinkSync(sourcePath);
+      fs.symlinkSync(linkTarget, targetPath);
+    } else if (stat.isDirectory()) {
       copyDirectory(sourcePath, targetPath);
     } else {
       fs.copyFileSync(sourcePath, targetPath);
@@ -828,6 +833,26 @@ function classifySkillGrouping(text: string) {
   };
 }
 
+// Cached skills index — avoids reparsing all SKILL.md files on every request
+let _skillsIndexCache: ReturnType<typeof buildSkillsIndex> | null = null;
+let _skillsIndexCachedAt = 0;
+const SKILLS_INDEX_TTL_MS = 5000; // 5s TTL
+
+function getCachedSkillsIndex() {
+  const now = Date.now();
+  if (_skillsIndexCache && (now - _skillsIndexCachedAt) < SKILLS_INDEX_TTL_MS) {
+    return _skillsIndexCache;
+  }
+  _skillsIndexCache = buildSkillsIndex();
+  _skillsIndexCachedAt = now;
+  return _skillsIndexCache;
+}
+
+function invalidateSkillsIndexCache() {
+  _skillsIndexCache = null;
+  _skillsIndexCachedAt = 0;
+}
+
 function buildSkillsIndex() {
   const sources = buildSkillSourceDescriptors();
   const skillsMap = new Map<string, SkillsIndexSkill & { _installed: Set<string>; _groupingText: string[] }>();
@@ -842,7 +867,7 @@ function buildSkillsIndex() {
   ) => {
     const content = fs.readFileSync(skillPath, 'utf8');
     const parsed = parseSkillDocument(content);
-    const skillId = slugify(dirName);
+    const skillId = folder ? slugify(`${folder}--${dirName}`) : slugify(dirName);
     const label = parsed.frontmatter.name || dirName;
     const summary = parsed.frontmatter.description || summarizeSkillBody(parsed.body, `${label} skill`);
     const groupingText = [dirName, label, parsed.frontmatter.description || '', summary, parsed.body.slice(0, 400)].join('\n');
@@ -1017,7 +1042,7 @@ function getAgentById(agentId: string) {
 }
 
 function buildSkillDeletePreview(skillId: string, sourceId?: string): SkillDeletePreview {
-  const index = buildSkillsIndex();
+  const index = getCachedSkillsIndex();
   const skill = index.skills.find(item => item.id === skillId);
   if (!skill) throw new Error('Skill not found');
 
@@ -1171,8 +1196,23 @@ initAgents();
 app.use(express.json({ limit: '10mb' }));
 app.use(cookieParser());
 
-function isAllowed(filePath) {
-  return isWithinRoots(filePath, ALLOWED_ROOTS);
+function isAllowed(filePath: string): boolean {
+  // Check both the resolved path AND the real path (following symlinks)
+  // to prevent symlink escape from allowed roots
+  if (!isWithinRoots(filePath, ALLOWED_ROOTS)) return false;
+  try {
+    const realPath = fs.realpathSync(filePath);
+    return isWithinRoots(realPath, ALLOWED_ROOTS);
+  } catch {
+    // File doesn't exist yet (e.g., write to new file) — check parent
+    const parentDir = path.dirname(filePath);
+    try {
+      const realParent = fs.realpathSync(parentDir);
+      return isWithinRoots(realParent, ALLOWED_ROOTS);
+    } catch {
+      return false;
+    }
+  }
 }
 
 function getHQBrowseRoots(): string[] {
@@ -1226,7 +1266,14 @@ function resolveFiles(root, files) {
   return files.map(f => ({ label: f, path: path.join(root, f) })).filter(f => fs.existsSync(f.path));
 }
 
-function auth(_req, _res, next) {
+function auth(req, res, next) {
+  // In production, require the HUB_PASSWORD cookie
+  if (process.env.NODE_ENV === 'production' || process.env.HUB_AUTH === 'true') {
+    const token = req.cookies?.agent_hub_auth || req.headers['x-hub-token'];
+    if (!token || token !== PASSWORD) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+  }
   return next();
 }
 
@@ -1246,8 +1293,13 @@ if (hasClientBuild) {
   app.get('/login', (_req, res) => res.sendFile(LEGACY_HTML));
 }
 
-app.post('/api/login', (_req, res) => {
-  res.cookie('agent_hub_auth', 'open', { httpOnly: false, maxAge: 7*24*3600*1000 });
+app.post('/api/login', (req, res) => {
+  const { password } = req.body || {};
+  const authEnabled = process.env.NODE_ENV === 'production' || process.env.HUB_AUTH === 'true';
+  if (authEnabled && password !== PASSWORD) {
+    return res.status(401).json({ error: 'Invalid password' });
+  }
+  res.cookie('agent_hub_auth', authEnabled ? PASSWORD : 'open', { httpOnly: true, sameSite: 'strict', maxAge: 7*24*3600*1000 });
   return res.json({ ok: true });
 });
 
@@ -1257,6 +1309,7 @@ app.post('/api/logout', (req, res) => { res.clearCookie('agent_hub_auth'); res.j
 app.post('/api/refresh', auth, (_req, res) => {
   try {
     initAgents();
+    invalidateSkillsIndexCache();
     res.json({ ok: true, agents: AGENTS.length, libs: SKILL_LIBRARIES.length });
   } catch (e: any) {
     res.status(500).json({ error: e.message });
@@ -1283,9 +1336,81 @@ app.get('/api/tree', auth, (req, res) => {
 
 app.get('/api/skills/index', auth, (_req, res) => {
   try {
-    res.json(buildSkillsIndex());
+    res.json(getCachedSkillsIndex());
   } catch (e: any) {
     res.status(500).json({ error: e.message });
+  }
+});
+
+// ── Claude Code plugins ─────────────────────────────────────
+function readClaudePlugins() {
+  const claudeDir = path.join(os.homedir(), '.claude');
+  const pluginsDir = path.join(claudeDir, 'plugins');
+  const installedPath = path.join(pluginsDir, 'installed_plugins.json');
+  const marketplacesPath = path.join(pluginsDir, 'known_marketplaces.json');
+  const settingsPath = path.join(claudeDir, 'settings.json');
+
+  let installed: Record<string, any> = {};
+  let marketplaces: Record<string, any> = {};
+  let settings: any = {};
+
+  try { installed = JSON.parse(fs.readFileSync(installedPath, 'utf8')); } catch {}
+  try { marketplaces = JSON.parse(fs.readFileSync(marketplacesPath, 'utf8')); } catch {}
+  try { settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8')); } catch {}
+
+  const enabledPlugins: string[] = settings.enabledPlugins || [];
+
+  const plugins = Object.entries(installed).map(([key, entry]: [string, any]) => {
+    const name = entry.name || key.split('@')[0];
+    const marketplace = entry.marketplace || key.split('@').slice(1).join('@') || '';
+    const installPath = entry.installPath || '';
+
+    // Check enabled state — both "name@marketplace" and "marketplace:name" formats
+    const enabled = enabledPlugins.includes(key)
+      || enabledPlugins.includes(`${marketplace}:${name}`)
+      || enabledPlugins.includes(`${name}@${marketplace}`);
+
+    // Resolve marketplace repo URL
+    const marketplaceRepo = marketplaces[marketplace]?.repo || undefined;
+
+    // Count skills under installPath
+    let skills: { name: string; path: string; directoryName: string }[] = [];
+    if (installPath && fs.existsSync(installPath)) {
+      try {
+        const entries = fs.readdirSync(installPath, { withFileTypes: true });
+        skills = entries
+          .filter(e => e.isDirectory() && !e.name.startsWith('.'))
+          .map(e => ({
+            name: e.name,
+            path: path.join(installPath, e.name),
+            directoryName: e.name,
+          }));
+      } catch {}
+    }
+
+    return {
+      id: key,
+      name,
+      marketplace,
+      version: entry.version || '',
+      scope: entry.scope || '',
+      enabled,
+      installPath,
+      installedAt: entry.installedAt || '',
+      marketplaceRepo,
+      skillCount: skills.length,
+      skills,
+    };
+  });
+
+  return { plugins };
+}
+
+app.get('/api/claude/plugins', auth, (_req, res) => {
+  try {
+    res.json(readClaudePlugins());
+  } catch (e: any) {
+    res.json({ plugins: [] });
   }
 });
 
@@ -1319,6 +1444,7 @@ app.post('/api/skills/delete', auth, (req, res) => {
 
     if (preview.action === 'unassign-agent') {
       removePathRecursive(path.dirname(preview.variantPath));
+      invalidateSkillsIndexCache();
       return res.json({
         ok: true,
         action: preview.action,
@@ -1331,6 +1457,7 @@ app.post('/api/skills/delete', auth, (req, res) => {
     for (const install of preview.impactedInstalls) {
       removePathRecursive(path.dirname(install.path));
     }
+    invalidateSkillsIndexCache();
 
     res.json({
       ok: true,
@@ -1584,6 +1711,7 @@ app.post('/api/skill/copy', auth, (req, res) => {
       });
     };
     copyDir(srcDir, targetDir);
+    invalidateSkillsIndexCache();
     res.json({ ok: true, dest: path.join(targetDir, 'SKILL.md') });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
@@ -1598,6 +1726,7 @@ app.post('/api/skill/move', auth, (req, res) => {
     if (fs.existsSync(targetDir)) return res.status(409).json({ error: 'Skill already exists at destination' });
     fs.mkdirSync(path.dirname(targetDir), { recursive: true });
     fs.renameSync(srcDir, targetDir);
+    invalidateSkillsIndexCache();
     res.json({ ok: true });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
@@ -1616,6 +1745,7 @@ app.post('/api/skill/delete', auth, (req, res) => {
       fs.rmdirSync(p);
     };
     rmrf(path.dirname(src));
+    invalidateSkillsIndexCache();
     res.json({ ok: true });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
@@ -1666,6 +1796,7 @@ app.post('/api/skill/rename', auth, (req, res) => {
       fs.renameSync(srcDir, targetDir);
     }
     const newPath = path.join(targetDir, 'SKILL.md');
+    invalidateSkillsIndexCache();
     res.json({ ok: true, newPath });
   } catch (e: any) {
     res.status(500).json({ error: e.message });
@@ -1735,7 +1866,9 @@ app.post('/api/skills/create', auth, (req, res) => {
     fs.mkdirSync(directoryPath, { recursive: true });
     const skillPath = path.join(directoryPath, 'SKILL.md');
     fs.writeFileSync(skillPath, buildInitialSkillDocument(trimmedName, trimmedDescription, body), 'utf8');
-    recordSkillInstallMetadata(slugify(directoryName), { addedVia: 'create', sourceLabel: 'skills-lab' });
+    const skillId = folder ? slugify(`${folder.trim()}--${directoryName}`) : slugify(directoryName);
+    recordSkillInstallMetadata(skillId, { addedVia: 'create', sourceLabel: 'skills-lab' });
+    invalidateSkillsIndexCache();
     res.json({ ok: true, skillPath, directoryPath, directoryName });
   } catch (e: any) {
     res.status(500).json({ error: e.message });
@@ -1754,6 +1887,7 @@ app.post('/api/skills/install/zip', auth, express.raw({
   try {
     const installed = installSkillBundleFromZip(body, safeName);
     initAgents();
+    invalidateSkillsIndexCache();
     res.json({ ok: true, ...installed });
   } catch (e: any) {
     const message = e instanceof Error ? e.message : 'ZIP install failed';
@@ -1769,6 +1903,7 @@ app.post('/api/skills/install/command', auth, async (req, res) => {
   try {
     const installed = await installSkillBundleFromCommand(command);
     initAgents();
+    invalidateSkillsIndexCache();
     res.json({ ok: true, ...installed });
   } catch (e: any) {
     const message = e instanceof Error ? e.message : 'Command install failed';
@@ -1784,7 +1919,7 @@ app.post('/api/skills/assign', auth, (req, res) => {
   if (!agent?.skillsRoot) return res.status(404).json({ error: 'Agent not found' });
   if (!isAllowed(variantPath) || !isAllowed(agent.skillsRoot)) return res.status(403).json({ error: 'Not allowed' });
 
-  const index = buildSkillsIndex();
+  const index = getCachedSkillsIndex();
   const variant = index.skills.flatMap(skill => skill.variants).find(item => item.path === variantPath);
   if (!variant) return res.status(404).json({ error: 'Skill variant not found' });
 
@@ -1801,6 +1936,7 @@ app.post('/api/skills/assign', auth, (req, res) => {
     } else {
       copyDirectory(srcDir, targetDir);
     }
+    invalidateSkillsIndexCache();
     res.json({ ok: true, dest: path.join(targetDir, 'SKILL.md'), symlink: useSymlink });
   } catch (e: any) {
     res.status(500).json({ error: e.message });
@@ -1813,7 +1949,7 @@ app.post('/api/skills/unassign', auth, (req, res) => {
   const agent = getAgentById(agentId);
   if (!agent?.skillsRoot) return res.status(404).json({ error: 'Agent not found' });
 
-  const index = buildSkillsIndex();
+  const index = getCachedSkillsIndex();
   const skill = index.skills.find(item => item.id === skillId);
   if (!skill) return res.status(404).json({ error: 'Skill not found' });
 
@@ -1836,6 +1972,7 @@ app.post('/api/skills/unassign', auth, (req, res) => {
     } else {
       removeDirectoryRecursive(targetDir);
     }
+    invalidateSkillsIndexCache();
     res.json({ ok: true, wasSymlink });
   } catch (e: any) {
     res.status(500).json({ error: e.message });
@@ -1846,7 +1983,7 @@ app.post('/api/skill/tag', auth, (req, res) => {
   const { skillId, department } = req.body;
   if (!skillId || !department) return res.status(400).json({ error: 'skillId and department required' });
 
-  const index = buildSkillsIndex();
+  const index = getCachedSkillsIndex();
   const skill = index.skills.find(s => s.id === skillId);
   if (!skill) return res.status(404).json({ error: 'Skill not found' });
 
@@ -1899,6 +2036,7 @@ app.post('/api/skill/tag', auth, (req, res) => {
     }
 
     fs.writeFileSync(targetPath, updated, 'utf8');
+    invalidateSkillsIndexCache();
     res.json({ ok: true, path: targetPath, department });
   } catch (e: any) {
     res.status(500).json({ error: e.message });
@@ -2279,6 +2417,15 @@ app.post('/api/skills-repos/link', auth, (req, res) => {
   const resolved = expandPath(repoPath);
   if (!fs.existsSync(resolved)) return res.status(400).json({ error: `Path does not exist: ${resolved}` });
 
+  // Security: restrict linked repos to safe parent directories
+  const safeParents = [HOME_DIR, OPENCLAW_ROOT, AGENTS_SKILLS_ROOT, '/data'].filter(Boolean);
+  const realResolved = fs.realpathSync(resolved);
+  const withinSafe = safeParents.some(parent => {
+    const resolvedParent = path.resolve(parent);
+    return realResolved.startsWith(resolvedParent + path.sep) || realResolved === resolvedParent;
+  });
+  if (!withinSafe) return res.status(403).json({ error: `Path must be within home directory or known roots` });
+
   const id = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
 
   // Auto-detect skillsRoot: if root has SKILL.md dirs, use root; otherwise check for skills/ subdir
@@ -2304,6 +2451,7 @@ app.post('/api/skills-repos/link', auth, (req, res) => {
   else config.repos.push(entry);
   writeSkillsReposConfig(config);
   refreshSkillsReposAllowedRoots();
+  invalidateSkillsIndexCache();
   res.json({ ok: true, repo: entry });
 });
 
@@ -2313,6 +2461,7 @@ app.delete('/api/skills-repos/unlink/:id', auth, (req, res) => {
   config.repos = config.repos.filter(r => r.id !== req.params.id);
   if (config.repos.length === before) return res.status(404).json({ error: 'Repo not found' });
   writeSkillsReposConfig(config);
+  invalidateSkillsIndexCache();
   res.json({ ok: true });
 });
 
@@ -2326,6 +2475,7 @@ app.post('/api/skills-repos/pull/:id', auth, async (req, res) => {
   try {
     const { execSync } = require('child_process');
     const output = execSync(`git -C "${resolved}" pull`, { encoding: 'utf8', timeout: 30000 });
+    invalidateSkillsIndexCache();
     res.json({ ok: true, output: output.trim() });
   } catch (e: any) {
     res.status(500).json({ error: e.message || 'git pull failed' });
@@ -2346,6 +2496,7 @@ app.post('/api/skills/promote', auth, (req, res) => {
   try {
     fs.mkdirSync(AGENTS_SKILLS_ROOT, { recursive: true });
     copyDirectory(srcDir, targetDir);
+    invalidateSkillsIndexCache();
     res.json({ ok: true, dest: targetDir });
   } catch (e: any) {
     res.status(500).json({ error: e.message });

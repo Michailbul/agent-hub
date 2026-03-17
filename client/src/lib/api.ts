@@ -190,6 +190,34 @@ export async function installSkillCommand(command: string): Promise<SkillInstall
   return payload as SkillInstallResult
 }
 
+// ── Claude Plugins API ───────────────────────────────────────
+
+export interface ClaudePluginSkill {
+  name: string
+  path: string
+  directoryName: string
+}
+
+export interface ClaudePlugin {
+  id: string
+  name: string
+  marketplace: string
+  version: string
+  scope: string
+  enabled: boolean
+  installPath: string
+  installedAt: string
+  marketplaceRepo?: string
+  skillCount: number
+  skills: ClaudePluginSkill[]
+}
+
+export async function fetchClaudePlugins(): Promise<{ plugins: ClaudePlugin[] }> {
+  const r = await fetch('/api/claude/plugins')
+  if (!r.ok) return { plugins: [] }
+  return r.json()
+}
+
 // ── HQ API ──────────────────────────────────────────────────
 
 export async function fetchHQConfig(): Promise<{ sources: any[] }> {
