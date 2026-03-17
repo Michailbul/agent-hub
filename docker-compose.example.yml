@@ -9,11 +9,15 @@ services:
     restart: unless-stopped
     environment:
       HUB_PASSWORD: "your-secure-password"
-      OPENCLAW_ROOT: "/data/openclaw"
-      AGENTS_SKILLS_ROOT: "/data/agents/skills"
+      OPENCLAW_ROOT: "/root/.openclaw"
+      AGENTS_SKILLS_ROOT: "/root/.agents/skills"
     volumes:
-      # Map your local OpenClaw dir into the container
-      - ~/.openclaw:/data/openclaw
-      - ~/.agents:/data/agents
+      # Core OpenClaw dirs
+      - ~/.openclaw:/root/.openclaw
+      - ~/.agents:/root/.agents
+      # Claude Code skills (~/.claude/skills/) — required to show Claude Code skills in Skills Lab
+      - ~/.claude:/root/.claude
+      # Codex CLI skills (~/.codex/skills/) — required to show Codex skills in Skills Lab
+      - ~/.codex:/root/.codex
       # Optional: map a studio/HQ context directory
-      # - ~/work/my-studio:/data/studio
+      # - ~/work/my-studio:/root/work/my-studio
