@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ChevronRight, Check } from 'lucide-react'
+import { ChevronRight } from 'lucide-react'
 
 type FacetSection = {
   id: string
@@ -7,13 +7,6 @@ type FacetSection = {
   items: FacetItem[]
   activeValue: string | null
   onSelect: (value: string | null) => void
-}
-
-type FacetToggle = {
-  id: string
-  label: string
-  active: boolean
-  onToggle: () => void
 }
 
 type FacetItem = {
@@ -26,10 +19,9 @@ type FacetItem = {
 
 type FacetedFiltersProps = {
   sections: FacetSection[]
-  toggles?: FacetToggle[]
 }
 
-export function FacetedFilters({ sections, toggles }: FacetedFiltersProps) {
+export function FacetedFilters({ sections }: FacetedFiltersProps) {
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
 
   const toggle = (id: string) => {
@@ -95,28 +87,6 @@ export function FacetedFilters({ sections, toggles }: FacetedFiltersProps) {
           </div>
         )
       })}
-
-      {toggles && toggles.length > 0 && (
-        <div className="kl-facet-section">
-          <div className="kl-facet-header" style={{ cursor: 'default' }}>
-            <span className="kl-facet-label">Special</span>
-          </div>
-          <div className="kl-facet-body">
-            {toggles.map(t => (
-              <button
-                key={t.id}
-                className={`kl-facet-toggle${t.active ? ' active' : ''}`}
-                onClick={t.onToggle}
-              >
-                <span className="kl-facet-toggle-check">
-                  {t.active && <Check size={10} strokeWidth={2.5} />}
-                </span>
-                <span>{t.label}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
     </>
   )
 }

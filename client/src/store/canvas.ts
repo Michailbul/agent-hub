@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import type { CanvasData, PaletteSkill, AgentSkillPill, AgentFiles, SidePanelMode, InspectorActiveItem, SkillDirFile } from '@/types/canvas'
 import type { TreeData } from '@/types'
 import { fetchFile, saveFile } from '@/lib/api'
+import { getSkillDirectoryPath } from '@/lib/skillPaths'
 
 type CanvasTheme = 'default' | 'zinc' | 'stone' | 'neutral'
 
@@ -452,10 +453,7 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
       set({ skillDirExpanded: next })
       // Load files if not already loaded
       if (!s.skillDirFiles[skillId]) {
-        // variantPath points to SKILL.md, get its parent directory
-        const skillDir = variantPath.endsWith('/SKILL.md')
-          ? variantPath.slice(0, -'/SKILL.md'.length)
-          : variantPath.replace(/\/[^/]+$/, '')
+        const skillDir = getSkillDirectoryPath(variantPath)
         void get().loadSkillDirFiles(skillId, skillDir)
       }
     }

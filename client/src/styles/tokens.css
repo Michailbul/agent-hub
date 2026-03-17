@@ -1,0 +1,198 @@
+/* ═══════════════════════════════════════════════════════
+   Design Tokens — Single source of truth
+   Studio warm palette (light + dark)
+   ═══════════════════════════════════════════════════════ */
+
+:root {
+  /* ═══ SURFACES ═══ */
+  --paper: #FAF8F1;
+  --paper-muted: #F3F1EA;
+  --surface-0: #FAF8F1;
+  --surface-1: #F3F1EA;
+  --surface-2: #EFEDE6;
+  --surface-3: #E5E3DC;
+  --surface-4: #DDDBD4;
+  --surface-hover: rgba(48,48,40,0.04);
+  --surface-active: rgba(48,48,40,0.07);
+  --surface-elevated: #FFFFFF;
+  --surface-sunken: #EFEDE6;
+  --sidebar-bg: #F3F1EA;
+  /* Legacy aliases */
+  --p: var(--paper);
+  --s1: var(--surface-1);
+  --s2: var(--surface-2);
+  --s3: var(--surface-3);
+  --s4: var(--surface-4);
+
+  /* ═══ TEXT HIERARCHY ═══ */
+  --ink: #303030;
+  --text-primary: #303030;
+  --text-secondary: #6B6960;
+  --text-tertiary: #9A9890;
+  --text-ghost: #CBC9C0;
+  --t1: var(--text-primary);
+  --t2: var(--text-secondary);
+  --t3: var(--text-tertiary);
+  --tg: var(--text-ghost);
+
+  /* ═══ BORDERS ═══ */
+  --border-subtle: rgba(48,48,40,0.06);
+  --border-default: rgba(48,48,40,0.10);
+  --border-strong: rgba(48,48,40,0.18);
+  --border-accent: rgba(194,122,80,0.35);
+  --bs: var(--border-subtle);
+  --bd: var(--border-default);
+  --bst: var(--border-strong);
+
+  /* ═══ ACCENT (Studio Terracotta) ═══ */
+  --coral: #C27A50;
+  --coral-hover: #AB6B46;
+  --coral-light: rgba(194,122,80,0.10);
+  --coral-subtle: rgba(194,122,80,0.04);
+  --warm-accent: #AB6B46;
+  --accent-subtle: rgba(194,122,80,0.10);
+  --accent-glow: rgba(194,122,80,0.18);
+  --warm-subtle: rgba(194,122,80,0.12);
+  --amber-surface: rgba(194,122,80,0.12);
+  --focus-ring: rgba(194,122,80,0.18);
+  --selection: rgba(48,48,40,0.05);
+  --selection-active: rgba(48,48,40,0.08);
+  /* Legacy aliases */
+  --ch: var(--coral-hover);
+  --cdim: var(--accent-subtle);
+  --cglow: var(--accent-glow);
+
+  /* ═══ SEMANTIC ═══ */
+  --background: var(--surface-0);
+  --foreground: var(--text-primary);
+  --primary: var(--coral);
+  --primary-foreground: #fff;
+  --destructive: oklch(0.62 0.2 27);
+  --destructive-foreground: oklch(0.98 0 0);
+  --inv: #18181b;
+  --invt: #fafafa;
+
+  /* Status */
+  --status-running: var(--coral);
+  --status-success: #16a34a;
+  --status-success-light: rgba(34,197,94,0.1);
+  --status-error: #dc2626;
+  --status-queued: var(--text-tertiary);
+
+  /* ═══ TYPOGRAPHY ═══ */
+  --text-micro: 10px;
+  --text-size-xs: 11px;
+  --text-size-sm: 13px;
+  --text-size-base: 15px;
+  --text-size-lg: 18px;
+  --text-size-xl: 24px;
+  --text-size-2xl: 32px;
+  --font-sans: 'Geist', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --font-mono: 'Geist Mono', 'SF Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* ═══ SHADOWS ═══ */
+  --shadow-sm: 0 1px 2px rgba(48,40,30,0.05);
+  --shadow-md: 0 1px 3px rgba(48,40,30,0.07), 0 1px 2px rgba(48,40,30,0.04);
+  --shadow-lg: 0 12px 40px rgba(48,40,30,0.12), 0 4px 8px rgba(48,40,30,0.06);
+  --shadow-sharp: 0 4px 12px rgba(0,0,0,.08);
+  --shadow-elevated: 0 20px 40px -10px rgba(0,0,0,.12);
+  --shadow-cmd: 0 16px 48px rgba(48,40,30,0.14), 0 0 0 1px rgba(48,40,30,0.05);
+  --shadow-brutal: 4px 4px 0 0 var(--ink);
+  --shadow-brutal-sm: 2px 2px 0 0 var(--ink);
+  --shadow-brutal-accent: 4px 4px 0 0 rgba(194,122,80,0.5);
+  /* Legacy aliases */
+  --sh-sm: var(--shadow-sm);
+  --sh-md: var(--shadow-md);
+  --sh-lg: var(--shadow-lg);
+  --sh-b: var(--shadow-brutal);
+  --sh-ba: var(--shadow-brutal-accent);
+
+  /* ═══ ELEVATED SURFACES ═══ */
+  --header-bg: linear-gradient(180deg, rgba(48,48,40,0.02) 0%, transparent 100%);
+
+  /* ═══ LAYOUT ═══ */
+  --r: 0;
+  --rl: 0;
+  --sw: 256px;
+  --th: 44px;
+  --radius: 8px;
+
+  /* ═══ TIMING & EASING ═══ */
+  --duration-instant: 80ms;
+  --duration-fast: 150ms;
+  --duration-normal: 250ms;
+  --duration-slow: 400ms;
+  --ease-out: cubic-bezier(.16,1,.3,1);
+  --ease-spring: cubic-bezier(.34,1.56,.64,1);
+  --ease: var(--ease-out);
+  --fast: var(--duration-instant);
+  --norm: var(--duration-fast);
+}
+
+/* ═══════════════════════════════════════════════════════
+   Dark Mode
+   ═══════════════════════════════════════════════════════ */
+
+[data-theme="dark"] {
+  /* ═══ SURFACES ═══ */
+  --paper: #1C1C1E;
+  --paper-muted: #222224;
+  --surface-0: #1C1C1E;
+  --surface-1: #2A2A2C;
+  --surface-2: #333336;
+  --surface-3: #3E3E42;
+  --surface-4: #4A4A4E;
+  --surface-hover: rgba(255,255,255,0.05);
+  --surface-active: rgba(255,255,255,0.08);
+  --surface-elevated: #2A2A2C;
+  --surface-sunken: #161618;
+  --sidebar-bg: #222224;
+
+  /* ═══ TEXT HIERARCHY ═══ */
+  --ink: #EDEDEB;
+  --text-primary: #EDEDEB;
+  --text-secondary: #A8A6A0;
+  --text-tertiary: #7C7A74;
+  --text-ghost: #555550;
+
+  /* ═══ BORDERS ═══ */
+  --border-subtle: rgba(255,255,255,0.07);
+  --border-default: rgba(255,255,255,0.12);
+  --border-strong: rgba(255,255,255,0.20);
+  --border-accent: rgba(216,119,87,0.50);
+
+  /* ═══ ACCENT ═══ */
+  --coral: #E08060;
+  --coral-hover: #EA9474;
+  --coral-light: rgba(224,128,96,0.15);
+  --coral-subtle: rgba(224,128,96,0.08);
+  --warm-accent: #EA9474;
+  --accent-subtle: rgba(224,128,96,0.12);
+  --accent-glow: rgba(224,128,96,0.25);
+  --warm-subtle: rgba(224,128,96,0.14);
+  --amber-surface: rgba(224,128,96,0.14);
+  --focus-ring: rgba(224,128,96,0.30);
+  --selection: rgba(255,255,255,0.06);
+  --selection-active: rgba(255,255,255,0.10);
+
+  /* ═══ SEMANTIC ═══ */
+  --inv: #fafafa;
+  --invt: #18181b;
+
+  /* Status */
+  --status-success-light: rgba(34,197,94,0.18);
+
+  /* ═══ SHADOWS ═══ */
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.04);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.05);
+  --shadow-lg: 0 12px 40px rgba(0,0,0,0.6), 0 4px 8px rgba(0,0,0,0.4);
+  --shadow-sharp: 0 4px 12px rgba(0,0,0,.4);
+  --shadow-elevated: 0 20px 40px -10px rgba(0,0,0,.5);
+  --shadow-cmd: 0 16px 48px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.08);
+  --shadow-brutal: 4px 4px 0 0 rgba(0,0,0,0.5);
+  --shadow-brutal-sm: 2px 2px 0 0 rgba(0,0,0,0.5);
+  --shadow-brutal-accent: 4px 4px 0 0 rgba(224,128,96,0.45);
+
+  /* ═══ ELEVATED SURFACES ═══ */
+  --header-bg: linear-gradient(180deg, rgba(255,255,255,0.02) 0%, transparent 100%);
+}

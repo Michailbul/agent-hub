@@ -83,22 +83,13 @@ interface CreateSkillResult {
 
 function buildSkillTemplate(name: string, description: string) {
   const safeName = name.replace(/\s+/g, ' ').trim() || 'New Skill'
-  const safeDescription = description.replace(/\s+/g, ' ').trim() || 'Describe what this skill does and when to use it'
+  const safeDescription = description.replace(/\s+/g, ' ').trim() || 'A new skill'
   return `---
 name: "${safeName.replace(/"/g, '\\"')}"
 description: "${safeDescription.replace(/"/g, '\\"')}"
 ---
 
-# ${safeName}
-
-## When to use
-- Describe the trigger conditions.
-
-## Workflow
-- Describe the core steps.
-
-## Notes
-- Add constraints, caveats, or resources.
+${safeName}
 `
 }
 

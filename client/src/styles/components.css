@@ -1,0 +1,205 @@
+/* ═══════════════════════════════════════════════════════
+   Reusable Component Patterns
+   Generic classes extracted from Studio theme
+   ═══════════════════════════════════════════════════════ */
+
+/* ── Search Bar ── */
+.search-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  height: 36px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius);
+  background: var(--surface-1);
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+.search-bar:focus-within {
+  border-color: var(--border-strong);
+  box-shadow: 0 0 0 2px var(--focus-ring);
+}
+.search-bar input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  font-size: 13px;
+  color: var(--text-primary);
+  outline: none;
+}
+.search-bar input::placeholder {
+  color: var(--text-ghost);
+}
+
+/* ── Panel Header / Title ── */
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 48px;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+  background: var(--header-bg);
+}
+.panel-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+/* ── Badge / Tag ── */
+.badge, .tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 500;
+  background: var(--surface-2);
+  color: var(--text-tertiary);
+}
+
+/* ── Action Buttons ── */
+.action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius);
+  background: var(--paper);
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 120ms ease;
+}
+.action-btn:hover {
+  background: var(--surface-1);
+  border-color: var(--border-strong);
+  color: var(--text-primary);
+}
+.action-btn.primary {
+  background: var(--coral);
+  border-color: var(--coral);
+  color: #fff;
+}
+.action-btn.primary:hover {
+  opacity: 0.9;
+}
+.action-btn.danger {
+  color: var(--status-error);
+  border-color: rgba(220,38,38,0.3);
+}
+.action-btn.danger:hover {
+  background: rgba(220,38,38,0.06);
+}
+
+/* ── Nav Item ── */
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  height: 32px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text-secondary);
+  background: none;
+  border: none;
+  width: 100%;
+  text-align: left;
+  transition: background 100ms ease, color 100ms ease;
+}
+.nav-item:hover {
+  background: var(--surface-hover);
+  color: var(--text-primary);
+}
+.nav-item.active {
+  background: var(--selection-active);
+  color: var(--ink);
+  font-weight: 500;
+}
+
+/* ── Modal ── */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(0,0,0,0.4);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+[data-theme="dark"] .modal-backdrop {
+  background: rgba(0,0,0,0.6);
+}
+.modal-card {
+  background: var(--surface-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: 12px;
+  box-shadow: var(--shadow-cmd);
+  padding: 24px;
+  max-width: 480px;
+  width: 90%;
+}
+
+/* ── Loading Spinner ── */
+.loading-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--border-default);
+  border-top-color: var(--coral);
+  border-radius: 50%;
+  animation: spin-generic 0.6s linear infinite;
+}
+@keyframes spin-generic {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Pill Tab ── */
+.pill-tab {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-tertiary);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: background 100ms ease, color 100ms ease;
+}
+.pill-tab:hover {
+  background: var(--surface-hover);
+  color: var(--text-primary);
+}
+.pill-tab.active {
+  background: var(--selection-active);
+  color: var(--ink);
+  font-weight: 600;
+}
+
+/* ── Glass Surface ── */
+.glass-surface {
+  background: rgba(250,248,241,0.82);
+  backdrop-filter: blur(20px) saturate(120%);
+  -webkit-backdrop-filter: blur(20px) saturate(120%);
+  border: 1px solid var(--border-subtle);
+}
+[data-theme="dark"] .glass-surface {
+  background: rgba(38,38,38,0.82);
+}
+
+/* ── macOS Scrollbar Defaults ── */
+::-webkit-scrollbar { width: 3px; height: 3px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--surface-4); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--coral); }

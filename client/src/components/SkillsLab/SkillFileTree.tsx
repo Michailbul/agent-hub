@@ -1,14 +1,6 @@
+import { memo } from 'react'
 import { useSkillsLabStore, type SkillFile } from '@/store/skillsLab'
-
-function iconForFile(name: string) {
-  const ext = name.split('.').pop()?.toLowerCase()
-  if (ext === 'md') return '◊'
-  if (ext === 'json') return '{}'
-  if (ext === 'ts' || ext === 'tsx' || ext === 'js' || ext === 'jsx') return '◆'
-  if (ext === 'css') return '◈'
-  if (ext === 'yml' || ext === 'yaml') return '≡'
-  return '◇'
-}
+import { ChevronRight, File, Folder } from 'lucide-react'
 
 interface SkillFileNodeProps {
   depth: number
@@ -16,15 +8,13 @@ interface SkillFileNodeProps {
   prefix: string
 }
 
-function SkillFileNode({ depth, node, prefix }: SkillFileNodeProps) {
-  const activeSkillFile = useSkillsLabStore(s => s.activeSkillFile)
-  const expandedSkillFolders = useSkillsLabStore(s => s.expandedSkillFolders)
+const SkillFileNode = memo(function SkillFileNode({ depth, node, prefix }: SkillFileNodeProps) {
+  const isActive = useSkillsLabStore(s => s.activeSkillFile === node.path)
+  const isOpen = useSkillsLabStore(s => s.expandedSkillFolders.has(node.path))
   const toggleSkillFolder = useSkillsLabStore(s => s.toggleSkillFolder)
   const setActiveSkillFile = useSkillsLabStore(s => s.setActiveSkillFile)
 
   const isFolder = node.type === 'folder'
-  const isOpen = expandedSkillFolders.has(node.path)
-  const isActive = activeSkillFile === node.path
 
   const handleClick = () => {
     if (isFolder) {
@@ -38,14 +28,22 @@ function SkillFileNode({ depth, node, prefix }: SkillFileNodeProps) {
     <div className={`${prefix}-tree-node`}>
       <button
         className={`${prefix}-tree-row${isActive ? ' active' : ''}`}
-        style={{ paddingLeft: depth * 18 + 12 }}
+        style={{ paddingLeft: depth * 16 + 8 }}
         onClick={handleClick}
       >
+        {/* Indent guides */}
+        {depth > 0 && (
+          <span className={`${prefix}-tree-guides`}>
+            {Array.from({ length: depth }, (_, i) => (
+              <span key={i} className={`${prefix}-tree-guide`} />
+            ))}
+          </span>
+        )}
         <span className={`${prefix}-tree-chevron${isFolder ? '' : ' hidden'}${isOpen ? ' open' : ''}`}>
-          ›
+          <ChevronRight size={11} strokeWidth={1.5} />
         </span>
         <span className={`${prefix}-tree-icon${isFolder ? ' folder' : ''}`}>
-          {isFolder ? (isOpen ? '📂' : '📁') : iconForFile(node.name)}
+          {isFolder ? <Folder size={13} strokeWidth={1.5} /> : <File size={13} strokeWidth={1.5} />}
         </span>
         <span className={`${prefix}-tree-name${isFolder ? ' folder' : ''}`}>{node.name}</span>
       </button>
@@ -59,7 +57,7 @@ function SkillFileNode({ depth, node, prefix }: SkillFileNodeProps) {
       )}
     </div>
   )
-}
+})
 
 interface SkillFileTreeProps {
   files: SkillFile[]
@@ -70,8 +68,7 @@ export function SkillFileTree({ files, prefix = 'kn' }: SkillFileTreeProps) {
   if (!files.length) {
     return (
       <div className={`${prefix}-tree-empty`}>
-        <span className={`${prefix}-tree-empty-icon`}>📭</span>
-        <span className={`${prefix}-tree-empty-text`}>No extra files in this skill.</span>
+        <span className={`${prefix}-tree-empty-text`}>No files</span>
       </div>
     )
   }

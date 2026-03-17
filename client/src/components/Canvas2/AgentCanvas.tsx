@@ -1,5 +1,4 @@
 import { useCallback, useMemo, useEffect, useState } from 'react'
-import { useThemeStore } from '@/store/theme'
 import {
   ReactFlow,
   Background,
@@ -68,8 +67,6 @@ function autoLayout(agentCount: number, index: number): { x: number; y: number }
 }
 
 function AgentCanvasInner() {
-  const theme = useThemeStore(s => s.theme)
-  const isDark = theme === 'dark'
   const data = useCanvasStore(s => s.data)
   const selectedAgentId = useCanvasStore(s => s.selectedAgentId)
   const inspectorActiveItem = useCanvasStore(s => s.inspectorActiveItem)
@@ -85,7 +82,6 @@ function AgentCanvasInner() {
   const deletingAgentId = useCanvasStore(s => s.deletingAgentId)
   const toast = useUIStore(s => s.toast)
 
-  // Context menu state
   const [ctxMenu, setCtxMenu] = useState<{ skillId: string; variantPath: string; x: number; y: number } | null>(null)
 
   const handleDeleteAgent = useCallback(async (agentId: string, label: string) => {
@@ -102,7 +98,6 @@ function AgentCanvasInner() {
     }
   }, [deleteAgent, toast])
 
-  // Build nodes
   const initialNodes = useMemo((): Node[] => {
     if (!data) return []
     const saved = loadPositions()
@@ -178,7 +173,6 @@ function AgentCanvasInner() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data, selectedAgentId, inspectorActiveItem, dropTargetAgentId, deletingAgentId, openInspector, openInspectorAndBrowser, openInspectorToSkills, handleDeleteAgent, previewSkill, setDropTargetAgent, assignSkill, unassignSkill])
 
-  // Build edges from subagent relationships
   const initialEdges = useMemo((): Edge[] => {
     if (!data) return []
     const edges: Edge[] = []
@@ -191,7 +185,7 @@ function AgentCanvasInner() {
             target: subId,
             type: 'default',
             animated: false,
-            style: { stroke: '#d4d3d0', strokeWidth: 1 },
+            style: { stroke: 'oklch(0.82 0 0)', strokeWidth: 1.5 },
           })
         }
       }
@@ -202,10 +196,8 @@ function AgentCanvasInner() {
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes)
   const [edges, , onEdgesChange] = useEdgesState(initialEdges)
 
-  // Sync when initialNodes changes (selection, drop target)
   useEffect(() => {
     setNodes(prev => {
-      // Preserve positions from current nodes
       const posMap = new Map(prev.map(n => [n.id, n.position]))
       return initialNodes.map(n => ({
         ...n,
@@ -214,16 +206,12 @@ function AgentCanvasInner() {
     })
   }, [initialNodes, setNodes])
 
-  // Save positions on node drag
   const handleNodesChange: OnNodesChange = useCallback((changes) => {
     onNodesChange(changes)
-    // Debounced save on position changes
     const positionChanges = changes.filter(c => c.type === 'position' && 'position' in c && c.position)
     if (positionChanges.length > 0) {
-      // Save after a tick to get updated positions
       requestAnimationFrame(() => {
         const positions: Record<string, { x: number; y: number }> = {}
-        // Save from the store directly via setNodes callback
         setNodes(prev => {
           for (const n of prev) {
             positions[n.id] = n.position
@@ -240,7 +228,6 @@ function AgentCanvasInner() {
   }, [openInspector])
 
   const handleViewportChange = useCallback((_event: MouseEvent | TouchEvent | null, viewport: Viewport) => {
-    // Debounce viewport saves
     const positions: Record<string, { x: number; y: number }> = {}
     setNodes(prev => {
       for (const n of prev) positions[n.id] = n.position
@@ -254,7 +241,7 @@ function AgentCanvasInner() {
   if (!data) return null
 
   return (
-    <>
+    <div className="cv2-flow-wrap">
     <ReactFlow
       nodes={nodes}
       edges={edges}
@@ -269,30 +256,24 @@ function AgentCanvasInner() {
       minZoom={0.3}
       maxZoom={2}
       proOptions={{ hideAttribution: true }}
-      className="cv-flow"
+      style={{ background: 'oklch(0.97 0 0)' }}
     >
       <Background
         variant={BackgroundVariant.Dots}
         gap={20}
         size={0.8}
-        color={isDark ? 'rgba(255,255,255,.04)' : 'rgba(55,53,47,.1)'}
+        color="oklch(0.72 0 0 / 0.2)"
       />
       <Controls
-        className="cv-flow-controls"
         showInteractive={false}
       />
       <MiniMap
-        className="cv-flow-minimap"
         nodeColor={(node) => {
           const d = node.data as unknown as AgentNodeData
-          if (d?.isSelected) return isDark ? 'rgba(224,128,96,.5)' : 'rgba(35,131,226,.5)'
-          return isDark ? 'rgba(255,255,255,.10)' : 'rgba(55,53,47,.12)'
+          return d?.isSelected ? 'oklch(0.13 0 0 / 0.5)' : 'oklch(0.13 0 0 / 0.12)'
         }}
-        maskColor={isDark ? 'rgba(28,28,30,.85)' : 'rgba(247,246,243,.8)'}
-        style={isDark
-          ? { background: '#232220', border: '1px solid rgba(255,255,255,0.10)', borderRadius: 6 }
-          : { background: '#fff', border: '1px solid rgba(55,53,47,.06)', borderRadius: 6 }
-        }
+        maskColor="oklch(0.99 0 0 / 0.8)"
+        style={{ background: 'oklch(0.99 0 0)', border: '1px solid oklch(0.82 0 0)', borderRadius: '6px', boxShadow: '0 1px 3px oklch(0 0 0 / 0.08)' }}
       />
     </ReactFlow>
     {ctxMenu && (
@@ -304,7 +285,7 @@ function AgentCanvasInner() {
         onClose={() => setCtxMenu(null)}
       />
     )}
-    </>
+    </div>
   )
 }
 

@@ -1,0 +1,278 @@
+/* ═══════════════════════════════════════════════════════════════════
+   CULT UI — Ember/Amber Glow Design Reference
+   Saved from v2-cultui.css for reuse in other themes.
+
+   Palette:
+     Primary ember:  #F59E0B (amber-500)
+     Orange:         #F97316 (orange-500)
+     Deep orange:    #EA580C (orange-600)
+     Golden:         #FBBF24 (amber-400)
+     Dark accent:    #B45309 (amber-700, for light mode)
+
+   Dark bg:          #0A0A0A
+   Surface:          #1B1B1B
+   Light bg:         #FFFCF5
+   Light surface:    #F7F3EB
+   ═══════════════════════════════════════════════════════════════════ */
+
+
+/* ── Design Tokens (dark mode) ── */
+/*
+  --sh-bg: #0A0A0A;
+  --sh-surface: #1B1B1B;
+  --sh-coral: #F59E0B;
+  --sh-coral-hover: #FBBF24;
+  --sh-coral-light: rgba(245,158,11,0.12);
+  --sh-coral-subtle: rgba(245,158,11,0.05);
+  --sh-green: #F59E0B;
+  --sh-green-light: rgba(245,158,11,0.15);
+  --sh-primary: #FAFAFA;
+  --sh-primary-fg: #0A0A0A;
+  --sh-accent: #1B1B1B;
+  --sh-focus-ring: rgba(245,158,11,0.3);
+  --sh-selection: rgba(245,158,11,0.08);
+  --sh-selection-active: rgba(245,158,11,0.15);
+*/
+
+/* ── Design Tokens (light mode) ── */
+/*
+  --sh-bg: #FFFCF5;
+  --sh-surface: #F7F3EB;
+  --sh-coral: #B45309;
+  --sh-coral-hover: #92400E;
+  --sh-coral-light: rgba(245,158,11,0.12);
+  --sh-primary: #1B1B1B;
+  --sh-primary-fg: #FFFCF5;
+  --sh-accent: #1B1B1B;
+  --sh-focus-ring: rgba(245,158,11,0.3);
+*/
+
+
+/* ═══ Keyframes ═══ */
+
+@keyframes gradient-shift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes glow-pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+
+/* ═══ Glowing Button Patterns ═══ */
+
+/* ── Animated gradient button (install / primary CTA) ──
+
+   Usage: apply to any primary action button.
+
+   background: linear-gradient(135deg, #EA580C, #F97316, #F59E0B, #FBBF24);
+   background-size: 200% 200%;
+   animation: gradient-shift 3s ease infinite;
+   color: #0A0A0A;
+   font-weight: 700;
+   letter-spacing: -0.01em;
+   box-shadow:
+     0 0 24px rgba(245,158,11,0.4),
+     0 0 48px rgba(249,115,22,0.15),
+     inset 0 1px 0 rgba(255,255,255,0.2);
+
+   :hover →
+     box-shadow:
+       0 0 32px rgba(245,158,11,0.55),
+       0 0 64px rgba(249,115,22,0.25),
+       inset 0 1px 0 rgba(255,255,255,0.25);
+     transform: translateY(-1px);
+
+   Light mode variant:
+     background: linear-gradient(135deg, #EA580C, #F97316, #F59E0B);
+     color: #FFFCF5;
+     box-shadow: 0 0 20px rgba(245,158,11,0.25), inset 0 1px 0 rgba(255,255,255,0.15);
+*/
+
+
+/* ── Primary action button — gradient with glow ──
+
+   background: linear-gradient(135deg, #EA580C, #F97316, #F59E0B);
+   color: #0A0A0A;
+   font-weight: 600;
+   box-shadow: 0 0 20px rgba(245,158,11,0.3), inset 0 1px 0 rgba(255,255,255,0.15);
+
+   :hover →
+     box-shadow: 0 0 32px rgba(245,158,11,0.45), inset 0 1px 0 rgba(255,255,255,0.2);
+     transform: translateY(-1px);
+*/
+
+
+/* ── Filter bulk button — gradient glow ──
+
+   background: linear-gradient(135deg, #F97316, #F59E0B);
+   color: #0A0A0A;
+   font-weight: 600;
+   box-shadow: 0 0 16px rgba(245,158,11,0.25);
+
+   :hover →
+     box-shadow: 0 0 24px rgba(245,158,11,0.4);
+     transform: translateY(-1px);
+*/
+
+
+/* ═══ Glow Effect Patterns ═══ */
+
+/* ── Canvas ambient wash (dark mode) ──
+
+   background:
+     radial-gradient(ellipse 80% 60% at 90% 5%, rgba(249,115,22,0.04) 0%, transparent 60%),
+     radial-gradient(ellipse 50% 40% at 10% 90%, rgba(251,191,36,0.02) 0%, transparent 50%),
+     #0A0A0A;
+*/
+
+/* ── Starred items — golden with drop-shadow glow ──
+
+   color: #FBBF24;
+   filter: drop-shadow(0 0 4px rgba(251,191,36,0.4));
+*/
+
+/* ── Scope pills active — gradient bg ──
+
+   Dark:
+     background: linear-gradient(135deg, rgba(249,115,22,0.15), rgba(251,191,36,0.12));
+     color: #FBBF24;
+     box-shadow: 0 0 12px rgba(245,158,11,0.1);
+
+   Light:
+     background: linear-gradient(135deg, rgba(249,115,22,0.15), rgba(245,158,11,0.1));
+     color: #B45309;
+*/
+
+/* ── Panel header — gradient bottom border (border-image trick) ──
+
+   border-bottom: 1px solid transparent;
+   background-image: linear-gradient(var(--bg), var(--bg)),
+                      linear-gradient(90deg, rgba(249,115,22,0.2), rgba(245,158,11,0.1), transparent 70%);
+   background-origin: padding-box, border-box;
+   background-clip: padding-box, border-box;
+*/
+
+/* ── Panel resizer — gradient on hover ──
+
+   background: linear-gradient(180deg, #F97316, #F59E0B);
+   box-shadow: 0 0 8px rgba(245,158,11,0.3);
+
+   :active →
+     box-shadow: 0 0 12px rgba(245,158,11,0.4);
+*/
+
+/* ── Code editor — gradient left-border ──
+
+   border-left: 2px solid transparent;
+   border-image: linear-gradient(180deg, #F97316 0%, #F59E0B 50%, #FBBF24 100%) 1;
+
+   Light:
+     border-image: linear-gradient(180deg, #EA580C 0%, #F97316 50%, #F59E0B 100%) 1;
+*/
+
+/* ── Theme toggle — ember glow hover ──
+
+   background: rgba(27,27,27,0.8);
+   backdrop-filter: blur(12px);
+   border-color: rgba(255,255,255,0.08);
+
+   :hover →
+     border-color: rgba(245,158,11,0.4);
+     box-shadow: 0 0 16px rgba(245,158,11,0.15), 0 0 32px rgba(249,115,22,0.06);
+     color: #FBBF24;
+*/
+
+/* ── Cards — gradient active border + glow ──
+
+   :hover →
+     border-color: rgba(245,158,11,0.2);
+     box-shadow: 0 0 16px rgba(245,158,11,0.06);
+     transform: translateY(-1px);
+
+   .active →
+     border-color: #F59E0B;
+     box-shadow: 0 0 0 1px #F59E0B, 0 0 24px rgba(245,158,11,0.15);
+*/
+
+/* ── Command palette — glass + ember ──
+
+   background: rgba(20,20,20,0.95);
+   backdrop-filter: blur(20px) saturate(120%);
+   box-shadow:
+     0 24px 64px rgba(0,0,0,0.5),
+     0 0 0 0.5px rgba(245,158,11,0.1),
+     0 0 48px rgba(249,115,22,0.06);
+
+   Highlighted item:
+     background: rgba(245,158,11,0.08);
+     color: #FBBF24;
+
+   Caret: #F59E0B;
+*/
+
+/* ── Install modal — glass + ember border ──
+
+   background: rgba(20,20,20,0.92);
+   backdrop-filter: blur(24px) saturate(120%);
+   border-color: rgba(245,158,11,0.1);
+   box-shadow:
+     0 24px 64px rgba(0,0,0,0.6),
+     0 0 0 1px rgba(245,158,11,0.06),
+     0 0 48px rgba(249,115,22,0.05),
+     inset 0 1px 0 rgba(255,255,255,0.04);
+*/
+
+/* ── Scrollbar thumb — warm ──
+
+   background: rgba(245,158,11,0.15);
+   :hover → rgba(245,158,11,0.3);
+*/
+
+/* ── Status bar filtered badge — gradient ──
+
+   color: #0A0A0A;
+   background: linear-gradient(135deg, #F97316, #F59E0B);
+   font-weight: 700;
+   box-shadow: 0 0 8px rgba(245,158,11,0.2);
+*/
+
+/* ── Welcome title — gradient text ──
+
+   background: linear-gradient(135deg, #FAFAFA 30%, #FBBF24 70%, #F97316);
+   -webkit-background-clip: text;
+   -webkit-text-fill-color: transparent;
+*/
+
+/* ── Facet toggle check — gradient with glow ──
+
+   background: linear-gradient(135deg, #F97316, #F59E0B);
+   border-color: transparent;
+   color: #0A0A0A;
+   box-shadow: 0 0 8px rgba(245,158,11,0.3);
+*/
+
+/* ── Loading spinner — gradient border ──
+
+   border-color: rgba(255,255,255,0.06);
+   border-top-color: #F59E0B;
+   filter: drop-shadow(0 0 4px rgba(245,158,11,0.3));
+*/
+
+
+/* ═══ Shadcn Overrides (dark mode) ═══ */
+/*
+  --secondary: oklch(0.15 0 0);
+  --secondary-foreground: oklch(0.95 0 0);
+  --popover: oklch(0.1 0 0);
+  --popover-foreground: oklch(0.95 0 0);
+  --accent: oklch(0.2 0 0);
+  --accent-foreground: oklch(0.95 0 0);
+  --muted: oklch(0.15 0 0);
+  --muted-foreground: oklch(0.5 0 0);
+  --border: oklch(0.2 0 0);
+  --ring: oklch(0.65 0.15 80);
+*/

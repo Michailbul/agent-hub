@@ -1,0 +1,338 @@
+/* ═══════════════════════════════════════════════════════
+   Design System Customizer — Page Layout + Controls
+   Prefix: ds-
+   ═══════════════════════════════════════════════════════ */
+
+.ds-page {
+  display: flex;
+  height: 100%;
+  overflow: hidden;
+  background: #111;
+  color: #e0e0e0;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 13px;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Token Editor Sidebar ── */
+.ds-editor {
+  width: 340px;
+  min-width: 340px;
+  display: flex;
+  flex-direction: column;
+  background: #161616;
+  border-right: 1px solid #2a2a2a;
+  overflow: hidden;
+}
+
+.ds-editor-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid #2a2a2a;
+  flex-shrink: 0;
+}
+
+.ds-editor-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  margin: 0;
+}
+
+/* Mode toggle (shared between editor + preview) */
+.ds-mode-toggle, .ds-preview-mode-toggle {
+  display: flex;
+  gap: 1px;
+  background: #222;
+  border-radius: 6px;
+  padding: 2px;
+}
+
+.ds-mode-btn {
+  font-family: inherit;
+  font-size: 11px;
+  padding: 3px 10px;
+  background: transparent;
+  border: none;
+  color: #888;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+
+.ds-mode-btn:hover { color: #ccc; }
+.ds-mode-btn.active {
+  background: #333;
+  color: #fff;
+}
+
+/* ── Groups ── */
+.ds-groups {
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px 0;
+}
+
+.ds-groups::-webkit-scrollbar { width: 5px; }
+.ds-groups::-webkit-scrollbar-track { background: transparent; }
+.ds-groups::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+
+.ds-group { border-bottom: 1px solid #222; }
+
+.ds-group-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 8px 14px;
+  background: none;
+  border: none;
+  color: #ccc;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+
+.ds-group-header:hover { background: #1a1a1a; }
+
+.ds-group-chevron {
+  font-size: 10px;
+  color: #555;
+  transition: transform 0.15s;
+  display: inline-block;
+}
+
+.ds-group-chevron.open { transform: rotate(90deg); }
+
+.ds-group-label { flex: 1; text-align: left; }
+
+.ds-group-count {
+  font-size: 10px;
+  color: #555;
+  font-weight: 400;
+}
+
+.ds-group-body { padding: 2px 14px 10px; }
+
+/* ── Token row ── */
+.ds-token-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 0;
+}
+
+.ds-token-label {
+  font-size: 11px;
+  color: #999;
+  white-space: nowrap;
+  min-width: 80px;
+}
+
+/* ── Color input ── */
+.ds-color-input {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+
+.ds-color-swatch-wrap {
+  position: relative;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+.ds-color-swatch {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 1px solid #333;
+}
+
+.ds-color-picker {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+  width: 100%;
+  height: 100%;
+}
+
+.ds-token-text-input {
+  flex: 1;
+  min-width: 0;
+  padding: 3px 6px;
+  background: #1a1a1a;
+  border: 1px solid #2a2a2a;
+  border-radius: 4px;
+  color: #ddd;
+  font-family: 'SF Mono', ui-monospace, monospace;
+  font-size: 10px;
+  outline: none;
+  transition: border-color 0.12s;
+}
+
+.ds-token-text-input:focus { border-color: #555; }
+
+/* ── Shadow input ── */
+.ds-shadow-input {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+
+.ds-shadow-preview {
+  width: 24px;
+  height: 24px;
+  background: #333;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+/* ── Font input ── */
+.ds-font-input {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ── Number input ── */
+.ds-number-input {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+
+.ds-range-slider {
+  flex: 1;
+  accent-color: #666;
+  height: 2px;
+}
+
+.ds-token-num-input {
+  width: 44px;
+  padding: 3px 4px;
+  background: #1a1a1a;
+  border: 1px solid #2a2a2a;
+  border-radius: 4px;
+  color: #ddd;
+  font-family: 'SF Mono', ui-monospace, monospace;
+  font-size: 10px;
+  outline: none;
+  text-align: center;
+}
+
+.ds-token-num-input:focus { border-color: #555; }
+
+/* ── Toolbar ── */
+.ds-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 14px;
+  border-top: 1px solid #2a2a2a;
+  flex-shrink: 0;
+}
+
+.ds-preset-select {
+  flex: 1;
+  padding: 5px 8px;
+  background: #1a1a1a;
+  border: 1px solid #2a2a2a;
+  border-radius: 4px;
+  color: #ddd;
+  font-family: inherit;
+  font-size: 11px;
+  outline: none;
+  cursor: pointer;
+}
+
+.ds-toolbar-btn {
+  padding: 5px 12px;
+  background: #2a2a2a;
+  border: 1px solid #333;
+  border-radius: 4px;
+  color: #ddd;
+  font-family: inherit;
+  font-size: 11px;
+  cursor: pointer;
+  transition: background 0.12s;
+  white-space: nowrap;
+}
+
+.ds-toolbar-btn:hover { background: #333; }
+
+.ds-toolbar-btn-ghost {
+  background: transparent;
+  border-color: transparent;
+  color: #888;
+}
+
+.ds-toolbar-btn-ghost:hover {
+  background: #222;
+  color: #ccc;
+}
+
+/* ── Preview Area ── */
+.ds-preview-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.ds-preview-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  border-bottom: 1px solid #2a2a2a;
+  flex-shrink: 0;
+}
+
+.ds-preview-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: #888;
+}
+
+.ds-preview-container {
+  flex: 1;
+  margin: 16px;
+  overflow: hidden;
+  border-radius: 8px;
+}
+
+/* ── Toast ── */
+.ds-toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #333;
+  color: #fff;
+  padding: 8px 20px;
+  border-radius: 6px;
+  font-size: 12px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+  z-index: 9999;
+  animation: ds-toast-in 0.2s ease-out;
+}
+
+@keyframes ds-toast-in {
+  from { opacity: 0; transform: translateX(-50%) translateY(8px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}

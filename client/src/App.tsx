@@ -13,12 +13,11 @@ import { PaneManager } from '@/components/Editor/PaneManager'
 import { Toast } from '@/components/Toast'
 import { CronsPanel } from '@/components/Crons/CronsPanel'
 import { CanvasView } from '@/components/Canvas/CanvasView'
-import { SkillsLab } from '@/components/SkillsLab/SkillsLab'
+import { SkillsLabStudio as SkillsLab } from '@/components/SkillsLab/SkillsLabStudio'
 import { HeadquartersPage } from '@/components/Headquarters/HeadquartersPage'
 import type { AppView } from '@/types'
 
-const ShadcnSkillsLab1 = lazy(() => import('@/components/SkillsLab/ShadcnSkillsLab1').then(m => ({ default: m.ShadcnSkillsLab1 })))
-const ShadcnSkillsLab2 = lazy(() => import('@/components/SkillsLab/ShadcnSkillsLab2').then(m => ({ default: m.ShadcnSkillsLab2 })))
+const DesignSystemView = lazy(() => import('@/components/DesignSystem/DesignSystemView').then(m => ({ default: m.DesignSystemView })))
 
 export function App() {
   const { isAuthenticated, isChecking, check } = useAuthStore()
@@ -26,22 +25,11 @@ export function App() {
   const { data: tree, refetch: refetchTree } = useTree()
   const addPane = usePanesStore(s => s.addPane)
   const panes = usePanesStore(s => s.panes)
-  const [activeView, setActiveViewRaw] = useState<AppView>(() => {
-    const path = window.location.pathname
-    if (path === '/shadcn-ui-1') return 'shadcn-ui-1'
-    if (path === '/shadcn-ui-2') return 'shadcn-ui-2'
-    return 'editor'
-  })
+  const [activeView, setActiveViewRaw] = useState<AppView>('editor')
   const setActiveView = useCallback((view: AppView) => {
     setActiveViewRaw(view)
-    const path = view === 'shadcn-ui-1' ? '/shadcn-ui-1'
-      : view === 'shadcn-ui-2' ? '/shadcn-ui-2' : '/'
-    window.history.pushState(null, '', path)
+    window.history.pushState(null, '', '/')
   }, [])
-  const [skillsLabTheme, setSkillsLabTheme] = useState<'dark' | 'light'>(() => {
-    if (typeof window === 'undefined') return 'dark'
-    return window.localStorage.getItem('skills-lab-theme') === 'dark' ? 'dark' : 'light'
-  })
   const activePaneId = usePanesStore(s => s.activePaneId)
   const { flashSaved, toast } = useUIStore()
   const [dropVisible, setDropVisible] = useState(false)
@@ -91,10 +79,6 @@ export function App() {
     window.addEventListener('beforeunload', handler)
     return () => window.removeEventListener('beforeunload', handler)
   }, [panes])
-
-  useEffect(() => {
-    window.localStorage.setItem('skills-lab-theme', skillsLabTheme)
-  }, [skillsLabTheme])
 
   // Local file drop handling
   const handleDragEnter = useCallback((e: React.DragEvent) => {
@@ -164,30 +148,24 @@ export function App() {
   if (needsSetup) return <><SetupOverlay /><Toast /></>
   if (!isAuthenticated) return <><LoginForm /><Toast /></>
 
-  const shadcnFallback = <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--t3)' }}>Loading…</div>
-
   return (
-    <div className={`app${activeView === 'skills-lab' ? ` app-skills-lab app-skills-lab-${skillsLabTheme}` : ''}`}>
+    <div className={`app${activeView === 'skills-lab' ? ' app-skills-lab' : ''}`}>
       <TopBar
         onRefresh={async () => {
           await refetchTree()
         }}
         activeView={activeView}
         onViewSwitch={setActiveView}
-        skillsLabTheme={skillsLabTheme}
-        onToggleSkillsLabTheme={() => setSkillsLabTheme(current => current === 'dark' ? 'light' : 'dark')}
       />
       <div className="app-body">
-        {activeView === 'shadcn-ui-1'
-          ? <Suspense fallback={shadcnFallback}><ShadcnSkillsLab1 /></Suspense>
-          : activeView === 'shadcn-ui-2'
-          ? <Suspense fallback={shadcnFallback}><ShadcnSkillsLab2 /></Suspense>
-          : activeView === 'canvas'
+        {activeView === 'canvas'
           ? <CanvasView onNavigateToFiles={() => setActiveView('editor')} themeClass="cv-b1-anthro" />
           : activeView === 'headquarters'
           ? <HeadquartersPage />
           : activeView === 'skills-lab'
-          ? <SkillsLab theme={skillsLabTheme} />
+          ? <SkillsLab />
+          : activeView === 'design-system'
+          ? <Suspense fallback={null}><DesignSystemView /></Suspense>
           : activeView === 'crons'
           ? <CronsPanel />
           : <>

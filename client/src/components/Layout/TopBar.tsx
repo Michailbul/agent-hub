@@ -2,6 +2,7 @@ import type { AppView } from '@/types'
 import { useCallback, useState } from 'react'
 import { usePanesStore } from '@/store/panes'
 import { useUIStore } from '@/store/ui'
+import { useThemeStore } from '@/store/theme'
 import { saveFile } from '@/lib/api'
 import { Package } from 'lucide-react'
 import { BreadcrumbPath } from './BreadcrumbPath'
@@ -10,28 +11,25 @@ interface TopBarProps {
   onRefresh?: () => Promise<void>
   activeView: AppView
   onViewSwitch: (view: AppView) => void
-  skillsLabTheme?: 'dark' | 'light'
-  onToggleSkillsLabTheme?: () => void
 }
 
 const navItems: { view: AppView; label: string }[] = [
-  { view: 'editor', label: 'Files' },
   { view: 'crons', label: 'Crons' },
-  { view: 'skills-lab', label: 'Skills Lab' },
+  { view: 'skills-lab', label: 'Skills' },
   { view: 'canvas', label: 'Canvas' },
   { view: 'headquarters', label: 'HQ' },
+  { view: 'design-system', label: 'Tokens' },
 ]
 
 export function TopBar({
   onRefresh,
   activeView,
   onViewSwitch,
-  skillsLabTheme = 'light',
-  onToggleSkillsLabTheme,
 }: TopBarProps) {
   const panes = usePanesStore(s => s.panes)
   const activePaneId = usePanesStore(s => s.activePaneId)
   const { flashSaved, toast } = useUIStore()
+  const { theme, toggleTheme } = useThemeStore()
   const [refreshing, setRefreshing] = useState(false)
 
   const activePane = panes.find(p => p.id === activePaneId)
@@ -87,15 +85,13 @@ export function TopBar({
         <BreadcrumbPath />
       </div>
       <div className="topbar-actions">
-        {activeView === 'skills-lab' && onToggleSkillsLabTheme && (
-          <button
-            className="tb-btn-ghost"
-            onClick={onToggleSkillsLabTheme}
-            title="Toggle Skills Lab theme"
-          >
-            {skillsLabTheme === 'dark' ? 'Dark' : 'Light'}
-          </button>
-        )}
+        <div
+          className={`toggle-switch small${theme === 'dark' ? ' on' : ''}`}
+          onClick={toggleTheme}
+          title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+          role="switch"
+          aria-checked={theme === 'dark'}
+        />
         <button
           className="tb-btn-ghost"
           onClick={handleRefresh}

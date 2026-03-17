@@ -1,17 +1,17 @@
 import { useState, useMemo, useCallback } from 'react'
 import { useCanvasStore } from '@/store/canvas'
 import { useCronsStore } from '@/store/crons'
-import { ChevronRight, File, Folder, Clock, Zap, Brain, ClipboardList, FileText, Theater } from 'lucide-react'
 import type { AgentFile } from '@/types'
 import type { InspectorActiveItem } from '@/types/canvas'
 
-/* ── Tree node type ── */
+/* ── Adapted FileTree node types ── */
 
 interface FTNode {
   id: string
   name: string
   type: 'file' | 'folder'
-  icon?: React.ReactNode
+  icon?: string
+  extension?: string
   children?: FTNode[]
   itemKind?: 'file' | 'skill' | 'skill-file' | 'cron'
   path?: string
@@ -24,9 +24,32 @@ interface FTNode {
   sectionAction?: { label: string; activeLabel: string; isActive: boolean; onClick: () => void }
 }
 
-/* ── Single tree row ── */
+/* ── Icon helper ── */
 
-const p = 'st' // reuse Skills Lab tree class prefix
+const EXT_ICONS: Record<string, { color: string; glyph: string }> = {
+  md:   { color: 'var(--cv-text-ghost)',     glyph: '\u25CA' },
+  json: { color: '#c49060',                  glyph: '{}' },
+  ts:   { color: '#3178c6',                  glyph: '\u25C6' },
+  tsx:  { color: '#3178c6',                  glyph: '\u269B' },
+  js:   { color: '#e8d44d',                  glyph: '\u25C6' },
+  py:   { color: '#3572a5',                  glyph: '\u25C6' },
+  css:  { color: '#663399',                  glyph: '\u25C8' },
+  svg:  { color: '#0f7b6c',                  glyph: '\u25D0' },
+  png:  { color: '#0f7b6c',                  glyph: '\u25D1' },
+}
+const DEFAULT_ICON = { color: 'var(--cv-text-ghost)', glyph: '\u25C7' }
+
+function getExtIcon(ext?: string) {
+  return ext ? (EXT_ICONS[ext] || DEFAULT_ICON) : DEFAULT_ICON
+}
+
+function extOf(name: string | undefined): string | undefined {
+  if (!name) return undefined
+  const dot = name.lastIndexOf('.')
+  return dot > 0 ? name.slice(dot + 1) : undefined
+}
+
+/* ── Single tree item renderer ── */
 
 interface FTItemProps {
   node: FTNode
@@ -40,14 +63,17 @@ interface FTItemProps {
 }
 
 function FTItem({ node, depth, isActive, onSelect, onRemove, isExpanded, onToggleExpand, childrenNodes }: FTItemProps) {
+  const [hovered, setHovered] = useState(false)
   const isFolder = node.type === 'folder'
+  const ext = node.extension || extOf(node.name)
+  const icon = getExtIcon(ext)
   const open = isExpanded ?? false
 
   return (
-    <div className={`${p}-tree-node`}>
-      <button
-        className={`${p}-tree-row${isActive ? ' active' : ''}${node.removable ? ' removable' : ''}`}
-        style={{ paddingLeft: depth * 16 + 8 }}
+    <div className="ft-node">
+      <div
+        className={`ft-row${isActive ? ' ft-active' : ''}${hovered ? ' ft-hovered' : ''}${node.removable ? ' ft-row-removable' : ''}`}
+        style={{ paddingLeft: `${depth * 16 + 8}px` }}
         onClick={() => {
           if (node.lazySkillId) {
             onToggleExpand?.()
@@ -58,61 +84,68 @@ function FTItem({ node, depth, isActive, onSelect, onRemove, isExpanded, onToggl
             onSelect(node)
           }
         }}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
       >
-        {/* Indent guides */}
         {depth > 0 && (
-          <span className={`${p}-tree-guides`}>
-            {Array.from({ length: depth }, (_, i) => (
-              <span key={i} className={`${p}-tree-guide`} />
-            ))}
-          </span>
+          <div
+            className={`ft-line${hovered ? ' ft-line-hl' : ''}`}
+            style={{ left: `${(depth - 1) * 16 + 16}px` }}
+          />
         )}
 
-        {/* Chevron */}
-        <span className={`${p}-tree-chevron${isFolder ? '' : ' hidden'}${open ? ' open' : ''}`}>
-          <ChevronRight size={11} strokeWidth={1.5} />
-        </span>
+        <div className={`ft-indicator${isFolder && open ? ' ft-rotated' : ''}`}>
+          {isFolder ? (
+            <svg width="6" height="8" viewBox="0 0 6 8" fill="none">
+              <path d="M1 1L5 4L1 7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          ) : (
+            <span className="ft-file-glyph" style={{ color: icon.color }}>{icon.glyph}</span>
+          )}
+        </div>
 
-        {/* Icon */}
-        <span className={`${p}-tree-icon${isFolder ? ' folder' : ''}`}>
-          {node.icon || (isFolder ? <Folder size={13} strokeWidth={1.5} /> : <File size={13} strokeWidth={1.5} />)}
-        </span>
+        <div className={`ft-shape${hovered ? ' ft-shape-hl' : ''}`}>
+          {isFolder ? (
+            <svg width="14" height="12" viewBox="0 0 16 14" fill="currentColor" style={{ color: 'var(--cv-folder-icon)' }}>
+              <path d="M1.5 1C0.671573 1 0 1.67157 0 2.5V11.5C0 12.3284 0.671573 13 1.5 13H14.5C15.3284 13 16 12.3284 16 11.5V4.5C16 3.67157 15.3284 3 14.5 3H8L6.5 1H1.5Z" />
+            </svg>
+          ) : (
+            <svg width="12" height="14" viewBox="0 0 14 16" fill="currentColor" style={{ color: icon.color, opacity: 0.7 }}>
+              <path d="M1.5 0C0.671573 0 0 0.671573 0 1.5V14.5C0 15.3284 0.671573 16 1.5 16H12.5C13.3284 16 14 15.3284 14 14.5V4.5L9.5 0H1.5Z" />
+              <path d="M9 0V4.5H14" fill="currentColor" fillOpacity="0.5" />
+            </svg>
+          )}
+        </div>
 
-        {/* Name */}
-        <span className={`${p}-tree-name${isFolder ? ' folder' : ''}`}>{node.name}</span>
+        <span className={`ft-name${isFolder ? '' : ' ft-name-file'}`}>{node.name}</span>
 
-        {/* Badge */}
-        {node.sublabel && <span className="cv-ft-badge">{node.sublabel}</span>}
-
-        {/* Remove button for skills */}
+        {node.sublabel && <span className="ft-badge">{node.sublabel}</span>}
         {node.removable && node.skillId && (
-          <span
-            role="button"
-            tabIndex={0}
-            className="cv-ft-remove"
-            onClick={(e) => { e.stopPropagation(); onRemove?.(e as any, node.skillId!) }}
-            onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); onRemove?.(e as any, node.skillId!) } }}
+          <button
+            type="button"
+            className="ft-remove"
+            onClick={(e) => { e.stopPropagation(); onRemove?.(e, node.skillId!) }}
             title={`Remove ${node.name}`}
             aria-label={`Remove ${node.name}`}
           >
-            ✕
-          </span>
+            &#x2715;
+          </button>
         )}
 
-        {/* Section action */}
         {node.sectionAction && (
           <span
-            className={`cv-ft-section-action${node.sectionAction.isActive ? ' active' : ''}`}
+            className={`ft-section-action${node.sectionAction.isActive ? ' ft-section-action-active' : ''}`}
             onClick={(e) => { e.stopPropagation(); node.sectionAction!.onClick() }}
           >
             {node.sectionAction.isActive ? node.sectionAction.activeLabel : node.sectionAction.label}
           </span>
         )}
-      </button>
 
-      {/* Children */}
-      {childrenNodes && open && (
-        <div className={`${p}-tree-children`}>
+        {!node.removable && <div className={`ft-dot${hovered ? ' ft-dot-show' : ''}`} />}
+      </div>
+
+      {childrenNodes && (
+        <div className={`ft-children${open ? ' ft-children-open' : ''}`}>
           {childrenNodes}
         </div>
       )}
@@ -153,6 +186,7 @@ export function InspectorTree({ agentId }: InspectorTreeProps) {
         id: f.path,
         name: displayName,
         type: 'file',
+        extension: extOf(f.name || f.label || ''),
         itemKind: 'file',
         path: f.path,
       }
@@ -164,8 +198,7 @@ export function InspectorTree({ agentId }: InspectorTreeProps) {
     )
     if (identityFile) {
       result.push({
-        id: 'identity', name: 'Identity', type: 'folder',
-        icon: <Theater size={13} strokeWidth={1.5} />,
+        id: 'identity', name: 'Identity', type: 'folder', icon: '\uD83C\uDFAD',
         children: [mkFile(identityFile)],
       })
     }
@@ -174,8 +207,7 @@ export function InspectorTree({ agentId }: InspectorTreeProps) {
     const instructionFiles = files.instructions.filter(f => f !== identityFile)
     if (instructionFiles.length > 0) {
       result.push({
-        id: 'instructions', name: 'Instructions', type: 'folder',
-        icon: <ClipboardList size={13} strokeWidth={1.5} />,
+        id: 'instructions', name: 'Instructions', type: 'folder', icon: '\uD83D\uDCCB',
         children: instructionFiles.map(mkFile),
       })
     }
@@ -183,8 +215,7 @@ export function InspectorTree({ agentId }: InspectorTreeProps) {
     // Memory
     if (files.memory.length > 0) {
       result.push({
-        id: 'memory', name: 'Memory', type: 'folder',
-        icon: <Brain size={13} strokeWidth={1.5} />,
+        id: 'memory', name: 'Memory', type: 'folder', icon: '\uD83E\uDDE0',
         children: files.memory.map(mkFile),
       })
     }
@@ -192,20 +223,18 @@ export function InspectorTree({ agentId }: InspectorTreeProps) {
     // PM
     if (files.pm.length > 0) {
       result.push({
-        id: 'pm', name: 'PM Docs', type: 'folder',
-        icon: <FileText size={13} strokeWidth={1.5} />,
+        id: 'pm', name: 'PM Docs', type: 'folder', icon: '\uD83D\uDCC1',
         children: files.pm.map(mkFile),
       })
     }
 
     // Skills
     const enrichedSkills = agent.skills.map(s => {
-      const palette = data!.paletteSkills.find(ps => ps.id === s.id)
+      const palette = data!.paletteSkills.find(p => p.id === s.id)
       return { ...s, department: palette?.department || 'Utility', variantPath: palette?.variantPath || '' }
     })
     result.push({
-      id: 'skills', name: 'Skills', type: 'folder',
-      icon: <Zap size={13} strokeWidth={1.5} />,
+      id: 'skills', name: 'Skills', type: 'folder', icon: '\u26A1',
       sectionAction: { label: '+ Add', activeLabel: 'Close', isActive: browserOpen, onClick: toggleBrowser },
       children: enrichedSkills.map(s => ({
         id: s.id,
@@ -225,8 +254,7 @@ export function InspectorTree({ agentId }: InspectorTreeProps) {
     const agentCrons = cronJobs.filter(c => c.agentId === agentId)
     if (agentCrons.length > 0) {
       result.push({
-        id: 'crons', name: 'Cron Jobs', type: 'folder',
-        icon: <Clock size={13} strokeWidth={1.5} />,
+        id: 'crons', name: 'Cron Jobs', type: 'folder', icon: '\u23F0',
         children: agentCrons.map(c => ({
           id: c.id,
           name: c.name,
@@ -273,13 +301,13 @@ export function InspectorTree({ agentId }: InspectorTreeProps) {
     return (
       <FTItem
         key={section.id}
-        node={{ ...section, sublabel: String(childCount) }}
+        node={{ ...section, name: `${section.icon || ''} ${section.name}`, sublabel: String(childCount) }}
         depth={0}
         isActive={false}
         onSelect={() => {}}
         isExpanded={!isCollapsed}
         onToggleExpand={() => toggleInspectorSection(section.id)}
-        childrenNodes={renderChildren(section.children || [], 1)}
+        childrenNodes={!isCollapsed ? renderChildren(section.children || [], 1) : undefined}
       />
     )
   }
@@ -294,6 +322,7 @@ export function InspectorTree({ agentId }: InspectorTreeProps) {
           id: `${node.lazySkillId}__skill-md`,
           name: 'SKILL.md',
           type: 'file' as const,
+          extension: 'md',
           itemKind: 'skill' as const,
           skillId: node.lazySkillId!,
           skillPath: node.lazyVariantPath!,
@@ -303,6 +332,7 @@ export function InspectorTree({ agentId }: InspectorTreeProps) {
           id: f.path,
           name: f.name,
           type: 'file' as const,
+          extension: extOf(f.name),
           itemKind: 'skill-file' as const,
           skillId: node.lazySkillId!,
           path: f.path,
@@ -320,7 +350,7 @@ export function InspectorTree({ agentId }: InspectorTreeProps) {
             onRemove={handleRemove}
             isExpanded={isExp}
             onToggleExpand={() => toggleSkillDir(node.lazySkillId!, node.lazyVariantPath!)}
-            childrenNodes={
+            childrenNodes={isExp ? (
               allChildren.map(sf => (
                 <FTItem
                   key={sf.id}
@@ -330,7 +360,7 @@ export function InspectorTree({ agentId }: InspectorTreeProps) {
                   onSelect={handleSelect}
                 />
               ))
-            }
+            ) : undefined}
           />
         )
       }
@@ -349,8 +379,8 @@ export function InspectorTree({ agentId }: InspectorTreeProps) {
   }
 
   return (
-    <div className="cv-inspector-tree">
-      <div className={`${p}-tree`}>
+    <div className="w-[260px] shrink-0 overflow-y-auto border-r border-border">
+      <div className="ft-tree">
         {sections.map(renderSection)}
       </div>
     </div>
