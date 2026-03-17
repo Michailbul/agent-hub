@@ -62,6 +62,8 @@ export interface UnifiedSkill {
   sourceVariants: Record<string, SkillVariantRef>
   sourceVariantCount: number
   isDuplicate: boolean
+  isCustom: boolean
+  originCategory: 'custom' | 'community' | 'built-in'
   familyKey: string | null
   familyLabel: string | null
   metadata: {
@@ -131,6 +133,7 @@ export type SortField = 'name' | 'department'
 export type SortDir = 'asc' | 'desc'
 export type SidebarMode = 'agents' | 'claude-code'
 export type SkillsLabSavedView = 'all' | 'starred' | 'recent'
+export type OriginFilter = 'custom' | 'community' | 'built-in' | null
 
 interface SkillsLabStore {
   variant: LabVariant
@@ -166,7 +169,10 @@ interface SkillsLabStore {
   plugins: ClaudePlugin[]
   pluginsLoading: boolean
   pluginsLoaded: boolean
+  activeOriginFilter: OriginFilter
   activePluginFilter: string | null
+  deletingAgentId: string | null
+  repos: { id: string; name: string; isOwned: boolean; skillCount: number }[]
   installBusy: boolean
   installError: string | null
   installLastOutput: string | null
@@ -193,7 +199,9 @@ interface SkillsLabStore {
   assignSkill: (agentId: string, variantPath: string) => Promise<void>
   unassignSkill: (agentId: string, skillId: string) => Promise<void>
   toggleStarSkill: (skillId: string) => Promise<void>
+  deleteAgent: (agentId: string) => Promise<void>
   loadPlugins: (force?: boolean) => Promise<void>
+  setActiveOriginFilter: (filter: OriginFilter) => void
   setActivePluginFilter: (id: string | null) => void
   installFromZip: (file: File) => Promise<void>
   installFromCommand: (command: string) => Promise<void>
@@ -296,6 +304,8 @@ function mapSkills(data: SkillsIndexData): UnifiedSkill[] {
       sourceVariants,
       sourceVariantCount: libraryVariants.length,
       isDuplicate: libraryVariants.length > 1,
+      isCustom: sk.isCustom ?? false,
+      originCategory: sk.originCategory ?? 'community',
       familyKey: null,
       familyLabel: null,
       metadata: {
@@ -466,7 +476,10 @@ export const useSkillsLabStore = create<SkillsLabStore>((set, get) => ({
   plugins: [],
   pluginsLoading: false,
   pluginsLoaded: false,
+  activeOriginFilter: null,
   activePluginFilter: null,
+  deletingAgentId: null,
+  repos: [],
   installBusy: false,
   installError: null,
   installLastOutput: null,
@@ -482,6 +495,7 @@ export const useSkillsLabStore = create<SkillsLabStore>((set, get) => ({
     activeSourceFilter: null,
     activeAgentFilter: null,
     activeFamilyFilter: null,
+    activeOriginFilter: null,
     activePluginFilter: null,
     duplicateOnly: false,
   }),
@@ -509,6 +523,7 @@ export const useSkillsLabStore = create<SkillsLabStore>((set, get) => ({
     activeSourceFilter: null,
     activeAgentFilter: null,
     activeFamilyFilter: null,
+    activeOriginFilter: null,
     activePluginFilter: null,
     duplicateOnly: false,
     activeDepartments: new Set(),
@@ -572,6 +587,7 @@ export const useSkillsLabStore = create<SkillsLabStore>((set, get) => ({
         skills,
         departments,
         families,
+        repos: data.repos || [],
         loading: false,
         loaded: true,
         starredSkillIds,
@@ -641,6 +657,26 @@ export const useSkillsLabStore = create<SkillsLabStore>((set, get) => ({
     } catch { set({ starredSkillIds }) }
   },
 
+  deleteAgent: async (agentId) => {
+    set({ deletingAgentId: agentId })
+    try {
+      const res = await fetch(`/api/agents/${encodeURIComponent(agentId)}`, { method: 'DELETE' })
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}))
+        throw new Error(j.error || 'Agent delete failed')
+      }
+      // Clear agent filter if we just deleted the filtered agent
+      const { activeAgentFilter } = get()
+      if (activeAgentFilter === agentId) {
+        set({ activeAgentFilter: null, activeDepartments: new Set() })
+      }
+      await get().loadFromAPI(true)
+      window.dispatchEvent(new Event('agent-hub:data-changed'))
+    } finally {
+      set({ deletingAgentId: null })
+    }
+  },
+
   loadPlugins: async (force = false) => {
     const { pluginsLoaded, pluginsLoading } = get()
     if (!force && (pluginsLoaded || pluginsLoading)) return
@@ -653,6 +689,9 @@ export const useSkillsLabStore = create<SkillsLabStore>((set, get) => ({
     }
   },
 
+  setActiveOriginFilter: (filter) => set(s => ({
+    activeOriginFilter: s.activeOriginFilter === filter ? null : filter,
+  })),
   setActivePluginFilter: (id) => set(s => ({
     activePluginFilter: s.activePluginFilter === id ? null : id,
     activeDepartments: new Set(),
@@ -858,6 +897,11 @@ export const useSkillsLabStore = create<SkillsLabStore>((set, get) => ({
 
     if (duplicateOnly) {
       result = result.filter(s => s.isDuplicate)
+    }
+
+    const { activeOriginFilter } = get()
+    if (activeOriginFilter) {
+      result = result.filter(s => s.originCategory === activeOriginFilter)
     }
 
     if (activeDepartments.size > 0) {

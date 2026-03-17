@@ -270,6 +270,16 @@
 .st-agent-nav-chevron:hover { color: var(--sh-text-secondary); background: var(--sh-surface-hover); }
 .st-agent-nav-item.active .st-agent-nav-chevron { color: var(--sh-text-tertiary); }
 
+.st-agent-nav-delete {
+  display: flex; align-items: center; justify-content: center;
+  width: 20px; height: 20px; border-radius: 4px; flex-shrink: 0;
+  color: var(--sh-text-ghost); opacity: 0;
+  transition: color 120ms ease, background 80ms ease, opacity 120ms ease;
+  cursor: pointer;
+}
+.st-agent-nav-item:hover .st-agent-nav-delete { opacity: 1; }
+.st-agent-nav-delete:hover { color: var(--sh-red); background: var(--sh-surface-hover); }
+
 /* ── Agent department sub-items ── */
 .st-agent-dept-list {
   display: flex; flex-direction: column;

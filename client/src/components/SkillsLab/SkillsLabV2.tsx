@@ -19,9 +19,12 @@ import {
   Copy,
   ExternalLink,
   Feather,
+  Globe,
   Grid3x3,
   List,
+  Package,
   Search,
+  Sparkles,
   Star,
   TerminalSquare,
   Trash2,
@@ -89,8 +92,12 @@ export function SkillsLabV2({ themePrefix: p, variant }: SkillsLabV2Props) {
   const plugins = useSkillsLabStore(s => s.plugins)
   const pluginsLoaded = useSkillsLabStore(s => s.pluginsLoaded)
   const loadPlugins = useSkillsLabStore(s => s.loadPlugins)
+  const activeOriginFilter = useSkillsLabStore(s => s.activeOriginFilter)
+  const setActiveOriginFilter = useSkillsLabStore(s => s.setActiveOriginFilter)
   const activePluginFilter = useSkillsLabStore(s => s.activePluginFilter)
   const setActivePluginFilter = useSkillsLabStore(s => s.setActivePluginFilter)
+  const deleteAgent = useSkillsLabStore(s => s.deleteAgent)
+  const deletingAgentId = useSkillsLabStore(s => s.deletingAgentId)
 
   // Resizable panels — modernized proportions
   const { size: navWidth, handleProps: navHandleProps } = useResizable({
@@ -194,12 +201,20 @@ export function SkillsLabV2({ themePrefix: p, variant }: SkillsLabV2Props) {
     }
     return map
   }, [skills])
+
+  const originCounts = useMemo(() => {
+    const counts = { custom: 0, community: 0, 'built-in': 0 }
+    for (const s of skills) counts[s.originCategory]++
+    return counts
+  }, [skills])
+
   const hasActiveFilters = Boolean(
     searchQuery.trim()
     || activeSavedView !== 'all'
     || activeSourceFilter
     || activeAgentFilter
     || activeFamilyFilter
+    || activeOriginFilter
     || activePluginFilter
     || duplicateOnly
     || activeDepartments.size > 0,
@@ -216,7 +231,7 @@ export function SkillsLabV2({ themePrefix: p, variant }: SkillsLabV2Props) {
 
   const filteredSkills = useMemo(
     () => getFilteredSkills(),
-    [getFilteredSkills, skills, sources, agents, searchQuery, activeSavedView, activeSourceFilter, activeAgentFilter, activeFamilyFilter, activePluginFilter, duplicateOnly, activeDepartments],
+    [getFilteredSkills, skills, sources, agents, searchQuery, activeSavedView, activeSourceFilter, activeAgentFilter, activeFamilyFilter, activeOriginFilter, activePluginFilter, duplicateOnly, activeDepartments],
   )
   const starredCount = starredSkillIds.size
   const removableDuplicateSkillIds = useMemo(
@@ -263,6 +278,13 @@ export function SkillsLabV2({ themePrefix: p, variant }: SkillsLabV2Props) {
   const editorContent = editorCacheKey ? (skillContentCache[editorCacheKey] || null) : null
 
   useEffect(() => { loadFromAPI() }, [loadFromAPI])
+
+  // Cross-view refresh: reload when agent data changes (e.g. deletion from Canvas)
+  useEffect(() => {
+    const handler = () => void loadFromAPI(true)
+    window.addEventListener('agent-hub:data-changed', handler)
+    return () => window.removeEventListener('agent-hub:data-changed', handler)
+  }, [loadFromAPI])
 
   useEffect(() => {
     if (!selectedSkillRoot) return
@@ -475,6 +497,10 @@ export function SkillsLabV2({ themePrefix: p, variant }: SkillsLabV2Props) {
     if (selectedFamily) chips.push({ key: 'family', label: `Family: ${selectedFamily.label}`, onRemove: () => setActiveFamilyFilter(null) })
     if (selectedAgent) chips.push({ key: 'agent', label: `Agent: ${selectedAgent.label}`, onRemove: () => setActiveAgentFilter(null) })
     if (selectedSource) chips.push({ key: 'source', label: `Source: ${selectedSource.label}`, onRemove: () => setActiveSourceFilter(null) })
+    if (activeOriginFilter) {
+      const originLabels: Record<string, string> = { custom: 'Custom Made', community: 'Community', 'built-in': 'Built-in' }
+      chips.push({ key: 'origin', label: `Origin: ${originLabels[activeOriginFilter]}`, onRemove: () => setActiveOriginFilter(null) })
+    }
     if (activePluginFilter) {
       const pluginName = plugins.find(pl => pl.id === activePluginFilter)?.name || activePluginFilter
       chips.push({ key: 'plugin', label: `Plugin: ${pluginName}`, onRemove: () => setActivePluginFilter(null) })
@@ -483,7 +509,7 @@ export function SkillsLabV2({ themePrefix: p, variant }: SkillsLabV2Props) {
       chips.push({ key: `dept-${dept}`, label: dept, onRemove: () => toggleDepartment(dept) })
     }
     return chips
-  }, [activeSavedView, duplicateOnly, selectedFamily, selectedAgent, selectedSource, activeDepartments, setActiveSavedView, toggleDepartment, toggleDuplicateOnly, setActiveFamilyFilter, setActiveAgentFilter, setActiveSourceFilter])
+  }, [activeSavedView, duplicateOnly, selectedFamily, selectedAgent, selectedSource, activeOriginFilter, activeDepartments, setActiveSavedView, toggleDepartment, toggleDuplicateOnly, setActiveFamilyFilter, setActiveAgentFilter, setActiveSourceFilter, setActiveOriginFilter])
 
   const listedSkills = filteredSkills
   const navSkillCount = skills.length
@@ -599,6 +625,33 @@ export function SkillsLabV2({ themePrefix: p, variant }: SkillsLabV2Props) {
                             <span className={`${p}-agent-nav-label`}>{agent.label}</span>
                             <span className={`${p}-nav-section-item-count`}>{agentSkillCount}</span>
                             <span
+                              className={`${p}-agent-nav-delete`}
+                              role="button"
+                              tabIndex={0}
+                              title={deletingAgentId === agent.id ? 'Deleting...' : `Delete ${agent.label}`}
+                              onClick={e => {
+                                e.stopPropagation()
+                                if (deletingAgentId) return
+                                const confirmed = window.confirm(
+                                  `Delete agent "${agent.label}"?\n\nThis permanently removes its workspace, installed skills, cron jobs, and config references.`,
+                                )
+                                if (confirmed) void deleteAgent(agent.id)
+                              }}
+                              onKeyDown={e => {
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                  e.preventDefault()
+                                  e.stopPropagation()
+                                  if (deletingAgentId) return
+                                  const confirmed = window.confirm(
+                                    `Delete agent "${agent.label}"?\n\nThis permanently removes its workspace, installed skills, cron jobs, and config references.`,
+                                  )
+                                  if (confirmed) void deleteAgent(agent.id)
+                                }
+                              }}
+                            >
+                              <Trash2 size={12} strokeWidth={1.5} />
+                            </span>
+                            <span
                               className={`${p}-agent-nav-chevron`}
                               onClick={e => { e.stopPropagation(); toggleAgentNavExpanded(agent.id) }}
                             >
@@ -631,18 +684,6 @@ export function SkillsLabV2({ themePrefix: p, variant }: SkillsLabV2Props) {
                       )
                     })}
                   </div>
-
-                  <div className={`${p}-nav-divider`} />
-
-                  {/* Starred */}
-                  <button
-                    className={`${p}-starred-nav-item${activeSavedView === 'starred' ? ' active' : ''}`}
-                    onClick={e => { e.stopPropagation(); setActiveSavedView(activeSavedView === 'starred' ? 'all' : 'starred') }}
-                  >
-                    <Star size={13} strokeWidth={1.5} fill={activeSavedView === 'starred' ? 'currentColor' : 'none'} />
-                    <span>Starred</span>
-                    {starredCount > 0 && <span className={`${p}-nav-section-item-count`}>{starredCount}</span>}
-                  </button>
 
                   <div className={`${p}-nav-divider`} />
 
@@ -719,20 +760,77 @@ export function SkillsLabV2({ themePrefix: p, variant }: SkillsLabV2Props) {
                       )
                     })}
                   </div>
-
-                  <div className={`${p}-nav-divider`} />
-
-                  {/* Starred */}
-                  <button
-                    className={`${p}-starred-nav-item${activeSavedView === 'starred' ? ' active' : ''}`}
-                    onClick={e => { e.stopPropagation(); setActiveSavedView(activeSavedView === 'starred' ? 'all' : 'starred') }}
-                  >
-                    <Star size={13} strokeWidth={1.5} fill={activeSavedView === 'starred' ? 'currentColor' : 'none'} />
-                    <span>Starred</span>
-                    {starredCount > 0 && <span className={`${p}-nav-section-item-count`}>{starredCount}</span>}
-                  </button>
                 </>
               )}
+
+              {/* ═══ Shared sections (both modes) ═══ */}
+
+              <div className={`${p}-nav-divider`} />
+
+              {/* Starred */}
+              <div className={`${p}-nav-section`}>
+                <div className={`${p}-nav-section-label`}>Starred</div>
+                <button
+                  className={`${p}-nav-section-item${activeSavedView === 'starred' ? ' active' : ''}`}
+                  onClick={e => { e.stopPropagation(); setActiveSavedView(activeSavedView === 'starred' ? 'all' : 'starred') }}
+                >
+                  <span className={`${p}-nav-section-item-left`}>
+                    <Star size={13} strokeWidth={1.5} fill={activeSavedView === 'starred' ? 'currentColor' : 'none'} />
+                    <span className={`${p}-nav-section-item-name`}>Starred</span>
+                  </span>
+                  <span className={`${p}-nav-section-item-count`}>{starredCount}</span>
+                </button>
+              </div>
+
+              <div className={`${p}-nav-divider`} />
+
+              {/* Origin */}
+              <div className={`${p}-nav-section`}>
+                <div className={`${p}-nav-section-label`}>Origin</div>
+                {([
+                  { key: 'custom' as const, label: 'Custom Made', Icon: Sparkles },
+                  { key: 'community' as const, label: 'Community', Icon: Globe },
+                  { key: 'built-in' as const, label: 'Built-in', Icon: Package },
+                ]).map(({ key, label, Icon }) => (
+                  <button
+                    key={key}
+                    className={`${p}-nav-section-item${activeOriginFilter === key ? ' active' : ''}`}
+                    onClick={e => { e.stopPropagation(); setActiveOriginFilter(key) }}
+                  >
+                    <span className={`${p}-nav-section-item-left`}>
+                      <Icon size={13} strokeWidth={1.5} />
+                      <span className={`${p}-nav-section-item-name`}>{label}</span>
+                    </span>
+                    <span className={`${p}-nav-section-item-count`}>{originCounts[key]}</span>
+                  </button>
+                ))}
+              </div>
+
+              <div className={`${p}-nav-divider`} />
+
+              {/* Sources */}
+              <div className={`${p}-nav-section`}>
+                <div className={`${p}-nav-section-label`}>Sources</div>
+                {sources.map(source => {
+                  const isActive = activeSourceFilter === source.id
+                  return (
+                    <button
+                      key={source.id}
+                      className={`${p}-nav-section-item${isActive ? ' active' : ''}`}
+                      onClick={e => { e.stopPropagation(); setActiveSourceFilter(isActive ? null : source.id) }}
+                    >
+                      <span className={`${p}-nav-section-item-left`}>
+                        <span
+                          className={`${p}-nav-section-item-dot`}
+                          style={{ background: source.color }}
+                        />
+                        <span className={`${p}-nav-section-item-name`}>{source.label}</span>
+                      </span>
+                      <span className={`${p}-nav-section-item-count`}>{sourceCounts.get(source.id) || 0}</span>
+                    </button>
+                  )
+                })}
+              </div>
             </div>
 
             {/* Status */}
