@@ -143,6 +143,7 @@ const AGENTS_SKILLS_ROOT = resolveAgentsSkillsRoot(OPENCLAW_ROOT);
 const HOME_DIR = os.homedir();
 
 const OPENCLAW_SKILLS_ROOT = path.join(OPENCLAW_ROOT, 'skills');
+const SKILLS_REPOS_CONFIG_PATH = path.join(path.dirname(CONFIG_PATH), 'skills-repos.config.json');
 
 let AGENTS, SKILL_LIBRARIES, STUDIO, ALLOWED_ROOTS;
 
@@ -1231,6 +1232,96 @@ function initAgents() {
 
 initAgents();
 
+// ── FILESYSTEM WATCHER — auto-detect changes in ~/.openclaw ────────
+// Debounced: coalesces rapid changes into a single refresh
+
+let _fsRefreshTimer: ReturnType<typeof setTimeout> | null = null;
+const FS_REFRESH_DEBOUNCE_MS = 2000; // Wait 2s after last change
+const FS_PERIODIC_REFRESH_MS = 60_000; // Safety net: re-scan every 60s
+const _watchers: fs.FSWatcher[] = [];
+
+function debouncedRefresh(reason: string) {
+  if (_fsRefreshTimer) clearTimeout(_fsRefreshTimer);
+  _fsRefreshTimer = setTimeout(() => {
+    _fsRefreshTimer = null;
+    try {
+      // Re-read config file if it changed
+      if (fs.existsSync(CONFIG_PATH)) {
+        try {
+          const freshConfig = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
+          CONFIG = freshConfig;
+        } catch { /* keep existing CONFIG */ }
+      }
+      initAgents();
+      invalidateSkillsIndexCache();
+      console.log(`[fs-watch] Refreshed: ${reason} — ${AGENTS.length} agents, ${SKILL_LIBRARIES.length} libs`);
+    } catch (e: any) {
+      console.error(`[fs-watch] Refresh failed (${reason}):`, e.message);
+    }
+  }, FS_REFRESH_DEBOUNCE_MS);
+}
+
+function watchDirectory(dirPath: string, label: string) {
+  if (!dirPath || !fs.existsSync(dirPath)) return;
+  try {
+    const watcher = fs.watch(dirPath, { recursive: false }, (eventType, filename) => {
+      // Ignore temp files, editor swaps, and hidden files starting with .#
+      if (filename && (filename.startsWith('.#') || filename.endsWith('~') || filename.endsWith('.swp'))) return;
+      debouncedRefresh(`${label}/${filename || 'unknown'} (${eventType})`);
+    });
+    watcher.on('error', (err) => {
+      console.warn(`[fs-watch] Watcher error on ${label}:`, err.message);
+    });
+    _watchers.push(watcher);
+  } catch (e: any) {
+    console.warn(`[fs-watch] Could not watch ${label} (${dirPath}):`, e.message);
+  }
+}
+
+// Watch key directories for changes
+watchDirectory(OPENCLAW_ROOT, 'openclaw-root');         // New workspace-* dirs
+watchDirectory(OPENCLAW_SKILLS_ROOT, 'openclaw-skills'); // Skills added/removed
+watchDirectory(AGENTS_SKILLS_ROOT, 'agents-skills');     // Agent skills library
+watchDirectory(path.dirname(CONFIG_PATH), 'config');     // Config file changes
+
+// Watch each agent workspace's skills dir
+for (const agent of AGENTS) {
+  if (agent.skillsRoot && fs.existsSync(agent.skillsRoot)) {
+    watchDirectory(agent.skillsRoot, `workspace-${agent.id}/skills`);
+  }
+}
+
+// Also watch Claude skills dir if it exists
+const claudeSkillsDir = path.join(HOME_DIR, '.claude', 'skills');
+if (fs.existsSync(claudeSkillsDir)) {
+  watchDirectory(claudeSkillsDir, 'claude-skills');
+}
+
+// Periodic safety-net refresh (catches changes the watchers might miss,
+// e.g. in deeply nested dirs, or when fs.watch is unreliable on the VPS)
+const _periodicRefreshInterval = setInterval(() => {
+  try {
+    initAgents();
+    invalidateSkillsIndexCache();
+  } catch (e: any) {
+    console.error('[periodic-refresh] Failed:', e.message);
+  }
+}, FS_PERIODIC_REFRESH_MS);
+
+// Clean up on process exit
+process.on('SIGTERM', () => {
+  _watchers.forEach(w => w.close());
+  clearInterval(_periodicRefreshInterval);
+  if (_fsRefreshTimer) clearTimeout(_fsRefreshTimer);
+});
+process.on('SIGINT', () => {
+  _watchers.forEach(w => w.close());
+  clearInterval(_periodicRefreshInterval);
+  if (_fsRefreshTimer) clearTimeout(_fsRefreshTimer);
+});
+
+console.log(`[fs-watch] Watching ${_watchers.length} directories for changes (periodic refresh: ${FS_PERIODIC_REFRESH_MS / 1000}s)`);
+
 // ── HELPERS ────────────────────────────────────────────────
 
 app.use(express.json({ limit: '10mb' }));
@@ -1348,6 +1439,11 @@ app.post('/api/logout', (req, res) => { res.clearCookie('agent_hub_auth'); res.j
 // Rescan agents and skills without restarting
 app.post('/api/refresh', auth, (_req, res) => {
   try {
+    // Re-read config file on manual refresh too
+    if (fs.existsSync(CONFIG_PATH)) {
+      try { CONFIG = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8')); }
+      catch { /* keep existing CONFIG */ }
+    }
     initAgents();
     invalidateSkillsIndexCache();
     res.json({ ok: true, agents: AGENTS.length, libs: SKILL_LIBRARIES.length });
@@ -2196,8 +2292,6 @@ refreshHQAllowedRoots();
 
 // ── SKILLS REPOS CONFIG ─────────────────────────────────────
 // Stores linked skill repos for the Skills page
-
-const SKILLS_REPOS_CONFIG_PATH = path.join(path.dirname(CONFIG_PATH), 'skills-repos.config.json');
 
 function readSkillsReposConfig(): { repos: SkillsRepoEntry[] } {
   if (fs.existsSync(SKILLS_REPOS_CONFIG_PATH)) {
