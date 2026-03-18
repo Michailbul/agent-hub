@@ -5,8 +5,12 @@ import {
   installSkillZip,
   installSkillCommand,
   fetchClaudePlugins,
+  fetchEmbeddingsStatus,
+  buildEmbeddingsIndex,
+  queryEmbeddings,
   type SkillsIndexData,
   type ClaudePlugin,
+  type SemanticSearchResult,
 } from '@/lib/api'
 
 /* ═══ Types ═══ */
@@ -177,6 +181,15 @@ interface SkillsLabStore {
   installError: string | null
   installLastOutput: string | null
 
+  // Semantic search state
+  hasApiKey: boolean
+  hasEmbeddings: boolean
+  embeddingSkillCount: number
+  isIndexing: boolean
+  isSemanticSearching: boolean
+  semanticResults: SemanticSearchResult[]
+  semanticScores: Map<string, number>
+
   setVariant: (v: LabVariant) => void
   setSearchQuery: (q: string) => void
   setSidebarMode: (mode: SidebarMode) => void
@@ -208,8 +221,15 @@ interface SkillsLabStore {
   clearInstallFeedback: () => void
   previewDeleteSkill: (skillId: string, sourceId?: string | null) => Promise<SkillDeletePreview>
   deleteSkill: (skillId: string, sourceId?: string | null) => Promise<void>
+  categorizeSkill: (skillId: string, department: string) => Promise<void>
   previewRemoveDuplicates: (skillIds?: string[]) => Promise<DuplicateRemovalPlan>
   removeDuplicates: (skillIds?: string[]) => Promise<DuplicateRemovalPlan>
+
+  // Semantic search actions
+  loadEmbeddingsStatus: () => Promise<void>
+  buildIndex: (rebuild?: boolean) => Promise<void>
+  runSemanticSearch: (query: string) => Promise<void>
+  clearSemanticResults: () => void
 
   filtered: () => UnifiedSkill[]
 }
@@ -494,6 +514,14 @@ export const useSkillsLabStore = create<SkillsLabStore>((set, get) => ({
   installError: null,
   installLastOutput: null,
 
+  hasApiKey: false,
+  hasEmbeddings: false,
+  embeddingSkillCount: 0,
+  isIndexing: false,
+  isSemanticSearching: false,
+  semanticResults: [],
+  semanticScores: new Map(),
+
   setVariant: (v) => set({ variant: v }),
   setSearchQuery: (q) => set({ searchQuery: q }),
   setSidebarMode: (mode) => set({
@@ -737,6 +765,48 @@ export const useSkillsLabStore = create<SkillsLabStore>((set, get) => ({
 
   clearInstallFeedback: () => set({ installError: null, installLastOutput: null }),
 
+  loadEmbeddingsStatus: async () => {
+    try {
+      const status = await fetchEmbeddingsStatus()
+      set({
+        hasApiKey: status.hasApiKey,
+        hasEmbeddings: status.hasEmbeddings,
+        embeddingSkillCount: status.skillCount,
+      })
+    } catch { /* ignore */ }
+  },
+
+  buildIndex: async (rebuild = false) => {
+    set({ isIndexing: true })
+    try {
+      await buildEmbeddingsIndex(rebuild)
+      await get().loadEmbeddingsStatus()
+    } catch (e: any) {
+      console.error('Embedding index build failed:', e.message)
+    } finally {
+      set({ isIndexing: false })
+    }
+  },
+
+  runSemanticSearch: async (query: string) => {
+    if (!query.trim() || !get().hasEmbeddings) {
+      set({ semanticResults: [], semanticScores: new Map() })
+      return
+    }
+    set({ isSemanticSearching: true })
+    try {
+      const results = await queryEmbeddings(query)
+      const scores = new Map(results.map(r => [r.skillId, r.score]))
+      set({ semanticResults: results, semanticScores: scores })
+    } catch {
+      set({ semanticResults: [], semanticScores: new Map() })
+    } finally {
+      set({ isSemanticSearching: false })
+    }
+  },
+
+  clearSemanticResults: () => set({ semanticResults: [], semanticScores: new Map() }),
+
   previewDeleteSkill: async (skillId: string, sourceId?: string | null) => {
     const res = await fetch('/api/skills/delete-preview', {
       method: 'POST',
@@ -767,6 +837,17 @@ export const useSkillsLabStore = create<SkillsLabStore>((set, get) => ({
         activeSkillFile: null,
       })
     }
+  },
+
+  categorizeSkill: async (skillId: string, department: string) => {
+    const res = await fetch('/api/skill/tag', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ skillId, department }),
+    })
+    const payload = await res.json().catch(() => ({}))
+    if (!res.ok) throw new Error(payload.error || 'Categorize failed')
+    await get().loadFromAPI(true)
   },
 
   previewRemoveDuplicates: async (skillIds) => {
@@ -918,14 +999,43 @@ export const useSkillsLabStore = create<SkillsLabStore>((set, get) => ({
       result = result.filter(s => activeDepartments.has(s.department))
     }
 
-    result = [...result].sort((a, b) => {
-      if (activeSavedView === 'recent') {
-        return getAddedAtMs(b) - getAddedAtMs(a) || a.name.localeCompare(b.name)
+    // Merge semantic results when searching
+    const { semanticResults, semanticScores } = get()
+    if (searchQuery && semanticResults.length > 0) {
+      const literalIds = new Set(result.map(s => s.id))
+      const semanticOnly = semanticResults
+        .filter(r => !literalIds.has(r.skillId))
+        .map(r => skills.find(s => s.id === r.skillId))
+        .filter((s): s is UnifiedSkill => Boolean(s))
+      // Apply same non-search filters to semantic results
+      let filteredSemantic = semanticOnly
+      if (sidebarMode === 'claude-code') {
+        filteredSemantic = filteredSemantic.filter(skill =>
+          Object.values(skill.sourceVariants).some(v => v.ecosystem === 'claude'),
+        )
       }
-      const av = a[sortField], bv = b[sortField]
-      const cmp = typeof av === 'string' ? av.localeCompare(bv as string) : 0
-      return sortDir === 'asc' ? cmp : -cmp
-    })
+      if (activeSourceFilter) filteredSemantic = filteredSemantic.filter(s => s.presence[activeSourceFilter] !== 'absent')
+      if (activeAgentFilter) filteredSemantic = filteredSemantic.filter(s => s.installedAgentIds.includes(activeAgentFilter))
+      if (activeFamilyFilter) filteredSemantic = filteredSemantic.filter(s => s.familyKey === activeFamilyFilter)
+      if (duplicateOnly) filteredSemantic = filteredSemantic.filter(s => s.isDuplicate)
+      if (activeOriginFilter) filteredSemantic = filteredSemantic.filter(s => s.originCategory === activeOriginFilter)
+      if (activeDepartments.size > 0) filteredSemantic = filteredSemantic.filter(s => activeDepartments.has(s.department))
+      // Sort semantic results by score descending
+      filteredSemantic.sort((a, b) => (semanticScores.get(b.id) || 0) - (semanticScores.get(a.id) || 0))
+      result = [...result, ...filteredSemantic]
+    }
+
+    // Sort (skip if we have mixed literal+semantic results during search — literal first, then semantic by score)
+    if (!searchQuery || semanticResults.length === 0) {
+      result = [...result].sort((a, b) => {
+        if (activeSavedView === 'recent') {
+          return getAddedAtMs(b) - getAddedAtMs(a) || a.name.localeCompare(b.name)
+        }
+        const av = a[sortField], bv = b[sortField]
+        const cmp = typeof av === 'string' ? av.localeCompare(bv as string) : 0
+        return sortDir === 'asc' ? cmp : -cmp
+      })
+    }
 
     return result
   },

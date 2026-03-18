@@ -116,6 +116,8 @@ export interface SkillsIndexSkill {
   isInMaster: boolean
   addedAt: string | null
   addedVia: 'zip' | 'npx' | 'create' | 'unknown' | null
+  isCustom: boolean
+  originCategory: 'custom' | 'community' | 'built-in'
   grouping: {
     purpose: string
     department: string
@@ -146,6 +148,7 @@ export interface SkillsIndexData {
   agents: SkillsIndexAgent[]
   skills: SkillsIndexSkill[]
   folders: { name: string; root: string; sourceId: string }[]
+  repos?: { id: string; name: string; isOwned: boolean; skillCount: number }[]
   starredSkillIds?: string[]
 }
 
@@ -325,6 +328,7 @@ export interface SkillsRepoEntry {
   description: string
   isGitRepo: boolean
   linkedAt: string
+  isOwned?: boolean
   skillCount?: number
   exists?: boolean
   gitBranch?: string | null
@@ -346,6 +350,19 @@ export async function linkSkillsRepo(data: { name: string; path: string; descrip
   if (!r.ok) {
     const j = await r.json()
     throw new Error(j.error || 'Link failed')
+  }
+  return r.json()
+}
+
+export async function patchSkillsRepo(id: string, data: { isOwned?: boolean }): Promise<any> {
+  const r = await fetch(`/api/skills-repos/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  })
+  if (!r.ok) {
+    const j = await r.json()
+    throw new Error(j.error || 'Patch failed')
   }
   return r.json()
 }
@@ -375,4 +392,44 @@ export async function promoteSkill(variantPath: string): Promise<any> {
     throw new Error(j.error || 'Promote failed')
   }
   return r.json()
+}
+
+// ── Embeddings / Semantic Search API ────────────────────────
+
+export interface EmbeddingsStatus {
+  hasApiKey: boolean
+  hasEmbeddings: boolean
+  skillCount: number
+  model: string | null
+  dimensions: number | null
+}
+
+export async function fetchEmbeddingsStatus(): Promise<EmbeddingsStatus> {
+  const r = await fetch('/api/embeddings/status')
+  if (!r.ok) return { hasApiKey: false, hasEmbeddings: false, skillCount: 0, model: null, dimensions: null }
+  return r.json()
+}
+
+export async function buildEmbeddingsIndex(rebuild = false): Promise<{ ok: boolean; embedded: number; total: number }> {
+  const endpoint = rebuild ? '/api/embeddings/rebuild' : '/api/embeddings/build'
+  const r = await fetch(endpoint, { method: 'POST' })
+  const payload = await r.json().catch(() => ({}))
+  if (!r.ok) throw new Error(payload.error || 'Embedding build failed')
+  return payload
+}
+
+export interface SemanticSearchResult {
+  skillId: string
+  score: number
+}
+
+export async function queryEmbeddings(text: string): Promise<SemanticSearchResult[]> {
+  const r = await fetch('/api/embeddings/query', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text }),
+  })
+  if (!r.ok) return []
+  const data = await r.json()
+  return data.results || []
 }

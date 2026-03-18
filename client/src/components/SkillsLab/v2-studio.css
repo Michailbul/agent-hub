@@ -1324,6 +1324,106 @@
   box-shadow: var(--sh-shadow-cmd);
 }
 
+/* ── Semantic search ── */
+.st-embedding-controls {
+  display: flex; align-items: center; gap: 6px;
+  margin: 0 16px 8px; padding: 0;
+}
+.st-embedding-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--sh-text-ghost);
+  flex-shrink: 0;
+  transition: background 200ms ease;
+}
+.st-embedding-dot.active {
+  background: #34d399;
+  box-shadow: 0 0 4px rgba(52, 211, 153, 0.4);
+}
+.st-embedding-btn {
+  background: var(--sh-surface-hover);
+  border: 0.5px solid var(--sh-border-subtle);
+  border-radius: 5px;
+  color: var(--sh-text-secondary);
+  font-size: 11px; font-weight: 500; font-family: inherit;
+  padding: 3px 8px; cursor: pointer;
+  transition: background 100ms ease, color 100ms ease;
+}
+.st-embedding-btn:hover { background: var(--sh-surface-sunken); color: var(--sh-text-primary); }
+.st-embedding-btn:disabled { opacity: 0.5; cursor: default; }
+
+.st-search-spinner {
+  color: var(--sh-text-ghost);
+  display: flex; align-items: center;
+  animation: st-spin 1s linear infinite;
+}
+@keyframes st-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.st-semantic-badge {
+  display: inline-flex; align-items: center; gap: 3px;
+  font-size: 10px; font-weight: 500;
+  color: #34d399;
+  background: rgba(52, 211, 153, 0.08);
+  border: 0.5px solid rgba(52, 211, 153, 0.2);
+  border-radius: 4px;
+  padding: 1px 5px;
+  flex-shrink: 0;
+  line-height: 1.2;
+}
+
+.st-skill-row-semantic {
+  border-left: 2px solid rgba(52, 211, 153, 0.3);
+}
+
+/* ── Results panel search ── */
+.st-results-search {
+  display: flex; align-items: center; gap: 6px;
+  background: var(--sh-surface-sunken);
+  border: 1px solid var(--sh-border-subtle);
+  border-radius: 7px;
+  padding: 0 10px;
+  margin: 0 12px 8px;
+  height: 32px;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+.st-results-search:focus-within {
+  border-color: var(--sh-border-hover);
+  box-shadow: 0 0 0 2px var(--sh-focus-ring);
+}
+.st-results-search-icon { color: var(--sh-text-tertiary); flex-shrink: 0; }
+.st-results-search-input {
+  background: none; border: none; outline: none;
+  color: var(--sh-ink); font-size: 12px; font-family: inherit;
+  width: 100%; padding: 0; font-weight: 400;
+}
+.st-results-search-input::placeholder { color: var(--sh-text-tertiary); font-size: 12px; }
+.st-results-search-clear {
+  background: var(--sh-text-ghost); border: none; color: var(--sh-bg);
+  cursor: pointer; font-size: 9px; font-weight: 700; padding: 0; line-height: 1;
+  width: 14px; height: 14px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 80ms ease;
+}
+.st-results-search-clear:hover { background: var(--sh-text-tertiary); }
+
+/* ── Department select ── */
+.st-dept-select {
+  width: 100%;
+  background: var(--sh-surface-sunken);
+  border: 1px solid var(--sh-border-subtle);
+  border-radius: 6px;
+  color: var(--sh-text-primary);
+  font-size: 12px; font-family: inherit; font-weight: 500;
+  padding: 5px 8px;
+  cursor: pointer;
+  appearance: auto;
+  transition: border-color 150ms ease;
+}
+.st-dept-select:hover { border-color: var(--sh-border-hover); }
+.st-dept-select:focus { border-color: var(--sh-border-hover); outline: none; box-shadow: 0 0 0 2px var(--sh-focus-ring); }
+
 /* ── Legacy hidden ── */
 .st-nav-depts, .st-dept-label, .st-dept-pills, .st-dept-pill, .st-dept-count,
 .st-claude-header, .st-results-intro, .st-claude-kicker, .st-claude-title,
@@ -1336,3 +1436,201 @@
 .st-skill-chip-family, .st-skill-chip-status, .st-skill-chip-dept,
 .st-skill-chip-duplicate, .st-meta-row, .st-meta-key, .st-meta-val,
 .st-meta-empty, .st-saved-views, .st-saved-view-pill { display: none; }
+
+/* ═══════════════════════════════════════════════════════
+   MOBILE RESPONSIVE — Skills Lab
+   ═══════════════════════════════════════════════════════ */
+
+/* ── Tablet (≤1024px) — reduce meta panel ── */
+@media (max-width: 1024px) {
+  .st-meta-panel { width: 240px; }
+}
+
+/* ── Mobile (≤768px) — stacked single-panel ── */
+@media (max-width: 768px) {
+  /* Full vertical stack instead of side-by-side panels */
+  .st-panels {
+    flex-direction: column;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Hide panel resizers on mobile — not needed in stacked layout */
+  .st-panel-resizer {
+    display: none;
+  }
+
+  /* Nav panel — collapsible, compact */
+  .st-nav-shell {
+    width: 100% !important;
+    max-width: 100%;
+  }
+  .st-nav {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-height: 45vh;
+    overflow-y: auto;
+    border-right: none;
+    border-bottom: 1px solid var(--sh-border);
+  }
+
+  /* Panel headers — compact */
+  .st-panel-header {
+    height: 40px;
+    padding: 0 12px;
+  }
+  .st-panel-title { font-size: 12px; }
+
+  /* Search bar — touch friendly */
+  .st-search-bar {
+    height: 40px;
+    margin: 8px 12px;
+  }
+  .st-search-input { font-size: 16px; /* prevent iOS zoom on focus */ }
+
+  /* Mode switch */
+  .st-mode-switch { margin: 0 12px 8px; }
+  .st-mode-pill { font-size: 12px; padding: 6px 12px; min-height: 36px; }
+
+  /* Nav items — larger touch targets */
+  .st-agent-nav-item { height: 40px; padding: 0 12px; }
+  .st-agent-dept-item { height: 34px; }
+  .st-starred-nav-item { height: 38px; }
+  .st-nav-section-item { height: 38px; }
+
+  /* Agent delete button — always visible on mobile (no hover) */
+  .st-agent-nav-item .st-agent-nav-delete { opacity: 0.5; }
+
+  /* Results panel — flex-grow to fill remaining space */
+  .st-results-panel {
+    width: 100% !important;
+    min-width: 0 !important;
+    border-right: none;
+    border-bottom: 1px solid var(--sh-border);
+    max-height: 50vh;
+    flex-shrink: 0;
+  }
+
+  /* Skill rows — touch friendly */
+  .st-skill-row { height: 40px; padding: 0 12px; }
+  .st-skill-name { font-size: 13px; }
+
+  /* Card grid — 2 columns on mobile */
+  .st-canvas .kl-skill-grid {
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 6px;
+    padding: 8px;
+  }
+
+  /* Editor panel — hide on initial view, show when skill selected */
+  .st-editor-panel {
+    width: 100% !important;
+    min-width: 0;
+    min-height: 300px;
+    border-right: none;
+  }
+  .st-editor-shell { flex-direction: column; }
+  .st-files-panel {
+    width: 100% !important;
+    max-height: 30vh;
+    border-right: none;
+    border-bottom: 1px solid var(--sh-border);
+  }
+  .st-filetree-resizer { display: none; }
+
+  /* Meta/Inspector panel — full-width at bottom */
+  .st-meta-panel {
+    width: 100% !important;
+    max-height: none;
+    border-left: none;
+    border-top: 1px solid var(--sh-border);
+  }
+
+  /* Install modal — full-width on mobile */
+  .st-install-modal {
+    width: calc(100vw - 24px);
+    max-width: 460px;
+    padding: 20px;
+    border-radius: 12px;
+  }
+  .st-install-modal-backdrop { padding: 12px; align-items: flex-end; }
+
+  /* Command palette — full-width on mobile */
+  .st-canvas .kl-command-backdrop { padding-top: 48px; padding-left: 12px; padding-right: 12px; }
+  .st-canvas .kl-command-card { width: 100%; max-width: 520px; }
+  .st-canvas .kl-command-input { font-size: 16px; /* prevent iOS zoom */ }
+
+  /* Status bar */
+  .st-canvas .kl-status-bar { padding: 0 12px; }
+  .st-canvas .kl-status-bar-kbd { display: none; }
+
+  /* Active filter chips — scrollable */
+  .st-canvas .kl-active-filters {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    padding: 6px 12px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .st-canvas .kl-active-filters::-webkit-scrollbar { display: none; }
+  .st-canvas .kl-active-filter-chip { flex-shrink: 0; }
+
+  /* Embedding controls */
+  .st-embedding-controls { margin: 0 12px 6px; }
+
+  /* Theme toggle — larger on mobile */
+  .st-theme-toggle {
+    width: 40px;
+    height: 40px;
+    bottom: 20px;
+    right: 12px;
+  }
+
+  /* Results search */
+  .st-results-search { height: 36px; margin: 0 8px 6px; }
+  .st-results-search-input { font-size: 16px; /* prevent iOS zoom */ }
+
+  /* Faceted filters — larger touch targets */
+  .st-canvas .kl-facet-item { height: 38px; }
+  .st-canvas .kl-facet-toggle { height: 38px; }
+
+  /* Welcome state */
+  .st-welcome-inner { padding: 0 16px; }
+  .st-welcome-title { font-size: 16px; }
+  .st-welcome-sub { font-size: 12px; }
+
+  /* Rollout chips — touch friendly */
+  .st-rollout-chip { padding: 10px 14px; }
+
+  /* Meta section — comfortable padding */
+  .st-meta-section { padding: 14px; }
+  .st-meta-group { padding: 14px; }
+  .st-meta-actions { padding: 14px; }
+}
+
+/* ── Small phones (≤480px) ── */
+@media (max-width: 480px) {
+  .st-nav { max-height: 35vh; }
+  .st-results-panel { max-height: 40vh; }
+
+  .st-panel-header { height: 36px; padding: 0 10px; }
+
+  /* Search — even bigger for iOS */
+  .st-search-bar { height: 44px; margin: 6px 10px; border-radius: 10px; }
+  .st-mode-switch { margin: 0 10px 6px; }
+
+  /* Card grid — single column */
+  .st-canvas .kl-skill-grid {
+    grid-template-columns: 1fr;
+    padding: 6px;
+  }
+
+  /* Install modal */
+  .st-install-modal { padding: 16px; border-radius: 10px; }
+  .st-install-actions { flex-direction: column; }
+  .st-install-command-row { flex-direction: column; }
+
+  /* Meta badges — wrap more aggressively */
+  .st-meta-badges { gap: 4px; }
+  .st-meta-badge { font-size: 10px; padding: 3px 8px; }
+}

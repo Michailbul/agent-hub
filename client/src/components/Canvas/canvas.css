@@ -183,3 +183,35 @@
 }
 .cv-ft-section-action:hover { background: rgba(217,119,87,.06); }
 .cv-ft-section-action.active { color: var(--sh-coral, var(--cv-coral)); }
+
+/* ═══════════════════════════════════════════
+   Canvas — Mobile Responsive
+   ═══════════════════════════════════════════ */
+@media (max-width: 768px) {
+  /* ReactFlow pane — touch-friendly */
+  .cv-root .react-flow__pane { cursor: default; touch-action: manipulation; }
+  .cv-root .react-flow__controls {
+    bottom: 8px !important;
+    left: 8px !important;
+    transform: scale(0.85);
+    transform-origin: bottom left;
+  }
+  .cv-root .react-flow__minimap { display: none !important; }
+
+  /* Context menu — constrain to viewport */
+  .cv-ctx { max-width: calc(100vw - 20px); }
+  .cv-ctx-sub {
+    position: fixed;
+    left: 10px !important;
+    top: auto !important;
+    bottom: 60px;
+    max-width: calc(100vw - 20px);
+  }
+
+  /* Remove buttons — always visible on mobile (no hover) */
+  .st-tree-row.removable .cv-ft-remove {
+    opacity: 0.5;
+    pointer-events: auto;
+    transform: translateY(-50%) scale(1);
+  }
+}

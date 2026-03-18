@@ -989,6 +989,137 @@ body{font-family:'Inter',var(--font-sans);color:var(--text-primary);
 }
 
 /* ═══════════════════════════════════════════
+   MOBILE RESPONSIVE — 768px and below
+   ═══════════════════════════════════════════ */
+@media (max-width:768px){
+  /* ── TopBar — compact mobile layout ── */
+  .topbar{
+    height:auto;
+    min-height:44px;
+    padding:8px 12px;
+    flex-wrap:wrap;
+    gap:6px;
+  }
+  .topbar-brand{
+    font-size:12px;
+    padding-right:8px;
+    border-right:none;
+  }
+  .view-switcher{
+    order:2;
+    width:100%;
+    overflow-x:auto;
+    -webkit-overflow-scrolling:touch;
+    scrollbar-width:none;
+    gap:1px;
+    padding:2px;
+  }
+  .view-switcher::-webkit-scrollbar{display:none}
+  .view-btn{
+    padding:0 8px;
+    font-size:10px;
+    white-space:nowrap;
+    flex-shrink:0;
+    min-height:28px;
+  }
+  .topbar-center{
+    display:none;
+  }
+  .topbar-actions{
+    border-left:none;
+    padding-left:0;
+    margin-left:auto;
+  }
+  .tb-btn-ghost span:not(.refresh-icon){display:none}
+  .tb-btn-ghost{padding:0 6px}
+
+  /* ── App body — stack vertically ── */
+  .app-body{
+    flex-direction:column;
+    overflow:auto;
+    -webkit-overflow-scrolling:touch;
+  }
+
+  /* ── Sidebar — full-width on mobile ── */
+  .sidebar{
+    width:100%!important;
+    max-height:40vh;
+    border-right:none;
+    border-bottom:1px solid var(--border-subtle);
+    overflow-y:auto;
+  }
+
+  /* ── Editor — stacked ── */
+  .editor-area{
+    flex-direction:column;
+  }
+  .pane{
+    min-width:0;
+    min-height:200px;
+  }
+  .pane-header{
+    padding:0 10px;
+    height:36px;
+  }
+  .pane-name{font-size:12px}
+  .pane-divider{
+    width:100%;
+    height:1px;
+    cursor:row-resize;
+  }
+
+  /* ── Crons — stacked layout ── */
+  .crons-layout{flex-direction:column}
+  .crons-sidebar{
+    width:100%!important;
+    max-height:35vh;
+    border-right:none;
+    border-bottom:1px solid var(--border-subtle);
+  }
+  .crons-detail{min-height:0;flex:1}
+
+  /* ── Setup / Login — mobile padding ── */
+  .lc{width:90%;max-width:360px;padding:32px 24px}
+  .setup-card{padding:28px 24px}
+  .fo-card{padding:32px 24px;min-width:0;width:90%;max-width:380px}
+  .fo-timer{font-size:48px}
+
+  /* ── Toast — bottom-left to avoid thumb zone ── */
+  .toast{
+    left:12px;
+    right:12px;
+    bottom:12px;
+    width:auto;
+    text-align:center;
+  }
+
+  /* ── Context menu — fit viewport ── */
+  .ctx{
+    max-width:calc(100vw - 24px);
+  }
+
+  /* ── Node detail page ── */
+  .nd-page{
+    margin:10px 0;
+    padding:20px 14px 60px;
+    border-radius:8px;
+  }
+  .nd-scroll{padding:0 8px 16px}
+}
+
+/* ── Small phones (≤480px) ── */
+@media (max-width:480px){
+  .topbar{padding:6px 10px}
+  .topbar-brand{font-size:11px;gap:4px}
+  .view-btn{font-size:9px;padding:0 6px;height:26px}
+  .topbar-actions .toggle-switch{width:28px;height:16px}
+  .topbar-actions .toggle-switch::after{width:10px;height:10px;top:2px;left:2px}
+  .topbar-actions .toggle-switch.on::after{transform:translateX(12px)}
+  .lc{padding:24px 16px}
+  .nd-page{padding:16px 12px 48px}
+}
+
+/* ═══════════════════════════════════════════
    REDUCED MOTION
    ═══════════════════════════════════════════ */
 @media (prefers-reduced-motion:reduce){

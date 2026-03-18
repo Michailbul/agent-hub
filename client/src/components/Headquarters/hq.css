@@ -979,3 +979,64 @@
   font-size: 9px;
   color: var(--text-ghost);
 }
+
+/* ═══════════════════════════════════════════
+   HQ — Mobile Responsive
+   ═══════════════════════════════════════════ */
+@media (max-width: 768px) {
+  .hq-page { overflow-y: auto; }
+
+  .hq-topbar {
+    flex-wrap: wrap;
+    padding: 8px 12px;
+    gap: 8px;
+  }
+  .hq-topbar-left { flex-shrink: 1; min-width: 0; }
+
+  /* Sidebar — horizontal strip or collapsible on mobile */
+  .hq-sidebar {
+    width: 100% !important;
+    max-height: 35vh;
+    border-right: none;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .hq-sidebar.collapsed {
+    width: 100% !important;
+    max-height: 0;
+    border-bottom-width: 0;
+  }
+  .hq-sidebar-collapse {
+    top: auto;
+    bottom: -12px;
+    right: 50%;
+    transform: translateX(50%);
+    width: 48px;
+    height: 24px;
+    border-radius: 0 0 6px 6px;
+  }
+
+  /* Main area — full width */
+  .hq-main { min-height: 0; flex: 1; }
+  .hq-path-bar { padding: 8px 12px; }
+
+  /* Editor — full width */
+  .hq-editor { min-width: 0; }
+  .hq-editor-header { padding: 6px 12px; }
+
+  /* Source chips — scrollable */
+  .hq-topbar-chips {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .hq-topbar-chips::-webkit-scrollbar { display: none; }
+
+  /* Folder browser modal — full width */
+  .hq-folder-browser-backdrop { padding: 12px; }
+  .hq-folder-browser {
+    width: calc(100vw - 24px);
+    max-width: 500px;
+    max-height: 70vh;
+  }
+}

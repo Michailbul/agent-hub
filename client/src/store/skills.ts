@@ -36,6 +36,7 @@ export interface SkillsRepoEntry {
   description: string
   isGitRepo: boolean
   linkedAt: string
+  isOwned?: boolean
   skillCount?: number
   exists?: boolean
   gitBranch?: string | null
@@ -125,9 +126,10 @@ interface SkillsStore {
 
   loadSkills: () => Promise<void>
   loadRepos: () => Promise<void>
-  linkRepo: (name: string, repoPath: string, description?: string) => Promise<void>
+  linkRepo: (name: string, repoPath: string, description?: string, isOwned?: boolean) => Promise<void>
   unlinkRepo: (id: string) => Promise<void>
   pullRepo: (id: string) => Promise<string>
+  setRepoOwned: (id: string, isOwned: boolean) => Promise<void>
   promoteSkill: (variantPath: string) => Promise<void>
   setSyncFilter: (filter: 'all' | 'unsynced') => void
 
@@ -223,11 +225,11 @@ export const useSkillsStore = create<SkillsStore>((set, get) => ({
     } catch { /* ignore */ }
   },
 
-  linkRepo: async (name, repoPath, description) => {
+  linkRepo: async (name, repoPath, description, isOwned) => {
     const res = await fetch('/api/skills-repos/link', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, path: repoPath, description }),
+      body: JSON.stringify({ name, path: repoPath, description, ...(isOwned ? { isOwned } : {}) }),
     })
     if (!res.ok) {
       const j = await res.json().catch(() => ({}))
@@ -254,6 +256,20 @@ export const useSkillsStore = create<SkillsStore>((set, get) => ({
     await get().loadRepos()
     await get().loadSkills()
     return data.output || 'Done'
+  },
+
+  setRepoOwned: async (id, isOwned) => {
+    const res = await fetch(`/api/skills-repos/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ isOwned }),
+    })
+    if (!res.ok) {
+      const j = await res.json().catch(() => ({}))
+      throw new Error(j.error || 'Patch failed')
+    }
+    await get().loadRepos()
+    await get().loadSkills()
   },
 
   promoteSkill: async (variantPath) => {

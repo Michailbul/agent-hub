@@ -96,8 +96,22 @@ export function SkillsLabV2({ themePrefix: p, variant }: SkillsLabV2Props) {
   const setActiveOriginFilter = useSkillsLabStore(s => s.setActiveOriginFilter)
   const activePluginFilter = useSkillsLabStore(s => s.activePluginFilter)
   const setActivePluginFilter = useSkillsLabStore(s => s.setActivePluginFilter)
+  const previewDeleteSkill = useSkillsLabStore(s => s.previewDeleteSkill)
+  const deleteSkill = useSkillsLabStore(s => s.deleteSkill)
+  const categorizeSkill = useSkillsLabStore(s => s.categorizeSkill)
   const deleteAgent = useSkillsLabStore(s => s.deleteAgent)
   const deletingAgentId = useSkillsLabStore(s => s.deletingAgentId)
+  const hasApiKey = useSkillsLabStore(s => s.hasApiKey)
+  const hasEmbeddings = useSkillsLabStore(s => s.hasEmbeddings)
+  const embeddingSkillCount = useSkillsLabStore(s => s.embeddingSkillCount)
+  const isIndexing = useSkillsLabStore(s => s.isIndexing)
+  const isSemanticSearching = useSkillsLabStore(s => s.isSemanticSearching)
+  const semanticResults = useSkillsLabStore(s => s.semanticResults)
+  const semanticScores = useSkillsLabStore(s => s.semanticScores)
+  const loadEmbeddingsStatus = useSkillsLabStore(s => s.loadEmbeddingsStatus)
+  const buildIndex = useSkillsLabStore(s => s.buildIndex)
+  const runSemanticSearch = useSkillsLabStore(s => s.runSemanticSearch)
+  const clearSemanticResults = useSkillsLabStore(s => s.clearSemanticResults)
 
   // Resizable panels — modernized proportions
   const { size: navWidth, handleProps: navHandleProps } = useResizable({
@@ -231,7 +245,7 @@ export function SkillsLabV2({ themePrefix: p, variant }: SkillsLabV2Props) {
 
   const filteredSkills = useMemo(
     () => getFilteredSkills(),
-    [getFilteredSkills, skills, sources, agents, searchQuery, activeSavedView, activeSourceFilter, activeAgentFilter, activeFamilyFilter, activeOriginFilter, activePluginFilter, duplicateOnly, activeDepartments],
+    [getFilteredSkills, skills, sources, agents, searchQuery, activeSavedView, activeSourceFilter, activeAgentFilter, activeFamilyFilter, activeOriginFilter, activePluginFilter, duplicateOnly, activeDepartments, semanticResults],
   )
   const starredCount = starredSkillIds.size
   const removableDuplicateSkillIds = useMemo(
@@ -278,6 +292,22 @@ export function SkillsLabV2({ themePrefix: p, variant }: SkillsLabV2Props) {
   const editorContent = editorCacheKey ? (skillContentCache[editorCacheKey] || null) : null
 
   useEffect(() => { loadFromAPI() }, [loadFromAPI])
+
+  // Load embeddings status on mount
+  useEffect(() => { void loadEmbeddingsStatus() }, [loadEmbeddingsStatus])
+
+  // Debounced semantic search (400ms after typing)
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      clearSemanticResults()
+      return
+    }
+    if (!hasEmbeddings) return
+    const timer = setTimeout(() => {
+      void runSemanticSearch(searchQuery)
+    }, 400)
+    return () => clearTimeout(timer)
+  }, [searchQuery, hasEmbeddings, runSemanticSearch, clearSemanticResults])
 
   // Cross-view refresh: reload when agent data changes (e.g. deletion from Canvas)
   useEffect(() => {
@@ -434,14 +464,21 @@ export function SkillsLabV2({ themePrefix: p, variant }: SkillsLabV2Props) {
       || skill.sourceVariants[skill.canonicalSource] || Object.values(skill.sourceVariants)[0]
     const sourceLabel = variant?.sourceLabel || skill.canonicalSource
     const meta = sourceLabel
+    const semScore = semanticScores.get(skill.id)
 
     return (
       <button
         key={skill.id}
-        className={`${p}-skill-row${expandedSkillId === skill.id ? ' active' : ''}${skill.isDuplicate ? ` ${p}-skill-row-duplicate` : ''}`}
+        className={`${p}-skill-row${expandedSkillId === skill.id ? ' active' : ''}${skill.isDuplicate ? ` ${p}-skill-row-duplicate` : ''}${semScore !== undefined ? ` ${p}-skill-row-semantic` : ''}`}
         onClick={e => { e.stopPropagation(); openSkill(skill.id) }}
       >
         <span className={`${p}-skill-name`}>{skill.displayName}</span>
+        {semScore !== undefined && (
+          <span className={`${p}-semantic-badge`} title={`Semantic similarity: ${(semScore * 100).toFixed(0)}%`}>
+            <Sparkles size={10} strokeWidth={1.5} />
+            {(semScore * 100).toFixed(0)}%
+          </span>
+        )}
         <span className={`${p}-skill-meta`}>{meta}</span>
         <span
           role="button"
@@ -569,14 +606,38 @@ export function SkillsLabV2({ themePrefix: p, variant }: SkillsLabV2Props) {
                 <Search size={14} strokeWidth={1.5} className={`${p}-search-icon`} />
                 <input
                   className={`${p}-search-input`}
-                  placeholder="Search skills..."
+                  placeholder={hasEmbeddings ? 'Search skills (semantic)...' : 'Search skills...'}
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
                 />
+                {isSemanticSearching && (
+                  <span className={`${p}-search-spinner`} title="Semantic search...">
+                    <Sparkles size={12} strokeWidth={1.5} />
+                  </span>
+                )}
                 {searchQuery && (
                   <button className={`${p}-search-clear`} onClick={() => setSearchQuery('')}>&times;</button>
                 )}
               </div>
+              {hasApiKey && (
+                <div className={`${p}-embedding-controls`} onClick={e => e.stopPropagation()}>
+                  <span
+                    className={`${p}-embedding-dot${hasEmbeddings ? ' active' : ''}`}
+                    title={hasEmbeddings
+                      ? `Semantic index: ${embeddingSkillCount} skills`
+                      : 'No semantic index'
+                    }
+                  />
+                  <button
+                    className={`${p}-embedding-btn`}
+                    onClick={() => void buildIndex(!hasEmbeddings ? false : true)}
+                    disabled={isIndexing}
+                    title={hasEmbeddings ? 'Rebuild semantic index' : 'Build semantic index'}
+                  >
+                    {isIndexing ? 'Indexing...' : hasEmbeddings ? 'Rebuild' : 'Build Index'}
+                  </button>
+                </div>
+              )}
 
               <div className={`${p}-mode-switch`} onClick={e => e.stopPropagation()}>
                 <button
@@ -767,9 +828,9 @@ export function SkillsLabV2({ themePrefix: p, variant }: SkillsLabV2Props) {
 
               <div className={`${p}-nav-divider`} />
 
-              {/* Starred */}
+              {/* Saved Views */}
               <div className={`${p}-nav-section`}>
-                <div className={`${p}-nav-section-label`}>Starred</div>
+                <div className={`${p}-nav-section-label`}>Views</div>
                 <button
                   className={`${p}-nav-section-item${activeSavedView === 'starred' ? ' active' : ''}`}
                   onClick={e => { e.stopPropagation(); setActiveSavedView(activeSavedView === 'starred' ? 'all' : 'starred') }}
@@ -779,6 +840,15 @@ export function SkillsLabV2({ themePrefix: p, variant }: SkillsLabV2Props) {
                     <span className={`${p}-nav-section-item-name`}>Starred</span>
                   </span>
                   <span className={`${p}-nav-section-item-count`}>{starredCount}</span>
+                </button>
+                <button
+                  className={`${p}-nav-section-item${activeSavedView === 'recent' ? ' active' : ''}`}
+                  onClick={e => { e.stopPropagation(); setActiveSavedView(activeSavedView === 'recent' ? 'all' : 'recent') }}
+                >
+                  <span className={`${p}-nav-section-item-left`}>
+                    <Feather size={13} strokeWidth={1.5} />
+                    <span className={`${p}-nav-section-item-name`}>Recent</span>
+                  </span>
                 </button>
               </div>
 
@@ -883,6 +953,19 @@ export function SkillsLabV2({ themePrefix: p, variant }: SkillsLabV2Props) {
               </button>
             </div>
           </header>
+
+          <div className={`${p}-results-search`} onClick={e => e.stopPropagation()}>
+            <Search size={13} strokeWidth={1.5} className={`${p}-results-search-icon`} />
+            <input
+              className={`${p}-results-search-input`}
+              placeholder={hasEmbeddings ? 'Search skills (semantic)...' : 'Filter skills...'}
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+            />
+            {searchQuery && (
+              <button className={`${p}-results-search-clear`} onClick={() => setSearchQuery('')}>&times;</button>
+            )}
+          </div>
 
           <ActiveFiltersBar chips={activeFilterChips} onClearAll={clearAllFilters} />
 
@@ -1050,7 +1133,22 @@ export function SkillsLabV2({ themePrefix: p, variant }: SkillsLabV2Props) {
 
               <div className={`${p}-meta-divider`} />
 
-              <div className={`${p}-meta-group-label`}>Tags</div>
+              <div className={`${p}-meta-group-label`}>Department</div>
+              <select
+                className={`${p}-dept-select`}
+                value={selectedSkill.department}
+                onChange={async e => {
+                  e.stopPropagation()
+                  try { await categorizeSkill(selectedSkill.id, e.target.value) }
+                  catch (err) { window.alert(err instanceof Error ? err.message : 'Failed to categorize') }
+                }}
+              >
+                {departments.map(dept => (
+                  <option key={dept} value={dept}>{dept}</option>
+                ))}
+              </select>
+
+              <div className={`${p}-meta-group-label`} style={{ marginTop: 8 }}>Tags</div>
               <div className={`${p}-meta-tags`}>
                 <span className={`${p}-tag`}>{selectedSkill.department}</span>
                 {selectedVariant?.sourceLabel && <span className={`${p}-tag`}>{selectedVariant.sourceLabel}</span>}
@@ -1139,12 +1237,28 @@ export function SkillsLabV2({ themePrefix: p, variant }: SkillsLabV2Props) {
                     <span className={`${p}-action-label`}>Duplicate</span>
                   </button>
                 </span>
-                <span title="Coming soon">
-                  <button className={`${p}-action-btn ${p}-action-danger`} disabled onClick={e => e.stopPropagation()}>
-                    <Trash2 size={14} strokeWidth={1.5} />
-                    <span className={`${p}-action-label`}>Delete</span>
-                  </button>
-                </span>
+                <button
+                  className={`${p}-action-btn ${p}-action-danger`}
+                  onClick={async e => {
+                    e.stopPropagation()
+                    try {
+                      const preview = await previewDeleteSkill(selectedSkill.id)
+                      if (!preview.allowed) { window.alert(preview.message); return }
+                      const lines = [`Delete "${selectedSkill.displayName}"?`]
+                      if (preview.impactedInstalls.length > 0) {
+                        lines.push(`This will remove it from ${preview.impactedInstalls.length} agent(s): ${preview.impactedInstalls.map(i => i.label).join(', ')}`)
+                      }
+                      lines.push(preview.message)
+                      if (!window.confirm(lines.join('\n\n'))) return
+                      await deleteSkill(selectedSkill.id)
+                    } catch (err) {
+                      window.alert(err instanceof Error ? err.message : 'Delete failed')
+                    }
+                  }}
+                >
+                  <Trash2 size={14} strokeWidth={1.5} />
+                  <span className={`${p}-action-label`}>Delete</span>
+                </button>
               </div>
             </section>
           </aside>

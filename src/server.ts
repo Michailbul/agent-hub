@@ -7,6 +7,22 @@ import os from 'os';
 import { spawn } from 'child_process';
 import { detectCLI, runSetupAgent } from './setup-agent';
 
+// Load .env file if present (no dependency needed)
+try {
+  const envPath = path.join(__dirname, '..', '.env');
+  if (fs.existsSync(envPath)) {
+    for (const line of fs.readFileSync(envPath, 'utf8').split('\n')) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith('#')) continue;
+      const eqIdx = trimmed.indexOf('=');
+      if (eqIdx < 0) continue;
+      const key = trimmed.slice(0, eqIdx).trim();
+      const val = trimmed.slice(eqIdx + 1).trim().replace(/^["']|["']$/g, '');
+      if (!process.env[key]) process.env[key] = val;
+    }
+  }
+} catch {}
+
 const app = express();
 const PORT = process.env.PORT || 4001;
 const PASSWORD = process.env.HUB_PASSWORD || 'changeme';
@@ -184,6 +200,8 @@ interface SkillsIndexSkill {
   isInMaster: boolean;
   addedAt: string | null;
   addedVia: SkillInstallMethod | null;
+  isCustom: boolean;
+  originCategory: 'custom' | 'community' | 'built-in';
   grouping: {
     purpose: string;
     department: string;
@@ -228,6 +246,7 @@ interface SkillsRepoEntry {
   description: string;
   isGitRepo: boolean;
   linkedAt: string;
+  isOwned?: boolean;
 }
 
 function expandPath(p) {
@@ -855,7 +874,7 @@ function invalidateSkillsIndexCache() {
 
 function buildSkillsIndex() {
   const sources = buildSkillSourceDescriptors();
-  const skillsMap = new Map<string, SkillsIndexSkill & { _installed: Set<string>; _groupingText: string[] }>();
+  const skillsMap = new Map<string, Omit<SkillsIndexSkill, 'isInMaster' | 'addedAt' | 'addedVia' | 'isCustom' | 'originCategory'> & { _installed: Set<string>; _groupingText: string[] }>();
   const foldersSet = new Map<string, { name: string; root: string; sourceId: string }>();
   const installsConfig = readSkillInstallsConfig();
 
@@ -950,6 +969,12 @@ function buildSkillsIndex() {
     }
   }
 
+  // Build set of source IDs from owned repos
+  const reposConfig = readSkillsReposConfig();
+  const ownedSourceIds = new Set(
+    reposConfig.repos.filter(r => r.isOwned).map(r => `repo-${r.id}`)
+  );
+
   const resolvedMasterRoot = path.resolve(AGENTS_SKILLS_ROOT);
   const agentIds = AGENTS.filter(agent => agent.skillsRoot).map(agent => agent.id);
   const skills = [...skillsMap.values()]
@@ -979,6 +1004,13 @@ function buildSkillsIndex() {
         }
       }
 
+      const addedVia = installMeta?.addedVia || null;
+      const isFromOwnedRepo = skill.variants.some(v => ownedSourceIds.has(v.sourceId));
+      const isCustom = isFromOwnedRepo || addedVia === 'create';
+      const originCategory: 'custom' | 'community' | 'built-in' = isCustom
+        ? 'custom'
+        : isInMaster ? 'built-in' : 'community';
+
       return {
         id: skill.id,
         name: preferred?.frontmatter.name || preferred?.label || skill.name,
@@ -988,7 +1020,9 @@ function buildSkillsIndex() {
         missingAgentIds,
         isInMaster,
         addedAt: installMeta?.addedAt || fallbackAddedAt,
-        addedVia: installMeta?.addedVia || null,
+        addedVia,
+        isCustom,
+        originCategory,
         grouping,
       };
     })
@@ -1022,6 +1056,12 @@ function buildSkillsIndex() {
       })),
     skills,
     folders,
+    repos: reposConfig.repos.map(r => ({
+      id: r.id,
+      name: r.name,
+      isOwned: Boolean(r.isOwned),
+      skillCount: skills.filter(sk => sk.variants.some(v => v.sourceId === `repo-${r.id}`)).length,
+    })),
     starredSkillIds: (() => {
       const config = readStarredSkillsConfig();
       const valid = config.starred.filter(id => liveIds.has(id));
@@ -2412,7 +2452,7 @@ app.get('/api/skills-repos/config', auth, (_req, res) => {
 });
 
 app.post('/api/skills-repos/link', auth, (req, res) => {
-  const { name, path: repoPath, description } = req.body;
+  const { name, path: repoPath, description, isOwned } = req.body;
   if (!name || !repoPath) return res.status(400).json({ error: 'name and path required' });
   const resolved = expandPath(repoPath);
   if (!fs.existsSync(resolved)) return res.status(400).json({ error: `Path does not exist: ${resolved}` });
@@ -2445,7 +2485,7 @@ app.post('/api/skills-repos/link', auth, (req, res) => {
   try { isGitRepo = fs.existsSync(path.join(resolved, '.git')); } catch {}
 
   const config = readSkillsReposConfig();
-  const entry: SkillsRepoEntry = { id, name, path: repoPath, skillsRoot, description: description || '', isGitRepo, linkedAt: new Date().toISOString() };
+  const entry: SkillsRepoEntry = { id, name, path: repoPath, skillsRoot, description: description || '', isGitRepo, linkedAt: new Date().toISOString(), ...(isOwned ? { isOwned: true } : {}) };
   const existing = config.repos.findIndex(r => r.id === id);
   if (existing >= 0) config.repos[existing] = entry;
   else config.repos.push(entry);
@@ -2453,6 +2493,17 @@ app.post('/api/skills-repos/link', auth, (req, res) => {
   refreshSkillsReposAllowedRoots();
   invalidateSkillsIndexCache();
   res.json({ ok: true, repo: entry });
+});
+
+app.patch('/api/skills-repos/:id', auth, (req, res) => {
+  const config = readSkillsReposConfig();
+  const repo = config.repos.find(r => r.id === req.params.id);
+  if (!repo) return res.status(404).json({ error: 'Repo not found' });
+  const { isOwned } = req.body;
+  if (typeof isOwned === 'boolean') repo.isOwned = isOwned;
+  writeSkillsReposConfig(config);
+  invalidateSkillsIndexCache();
+  res.json({ ok: true, repo });
 });
 
 app.delete('/api/skills-repos/unlink/:id', auth, (req, res) => {
@@ -2498,6 +2549,231 @@ app.post('/api/skills/promote', auth, (req, res) => {
     copyDirectory(srcDir, targetDir);
     invalidateSkillsIndexCache();
     res.json({ ok: true, dest: targetDir });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ── Semantic Search — Gemini Embeddings ─────────────────────
+
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
+const EMBEDDINGS_CACHE_PATH = path.join(os.homedir(), '.claude', 'skill-browser-embeddings.json');
+const EMBEDDING_MODEL = 'gemini-embedding-001';
+const EMBEDDING_DIMENSIONS = 256;
+
+interface EmbeddingCacheFile {
+  model: string;
+  dimensions: number;
+  skills: Record<string, number[]>;
+}
+
+function loadEmbeddingsCache(): EmbeddingCacheFile | null {
+  try {
+    if (!fs.existsSync(EMBEDDINGS_CACHE_PATH)) return null;
+    return JSON.parse(fs.readFileSync(EMBEDDINGS_CACHE_PATH, 'utf8'));
+  } catch { return null; }
+}
+
+function saveEmbeddingsCache(cache: EmbeddingCacheFile): void {
+  const dir = path.dirname(EMBEDDINGS_CACHE_PATH);
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(EMBEDDINGS_CACHE_PATH, JSON.stringify(cache));
+}
+
+function buildSkillEmbeddingText(skill: SkillsIndexSkill): string {
+  const variant = skill.variants[0];
+  const parts = [
+    `Name: ${skill.name}`,
+    `Description: ${skill.summary}`,
+    `Department: ${skill.grouping.department}`,
+    `Purpose: ${skill.grouping.purpose}`,
+  ];
+  if (variant?.frontmatter.author) parts.push(`Author: ${variant.frontmatter.author}`);
+  // Collect unique tags from all variant labels
+  const labels = [...new Set(skill.variants.map(v => v.sourceLabel))];
+  if (labels.length) parts.push(`Sources: ${labels.join(', ')}`);
+  return parts.join('\n');
+}
+
+async function batchEmbedTexts(texts: string[], taskType: string): Promise<number[][]> {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${EMBEDDING_MODEL}:batchEmbedContents`;
+  const body = {
+    requests: texts.map(text => ({
+      model: `models/${EMBEDDING_MODEL}`,
+      content: { parts: [{ text }] },
+      taskType,
+      outputDimensionality: EMBEDDING_DIMENSIONS,
+    })),
+  };
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-goog-api-key': GEMINI_API_KEY },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`Gemini API error ${res.status}: ${errText}`);
+  }
+  const data = await res.json() as { embeddings: { values: number[] }[] };
+  return data.embeddings.map(e => e.values);
+}
+
+async function embedSingleText(text: string, taskType: string): Promise<number[]> {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${EMBEDDING_MODEL}:embedContent`;
+  const body = {
+    model: `models/${EMBEDDING_MODEL}`,
+    content: { parts: [{ text }] },
+    taskType,
+    outputDimensionality: EMBEDDING_DIMENSIONS,
+  };
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-goog-api-key': GEMINI_API_KEY },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`Gemini API error ${res.status}: ${errText}`);
+  }
+  const data = await res.json() as { embedding: { values: number[] } };
+  return data.embedding.values;
+}
+
+function cosineSimilarity(a: number[], b: number[]): number {
+  let dot = 0, magA = 0, magB = 0;
+  for (let i = 0; i < a.length; i++) {
+    dot += a[i] * b[i];
+    magA += a[i] * a[i];
+    magB += b[i] * b[i];
+  }
+  const denom = Math.sqrt(magA) * Math.sqrt(magB);
+  return denom === 0 ? 0 : dot / denom;
+}
+
+// GET /api/embeddings/status — check if embeddings are available
+app.get('/api/embeddings/status', auth, (_req, res) => {
+  const cache = loadEmbeddingsCache();
+  const hasApiKey = Boolean(GEMINI_API_KEY);
+  res.json({
+    hasApiKey,
+    hasEmbeddings: Boolean(cache),
+    skillCount: cache ? Object.keys(cache.skills).length : 0,
+    model: cache?.model || null,
+    dimensions: cache?.dimensions || null,
+  });
+});
+
+// POST /api/embeddings/build — batch embed all skills (or delta)
+app.post('/api/embeddings/build', auth, async (_req, res) => {
+  if (!GEMINI_API_KEY) return res.status(400).json({ error: 'GEMINI_API_KEY not set' });
+
+  try {
+    const index = getCachedSkillsIndex();
+    const existingCache = loadEmbeddingsCache();
+    const currentSkillIds = new Set(index.skills.map(s => s.id));
+
+    // Determine which skills need embedding
+    const cachedIds = new Set(existingCache ? Object.keys(existingCache.skills) : []);
+    const needsEmbedding = index.skills.filter(s => !cachedIds.has(s.id));
+
+    // If all skills are already cached, just return
+    if (needsEmbedding.length === 0 && existingCache) {
+      // Prune stale entries
+      const pruned: Record<string, number[]> = {};
+      for (const id of currentSkillIds) {
+        if (existingCache.skills[id]) pruned[id] = existingCache.skills[id];
+      }
+      saveEmbeddingsCache({ ...existingCache, skills: pruned });
+      return res.json({ ok: true, embedded: 0, total: currentSkillIds.size, cached: true });
+    }
+
+    // Batch embed in chunks of 100 (API limit)
+    const BATCH_SIZE = 100;
+    const newEmbeddings: Record<string, number[]> = {};
+    for (let i = 0; i < needsEmbedding.length; i += BATCH_SIZE) {
+      const chunk = needsEmbedding.slice(i, i + BATCH_SIZE);
+      const texts = chunk.map(buildSkillEmbeddingText);
+      const vectors = await batchEmbedTexts(texts, 'RETRIEVAL_DOCUMENT');
+      for (let j = 0; j < chunk.length; j++) {
+        newEmbeddings[chunk[j].id] = vectors[j];
+      }
+    }
+
+    // Merge with existing cache, prune stale
+    const mergedSkills: Record<string, number[]> = {};
+    for (const id of currentSkillIds) {
+      if (newEmbeddings[id]) mergedSkills[id] = newEmbeddings[id];
+      else if (existingCache?.skills[id]) mergedSkills[id] = existingCache.skills[id];
+    }
+
+    const cache: EmbeddingCacheFile = {
+      model: EMBEDDING_MODEL,
+      dimensions: EMBEDDING_DIMENSIONS,
+      skills: mergedSkills,
+    };
+    saveEmbeddingsCache(cache);
+    res.json({ ok: true, embedded: needsEmbedding.length, total: currentSkillIds.size });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// POST /api/embeddings/rebuild — force re-embed all skills
+app.post('/api/embeddings/rebuild', auth, async (_req, res) => {
+  if (!GEMINI_API_KEY) return res.status(400).json({ error: 'GEMINI_API_KEY not set' });
+
+  try {
+    const index = getCachedSkillsIndex();
+    const skills = index.skills;
+    const BATCH_SIZE = 100;
+    const allEmbeddings: Record<string, number[]> = {};
+
+    for (let i = 0; i < skills.length; i += BATCH_SIZE) {
+      const chunk = skills.slice(i, i + BATCH_SIZE);
+      const texts = chunk.map(buildSkillEmbeddingText);
+      const vectors = await batchEmbedTexts(texts, 'RETRIEVAL_DOCUMENT');
+      for (let j = 0; j < chunk.length; j++) {
+        allEmbeddings[chunk[j].id] = vectors[j];
+      }
+    }
+
+    const cache: EmbeddingCacheFile = {
+      model: EMBEDDING_MODEL,
+      dimensions: EMBEDDING_DIMENSIONS,
+      skills: allEmbeddings,
+    };
+    saveEmbeddingsCache(cache);
+    res.json({ ok: true, embedded: skills.length, total: skills.length });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// POST /api/embeddings/query — embed a query and rank skills by similarity
+app.post('/api/embeddings/query', auth, async (req, res) => {
+  if (!GEMINI_API_KEY) return res.status(400).json({ error: 'GEMINI_API_KEY not set' });
+
+  const { text } = req.body;
+  if (!text || typeof text !== 'string') return res.status(400).json({ error: 'text required' });
+
+  try {
+    const cache = loadEmbeddingsCache();
+    if (!cache || Object.keys(cache.skills).length === 0) {
+      return res.json({ results: [] });
+    }
+
+    const queryVector = await embedSingleText(text, 'RETRIEVAL_QUERY');
+
+    const results: { skillId: string; score: number }[] = [];
+    for (const [skillId, skillVector] of Object.entries(cache.skills)) {
+      const score = cosineSimilarity(queryVector, skillVector);
+      if (score >= 0.35) {
+        results.push({ skillId, score });
+      }
+    }
+
+    results.sort((a, b) => b.score - a.score);
+    res.json({ results: results.slice(0, 30) });
   } catch (e: any) {
     res.status(500).json({ error: e.message });
   }
