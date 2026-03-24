@@ -118,12 +118,26 @@ export interface SkillsIndexSkill {
   addedVia: 'zip' | 'npx' | 'create' | 'unknown' | null
   isCustom: boolean
   originCategory: 'custom' | 'community' | 'built-in'
+  pillar: string
   grouping: {
     purpose: string
     department: string
     confidence: number
     source: string
+    tags?: string[]
+    useCases?: string[]
+    agentSummary?: string
   }
+}
+
+export interface PillarDefinition {
+  id: string
+  name: string
+  emoji: string
+  color: string
+  description: string
+  priority: number
+  scope?: 'all' | 'user-only'
 }
 
 export interface SkillsIndexSource {
@@ -148,6 +162,7 @@ export interface SkillsIndexData {
   agents: SkillsIndexAgent[]
   skills: SkillsIndexSkill[]
   folders: { name: string; root: string; sourceId: string }[]
+  pillars?: PillarDefinition[]
   repos?: { id: string; name: string; isOwned: boolean; skillCount: number }[]
   starredSkillIds?: string[]
 }
@@ -420,7 +435,9 @@ export async function buildEmbeddingsIndex(rebuild = false): Promise<{ ok: boole
 
 export interface SemanticSearchResult {
   skillId: string
-  score: number
+  score: number        // semantic cosine similarity
+  keywordScore: number // server-side keyword match ratio
+  combined: number     // hybrid score: max(semantic, keyword * 0.85)
 }
 
 export async function queryEmbeddings(text: string): Promise<SemanticSearchResult[]> {

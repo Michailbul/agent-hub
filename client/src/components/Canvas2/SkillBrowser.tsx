@@ -41,12 +41,12 @@ export function SkillBrowser() {
       result = result.filter(s => !s.isInMaster && s.sourceKind !== 'workspace')
     }
     if (activeTags.size > 0) {
-      result = result.filter(s => activeTags.has(s.department))
+      result = result.filter(s => activeTags.has(s.pillarName))
     }
     if (q) {
       result = result.filter(s =>
         s.name.toLowerCase().includes(q) ||
-        s.department.toLowerCase().includes(q) ||
+        s.pillarName.toLowerCase().includes(q) ||
         s.summary.toLowerCase().includes(q),
       )
     }
@@ -56,7 +56,7 @@ export function SkillBrowser() {
   const grouped = useMemo(() => {
     const map = new Map<string, PaletteSkill[]>()
     for (const skill of filtered) {
-      const dept = skill.department || 'Utility'
+      const dept = skill.pillarName || 'Utility'
       if (!map.has(dept)) map.set(dept, [])
       map.get(dept)!.push(skill)
     }

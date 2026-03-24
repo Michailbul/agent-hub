@@ -37,39 +37,20 @@ export function InspectorContent() {
 
   // Resolve display info
   let displayPath = ''
-  let skillInfo: { name: string; department: string; summary: string } | null = null
 
   if (inspectorActiveItem.kind === 'file') {
     displayPath = inspectorActiveItem.path.split('/').pop() || inspectorActiveItem.path
   } else if (inspectorActiveItem.kind === 'skill') {
     const skill = data?.paletteSkills.find(s => s.id === inspectorActiveItem.skillId)
-    if (skill) {
-      skillInfo = { name: skill.name, department: skill.department, summary: skill.summary }
-      displayPath = 'SKILL.md'
-    }
+    displayPath = skill ? `${skill.name} — SKILL.md` : 'SKILL.md'
   } else if (inspectorActiveItem.kind === 'skill-file') {
     const skill = data?.paletteSkills.find(s => s.id === inspectorActiveItem.skillId)
-    if (skill) {
-      skillInfo = { name: skill.name, department: skill.department, summary: '' }
-    }
-    displayPath = inspectorActiveItem.path.split('/').pop() || inspectorActiveItem.path
+    const fileName = inspectorActiveItem.path.split('/').pop() || inspectorActiveItem.path
+    displayPath = skill ? `${skill.name} — ${fileName}` : fileName
   }
 
   return (
     <div className="cv-inspector-content">
-      {/* Skill header */}
-      {skillInfo && (
-        <div className="cv-inspector-skill-header">
-          <div className="cv-inspector-skill-title">
-            <span className="cv-inspector-skill-name">{skillInfo.name}</span>
-            <span className="cv-inspector-item-badge">{skillInfo.department}</span>
-          </div>
-          {skillInfo.summary && (
-            <p className="cv-inspector-skill-summary">{skillInfo.summary}</p>
-          )}
-        </div>
-      )}
-
       {/* Toolbar */}
       <div className="cv-inspector-file-toolbar">
         <span className="cv-inspector-file-path">{displayPath}</span>

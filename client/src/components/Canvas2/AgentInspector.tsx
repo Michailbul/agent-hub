@@ -1,6 +1,5 @@
 import { useEffect } from 'react'
 import { useCanvasStore } from '@/store/canvas'
-import { useCronsStore } from '@/store/crons'
 import { useUIStore } from '@/store/ui'
 import { InspectorTree } from './InspectorTree'
 import { InspectorContent } from './InspectorContent'
@@ -16,13 +15,7 @@ export function AgentInspector() {
   const inspectorFileDirty = useCanvasStore(s => s.inspectorFileDirty)
   const deleteAgent = useCanvasStore(s => s.deleteAgent)
   const deletingAgentId = useCanvasStore(s => s.deletingAgentId)
-  const loadCronJobs = useCronsStore(s => s.loadJobs)
   const toast = useUIStore(s => s.toast)
-
-  // Load cron jobs when inspector opens
-  useEffect(() => {
-    void loadCronJobs()
-  }, [loadCronJobs])
 
   // Escape to close
   useEffect(() => {
@@ -59,13 +52,12 @@ export function AgentInspector() {
 
   const handleDelete = async () => {
     const confirmed = window.confirm(
-      `Delete agent "${agent.label}"?\n\nThis permanently removes its workspace, installed skills, cron jobs, and OpenClaw config references.`,
+      `Delete agent "${agent.label}"?\n\nThis permanently removes its workspace, installed skills, and OpenClaw config references.`,
     )
     if (!confirmed) return
 
     try {
       await deleteAgent(agentId)
-      await loadCronJobs()
       toast(`Deleted ${agent.label}`, 'success')
     } catch (e) {
       toast(`Delete failed: ${e instanceof Error ? e.message : e}`, 'error')

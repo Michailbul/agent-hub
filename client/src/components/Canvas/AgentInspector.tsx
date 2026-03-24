@@ -1,41 +1,39 @@
 import { useEffect } from 'react'
 import { useCanvasStore } from '@/store/canvas'
-import { useCronsStore } from '@/store/crons'
 import { useUIStore } from '@/store/ui'
 import { InspectorTree } from './InspectorTree'
 import { InspectorContent } from './InspectorContent'
 
 export function AgentInspector() {
-  const sidePanelMode = useCanvasStore(s => s.sidePanelMode)
+  const selectedAgentId = useCanvasStore(s => s.selectedAgentId)
+  const setSelectedAgent = useCanvasStore(s => s.setSelectedAgent)
   const closeInspector = useCanvasStore(s => s.closeInspector)
   const data = useCanvasStore(s => s.data)
   const inspectorActiveItem = useCanvasStore(s => s.inspectorActiveItem)
   const inspectorFileDirty = useCanvasStore(s => s.inspectorFileDirty)
   const deleteAgent = useCanvasStore(s => s.deleteAgent)
   const deletingAgentId = useCanvasStore(s => s.deletingAgentId)
-  const loadCronJobs = useCronsStore(s => s.loadJobs)
   const toast = useUIStore(s => s.toast)
 
-  // Load cron jobs when inspector opens
-  useEffect(() => {
-    void loadCronJobs()
-  }, [loadCronJobs])
-
-  // Escape to close
+  // Escape to close content (clear active item), double-escape to dismiss
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        if (inspectorFileDirty) return // don't close if unsaved
-        closeInspector()
+        if (inspectorFileDirty) return
+        if (inspectorActiveItem) {
+          closeInspector() // clears active item
+        } else {
+          setSelectedAgent(null) // dismiss the tree entirely
+        }
       }
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [closeInspector, inspectorFileDirty])
+  }, [closeInspector, setSelectedAgent, inspectorFileDirty, inspectorActiveItem])
 
-  if (!sidePanelMode || sidePanelMode.kind !== 'agent-inspector') return null
+  if (!selectedAgentId) return null
 
-  const agentId = sidePanelMode.agentId
+  const agentId = selectedAgentId
   const agent = data?.agents.find(a => a.id === agentId)
   if (!agent) return null
 
@@ -57,13 +55,12 @@ export function AgentInspector() {
 
   const handleDelete = async () => {
     const confirmed = window.confirm(
-      `Delete agent "${agent.label}"?\n\nThis permanently removes its workspace, installed skills, cron jobs, and OpenClaw config references.`,
+      `Delete agent "${agent.label}"?\n\nThis permanently removes its workspace, installed skills, and OpenClaw config references.`,
     )
     if (!confirmed) return
 
     try {
       await deleteAgent(agentId)
-      await loadCronJobs()
       toast(`Deleted ${agent.label}`, 'success')
     } catch (e) {
       toast(`Delete failed: ${e instanceof Error ? e.message : e}`, 'error')
@@ -87,19 +84,19 @@ export function AgentInspector() {
         >
           {isDeleting ? 'Deleting...' : 'Delete'}
         </button>
-        <button className="cv-inspector-close" onClick={closeInspector} title="Close inspector">
+        <button className="cv-inspector-close" onClick={() => setSelectedAgent(null)} title="Close inspector">
           ✕
         </button>
       </div>
 
-      {/* Horizontal split: tree left, content right */}
+      {/* Horizontal split: content left (middle of screen), tree right (pinned to edge) */}
       <div className="cv-inspector-split">
-        <InspectorTree agentId={agentId} />
         {hasContent && (
           <div className="cv-inspector-content-wrap">
             <InspectorContent />
           </div>
         )}
+        <InspectorTree agentId={agentId} />
       </div>
 
       {/* Status bar */}

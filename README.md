@@ -4,18 +4,26 @@
 
 Built for [OpenClaw](https://openclaw.ai) users — but works with any AI agent setup that uses markdown files for instructions.
 
-![Agent Hub Screenshot](https://agent-hub.srv1439489.hstgr.cloud)
+<!-- TODO: add a real screenshot -->
 
 ## What it does
 
 - Browse all your agents and their instruction files (SOUL.md, MISSION.md, MEMORY.md, etc.)
-- Edit files directly in a multi-pane CodeMirror editor (VSCode-style)
-- Browse, filter, copy, move, and delete skills across agents
-- Drag files between panes to compare/edit side-by-side
+- Edit files in a multi-pane CodeMirror 6 editor (VSCode-style tabs, split view)
+- Skills Lab — browse, filter, copy, move, and delete skills across agents
 - Right-click context menu: copy/move/delete skills between agent workspaces
 - Filter skills by source: **Studio** (yours) / **Community** (downloaded) / **System** (built-in)
 - Focus timer (Pomodoro-style, 25/45/60/90m)
 - Password protected, runs locally or on a VPS
+
+## Install
+
+```bash
+npm install -g @laniameda/agent-hub
+agent-hub
+```
+
+Open http://localhost:4001
 
 ## Quick start — Docker
 
@@ -30,14 +38,29 @@ docker run -d \
   ghcr.io/laniameda/agent-hub:latest
 ```
 
-Open http://localhost:4001
-
 ## Docker Compose
 
 ```bash
 cp docker-compose.example.yml docker-compose.yml
 # edit docker-compose.yml with your paths and password
 docker compose up -d
+```
+
+## Running from source
+
+```bash
+git clone https://github.com/laniameda/agent-hub
+cd agent-hub
+npm install
+cd client && npm install && cd ..
+npm run build
+npm start
+```
+
+For development with hot reload:
+
+```bash
+npm run dev
 ```
 
 ## Auto-discovery (zero config for OpenClaw users)
@@ -81,26 +104,21 @@ For custom setups, create `agent-hub.config.json` (see `agent-hub.config.example
 | `OPENCLAW_ROOT` | `/data/openclaw` | OpenClaw root dir |
 | `AGENTS_SKILLS_ROOT` | `/data/agents/skills` | Custom skills dir |
 | `CONFIG_PATH` | `./agent-hub.config.json` | Path to config file |
+| `HUB_AUTH` | *(unset)* | Set to `true` to force auth in dev mode |
+| `GEMINI_API_KEY` | *(unset)* | Google Gemini key for semantic skill search |
 
-## Running without Docker
-
-```bash
-git clone https://github.com/laniameda/agent-hub
-cd agent-hub
-npm install
-HUB_PASSWORD=mypass OPENCLAW_ROOT=~/.openclaw node server.js
-```
+See `.env.example` for a copy-paste template.
 
 ## VPS + Traefik (SSL)
 
-See `docker-compose.example.yml`. Agent Hub is designed to run behind Traefik with Let's Encrypt. The server serves everything on a single port — no build step needed.
+See `docker-compose.example.yml`. Agent Hub is designed to run behind Traefik with Let's Encrypt.
 
 ## Tech stack
 
-- **Server:** Node.js + Express (no framework bloat)
-- **Editor:** CodeMirror 5 (markdown mode)
-- **UI:** Vanilla JS + CSS — no bundler, no React, ships as two files
-- **Auth:** Cookie-based session (httpOnly:false for JS detection)
+- **Client:** React 19, Vite 7, TailwindCSS v4, Zustand
+- **Editor:** CodeMirror 6 (markdown mode) + Tiptap (rich text)
+- **Server:** Node.js + Express, TypeScript
+- **Auth:** Cookie-based session (httpOnly)
 
 ## Security
 

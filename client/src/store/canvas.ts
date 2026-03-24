@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import type { CanvasData, PaletteSkill, AgentSkillPill, AgentFiles, SidePanelMode, InspectorActiveItem, SkillDirFile } from '@/types/canvas'
 import type { TreeData } from '@/types'
-import { fetchFile, saveFile } from '@/lib/api'
+import { fetchFile, saveFile, fetchEmbeddingsStatus, queryEmbeddings, type SemanticSearchResult } from '@/lib/api'
 import { getSkillDirectoryPath } from '@/lib/skillPaths'
 
 type CanvasTheme = 'default' | 'zinc' | 'stone' | 'neutral'
@@ -35,6 +35,14 @@ interface CanvasStore {
   inspectorFileDirty: boolean
   skillDirFiles: Record<string, SkillDirFile[]>  // skillId -> files in skill dir
   skillDirExpanded: Set<string>  // expanded skill IDs
+
+  // Browser inline expansion
+  browserExpandedSkillId: string | null
+
+  // Semantic search
+  hasEmbeddings: boolean
+  semanticResults: SemanticSearchResult[] | null
+  semanticLoading: boolean
 
   // Actions
   loadData: () => Promise<void>
@@ -72,6 +80,9 @@ interface CanvasStore {
   setInspectorEditContent: (content: string) => void
   toggleSkillDir: (skillId: string, variantPath: string) => void
   loadSkillDirFiles: (skillId: string, dirPath: string) => Promise<void>
+  expandBrowserSkill: (skillId: string | null) => void
+  semanticSearch: (query: string) => Promise<void>
+  clearSemanticResults: () => void
 
   // Legacy redirects
   enterAgentDocs: (agentId: string) => void
@@ -105,6 +116,10 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
   inspectorFileDirty: false,
   skillDirFiles: {},
   skillDirExpanded: new Set(),
+  browserExpandedSkillId: null,
+  hasEmbeddings: false,
+  semanticResults: null,
+  semanticLoading: false,
 
   loadData: async () => {
     set({ loading: true, error: null })
@@ -122,9 +137,17 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
       const skillsIndex = await skillsRes.json()
       const treeData: TreeData = await treeRes.json()
 
+      // Build pillar lookup from index
+      const pillarLookup = new Map<string, { name: string; color: string; emoji: string }>()
+      for (const p of (skillsIndex.pillars || [])) {
+        pillarLookup.set(p.id, { name: p.name, color: p.color, emoji: p.emoji })
+      }
+
       // Build palette skills from skills-index
       const paletteSkills: PaletteSkill[] = (skillsIndex.skills || []).map((s: any) => {
         const pref = s.variants?.[0]
+        const pillarId = s.pillar || 'utility'
+        const pillarMeta = pillarLookup.get(pillarId) || { name: 'Utility', color: '#94a3b8', emoji: 'wrench' }
         return {
           id: s.id,
           name: s.name,
@@ -133,14 +156,22 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
           installedAgentIds: s.installedAgentIds || [],
           department: s.grouping?.department || 'Utility',
           purpose: s.grouping?.purpose || '',
+          pillar: pillarId,
+          pillarName: pillarMeta.name,
+          pillarColor: pillarMeta.color,
+          pillarEmoji: pillarMeta.emoji,
           sourceKind: pref?.kind || 'library',
           sourceLabel: pref?.sourceLabel || '',
           isInMaster: s.isInMaster ?? false,
         }
       })
 
-      // Build unique tags from departments
-      const allTags = [...new Set(paletteSkills.map(s => s.department))].sort()
+      // Build unique tags from pillar names (replaces purpose-based tags)
+      const allTags = [...new Set(paletteSkills.map(s => s.pillarName).filter(Boolean))].sort()
+
+      // Check embeddings availability
+      const embStatus = await fetchEmbeddingsStatus().catch(() => ({ hasEmbeddings: false }))
+      const hasEmbeddings = embStatus.hasEmbeddings
 
       // Enrich each agent's skills from the skills-index installedAgentIds
       const agents = rawCanvas.agents.map((agent: any) => {
@@ -176,7 +207,7 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
       const hasSelected = currentSelected && data.agents.some(a => a.id === currentSelected)
       const selectedAgentId = hasSelected ? currentSelected : (data.agents[0]?.id || null)
 
-      set({ data, loading: false, allTags, selectedAgentId })
+      set({ data, loading: false, allTags, selectedAgentId, hasEmbeddings })
     } catch (e) {
       set({ error: e instanceof Error ? e.message : 'Unknown error', loading: false })
     }
@@ -279,10 +310,36 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
 
   closeSidePanel: () => set({ sidePanelMode: null, previewSkillId: null }),
 
-  previewSkill: (skillId) => set({
-    previewSkillId: skillId,
-    sidePanelMode: skillId ? { kind: 'skill-preview', skillId } : null,
-  }),
+  previewSkill: (skillId) => {
+    if (!skillId) {
+      set({ previewSkillId: null })
+      return
+    }
+    const s = get()
+    const skill = s.data?.paletteSkills.find(p => p.id === skillId)
+    const agentId = s.selectedAgentId
+    // If an agent is selected, show skill within the inspector panel
+    if (agentId && skill?.variantPath) {
+      const collapsed = new Set(s.inspectorCollapsed)
+      collapsed.delete('skills')
+      set({
+        previewSkillId: skillId,
+        sidePanelMode: { kind: 'agent-inspector', agentId },
+        inspectorActiveItem: { kind: 'skill', skillId, skillPath: skill.variantPath },
+        inspectorCollapsed: collapsed,
+        inspectorFileContent: null,
+        inspectorEditContent: null,
+        inspectorFileDirty: false,
+      })
+      void get().loadInspectorFile(skill.variantPath)
+    } else {
+      // Fallback: standalone skill preview panel
+      set({
+        previewSkillId: skillId,
+        sidePanelMode: { kind: 'skill-preview', skillId },
+      })
+    }
+  },
 
   toggleAgentSkillFilter: (tag) => set(s => {
     const next = new Set(s.agentSkillFilter)
@@ -491,6 +548,52 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
       }
       set(s => ({ skillDirFiles: { ...s.skillDirFiles, [skillId]: allFiles } }))
     } catch { /* ignore */ }
+  },
+
+  semanticSearch: async (query) => {
+    if (!query.trim()) {
+      set({ semanticResults: null, semanticLoading: false })
+      return
+    }
+    set({ semanticLoading: true })
+    try {
+      const results = await queryEmbeddings(query)
+      set({ semanticResults: results.length > 0 ? results : null, semanticLoading: false })
+    } catch {
+      set({ semanticResults: null, semanticLoading: false })
+    }
+  },
+
+  clearSemanticResults: () => set({ semanticResults: null, semanticLoading: false }),
+
+  expandBrowserSkill: (skillId) => {
+    if (!skillId) {
+      set({ browserExpandedSkillId: null })
+      return
+    }
+    const s = get()
+    // Toggle: collapse if already expanded
+    if (s.browserExpandedSkillId === skillId) {
+      set({ browserExpandedSkillId: null })
+      return
+    }
+    const skill = s.data?.paletteSkills.find(p => p.id === skillId)
+    set({ browserExpandedSkillId: skillId })
+    // Load skill dir files if not already loaded
+    if (skill?.variantPath && !s.skillDirFiles[skillId]) {
+      const skillDir = getSkillDirectoryPath(skill.variantPath)
+      void get().loadSkillDirFiles(skillId, skillDir)
+    }
+    // Auto-load SKILL.md into the editor
+    if (skill?.variantPath) {
+      set({
+        inspectorActiveItem: { kind: 'skill', skillId, skillPath: skill.variantPath },
+        inspectorFileContent: null,
+        inspectorEditContent: null,
+        inspectorFileDirty: false,
+      })
+      void get().loadInspectorFile(skill.variantPath)
+    }
   },
 
   // Legacy redirects

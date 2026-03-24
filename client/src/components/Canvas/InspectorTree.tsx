@@ -1,7 +1,6 @@
 import { useState, useMemo, useCallback } from 'react'
 import { useCanvasStore } from '@/store/canvas'
-import { useCronsStore } from '@/store/crons'
-import { ChevronRight, File, Folder, Clock, Zap, Brain, ClipboardList, FileText, Theater } from 'lucide-react'
+import { ChevronRight, File, Folder, Zap, Brain, ClipboardList, FileText, Theater } from 'lucide-react'
 import type { AgentFile } from '@/types'
 import type { InspectorActiveItem } from '@/types/canvas'
 
@@ -13,7 +12,7 @@ interface FTNode {
   type: 'file' | 'folder'
   icon?: React.ReactNode
   children?: FTNode[]
-  itemKind?: 'file' | 'skill' | 'skill-file' | 'cron'
+  itemKind?: 'file' | 'skill' | 'skill-file'
   path?: string
   skillId?: string
   skillPath?: string
@@ -135,7 +134,6 @@ export function InspectorTree({ agentId }: InspectorTreeProps) {
   const unassignSkill = useCanvasStore(s => s.unassignSkill)
   const toggleBrowser = useCanvasStore(s => s.toggleBrowser)
   const browserOpen = useCanvasStore(s => s.browserOpen)
-  const cronJobs = useCronsStore(s => s.jobs)
   const skillDirFiles = useCanvasStore(s => s.skillDirFiles)
   const skillDirExpanded = useCanvasStore(s => s.skillDirExpanded)
   const toggleSkillDir = useCanvasStore(s => s.toggleSkillDir)
@@ -201,7 +199,7 @@ export function InspectorTree({ agentId }: InspectorTreeProps) {
     // Skills
     const enrichedSkills = agent.skills.map(s => {
       const palette = data!.paletteSkills.find(ps => ps.id === s.id)
-      return { ...s, department: palette?.department || 'Utility', variantPath: palette?.variantPath || '' }
+      return { ...s, department: palette?.pillarName || palette?.department || 'Utility', variantPath: palette?.variantPath || '' }
     })
     result.push({
       id: 'skills', name: 'Skills', type: 'folder',
@@ -221,24 +219,8 @@ export function InspectorTree({ agentId }: InspectorTreeProps) {
       })),
     })
 
-    // Crons
-    const agentCrons = cronJobs.filter(c => c.agentId === agentId)
-    if (agentCrons.length > 0) {
-      result.push({
-        id: 'crons', name: 'Cron Jobs', type: 'folder',
-        icon: <Clock size={13} strokeWidth={1.5} />,
-        children: agentCrons.map(c => ({
-          id: c.id,
-          name: c.name,
-          type: 'file' as const,
-          itemKind: 'cron' as const,
-          sublabel: c.schedule.expr || `every ${Math.round((c.schedule.everyMs || 0) / 60000)}m`,
-        })),
-      })
-    }
-
     return result
-  }, [agent, files, data, cronJobs, agentId, browserOpen, toggleBrowser])
+  }, [agent, files, data, agentId, browserOpen, toggleBrowser])
 
   const isNodeActive = useCallback((node: FTNode): boolean => {
     if (!inspectorActiveItem) return false

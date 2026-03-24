@@ -5,6 +5,7 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 import { spawn } from 'child_process';
+import crypto from 'crypto';
 import { detectCLI, runSetupAgent } from './setup-agent';
 
 // Load .env file if present (no dependency needed)
@@ -18,7 +19,7 @@ try {
       if (eqIdx < 0) continue;
       const key = trimmed.slice(0, eqIdx).trim();
       const val = trimmed.slice(eqIdx + 1).trim().replace(/^["']|["']$/g, '');
-      if (!process.env[key]) process.env[key] = val;
+      process.env[key] = val;
     }
   }
 } catch {}
@@ -203,12 +204,171 @@ interface SkillsIndexSkill {
   addedVia: SkillInstallMethod | null;
   isCustom: boolean;
   originCategory: 'custom' | 'community' | 'built-in';
+  pillar: string;
   grouping: {
     purpose: string;
     department: string;
     confidence: number;
-    source: 'heuristic';
+    source: 'heuristic' | 'agent' | 'frontmatter';
+    tags?: string[];
+    useCases?: string[];
+    agentSummary?: string;
   };
+}
+
+// ── Skill Pillars ──────────────────────────────────────────────
+
+interface SkillPillarDefinition {
+  id: string;
+  name: string;
+  emoji: string;
+  color: string;
+  description: string;
+  priority: number;
+  scope?: 'all' | 'user-only';
+  pinnedSkillIds?: string[];
+  includeKeywords: [string, number][];
+  excludeKeywords?: string[];
+}
+
+interface SkillPillarConfig {
+  version: 1;
+  pillars: SkillPillarDefinition[];
+}
+
+const DEFAULT_SKILL_PILLARS: SkillPillarDefinition[] = [
+  {
+    id: 'build', name: 'Build', emoji: 'hammer', color: '#3b82f6', description: 'Software engineering & development',
+    priority: 1, includeKeywords: [
+      ['typescript', 2], ['javascript', 2], ['react', 2], ['deploy', 2], ['api endpoint', 2],
+      ['plugin', 2], ['hook', 2], ['mcp', 2], ['convex', 2], ['frontend', 2], ['backend', 2],
+      ['compiler', 2], ['linter', 2], ['testing framework', 2], ['build system', 2],
+      ['database', 1], ['sdk', 1], ['npm', 1], ['bundler', 1], ['web app', 2], ['mobile app', 2],
+    ],
+  },
+  {
+    id: 'design', name: 'Design', emoji: 'palette', color: '#a855f7', description: 'UI/UX & visual design',
+    priority: 2, includeKeywords: [
+      ['figma', 2], ['ui design', 2], ['ux design', 2], ['brand', 2], ['design system', 2],
+      ['typography', 2], ['color palette', 2], ['visual design', 2], ['interaction design', 2],
+      ['prototype', 2], ['icon', 1], ['accessibility', 1], ['layout', 1],
+    ],
+  },
+  {
+    id: 'write', name: 'Write', emoji: 'feather', color: '#f59e0b', description: 'Copywriting & content creation',
+    priority: 3, includeKeywords: [
+      ['copywriting', 2], ['writing', 2], ['headline', 2], ['email sequence', 2],
+      ['social media', 2], ['social-media', 2], ['carousel', 2], ['content strategy', 2],
+      ['seo', 2], ['blog', 2], ['editorial', 2], ['viral', 2], ['engagement', 2],
+      ['instagram', 2], ['linkedin', 2], ['twitter', 2], ['tiktok', 2], ['content', 1],
+      ['copy', 1], ['social', 1],
+    ],
+  },
+  {
+    id: 'research', name: 'Research', emoji: 'mag', color: '#10b981', description: 'Research, analysis & extraction',
+    priority: 4, includeKeywords: [
+      ['research', 2], ['scrape', 2], ['analyze', 2], ['audit', 2], ['summarize', 2],
+      ['extract', 1], ['watcher', 1], ['monitor', 1], ['deep research', 2],
+    ],
+  },
+  {
+    id: 'automate', name: 'Automate', emoji: 'gear', color: '#6366f1', description: 'Workflows, ops & automation',
+    priority: 5, includeKeywords: [
+      ['workflow', 2], ['cron', 2], ['automation', 2], ['ops', 2], ['ci/cd', 2],
+      ['project management', 2], ['process', 1], ['kanban', 2], ['devops', 2],
+    ],
+  },
+  {
+    id: 'grow', name: 'Grow', emoji: 'chart_increasing', color: '#ef4444', description: 'Marketing, ads & growth',
+    priority: 6, includeKeywords: [
+      ['marketing', 2], ['ads', 2], ['ad creative', 2], ['growth', 2], ['campaign', 2],
+      ['funnel', 2], ['conversion', 2], ['retention', 2], ['acquisition', 2], ['cro', 2],
+      ['pricing', 1], ['launch', 1],
+    ],
+  },
+  {
+    id: 'ai-creative', name: 'AI Creative', emoji: 'sparkles', color: '#ec4899', description: 'Generative AI & prompt engineering',
+    priority: 7, includeKeywords: [
+      ['image generation', 2], ['video generation', 2], ['midjourney', 2], ['prompt', 1],
+      ['generative', 2], ['ai video', 2], ['ai image', 2], ['stable diffusion', 2],
+      ['dall-e', 2], ['text-to-image', 2], ['remotion', 2],
+    ],
+  },
+  {
+    id: 'data', name: 'Data', emoji: 'card_file_box', color: '#14b8a6', description: 'Data, embeddings & knowledge bases',
+    priority: 8, includeKeywords: [
+      ['database', 1], ['embedding', 2], ['rag', 2], ['knowledge base', 2],
+      ['enrichment', 2], ['data pipeline', 2], ['schema design', 2], ['spreadsheet', 2],
+      ['storage', 1],
+    ],
+  },
+  {
+    id: 'sell', name: 'Sell', emoji: 'handshake', color: '#f97316', description: 'Sales & outreach',
+    priority: 9, includeKeywords: [
+      ['sales', 2], ['cold email', 2], ['cold-email', 2], ['outreach', 2],
+      ['founder sales', 2], ['founder-sales', 2], ['referral', 2], ['pipeline', 2],
+    ],
+  },
+  {
+    id: 'utility', name: 'Utility', emoji: 'wrench', color: '#94a3b8', description: 'General-purpose tools',
+    priority: 99, includeKeywords: [
+      ['productivity', 1], ['general', 1],
+    ],
+  },
+];
+
+const SKILL_PILLARS_CONFIG_PATH = path.join(path.dirname(CONFIG_PATH), 'skill-pillars.config.json');
+
+function readSkillPillarsConfig(): SkillPillarConfig {
+  if (fs.existsSync(SKILL_PILLARS_CONFIG_PATH)) {
+    try { return JSON.parse(fs.readFileSync(SKILL_PILLARS_CONFIG_PATH, 'utf8')); }
+    catch { /* fall through */ }
+  }
+  return { version: 1, pillars: DEFAULT_SKILL_PILLARS };
+}
+
+function writeSkillPillarsConfig(config: SkillPillarConfig) {
+  fs.mkdirSync(path.dirname(SKILL_PILLARS_CONFIG_PATH), { recursive: true });
+  fs.writeFileSync(SKILL_PILLARS_CONFIG_PATH, JSON.stringify(config, null, 2), 'utf8');
+}
+
+function classifySkillPillar(
+  text: string,
+  skillId: string,
+  pillars: SkillPillarDefinition[],
+  isCustom: boolean,
+): string {
+  // 1. Check pinnedSkillIds — explicit override
+  for (const pillar of pillars) {
+    if (pillar.pinnedSkillIds?.includes(skillId)) return pillar.id;
+  }
+
+  const normalized = text.toLowerCase();
+  let bestId = 'utility';
+  let bestScore = 0;
+  let bestPriority = 999;
+
+  for (const pillar of pillars) {
+    // Skip user-only pillars for non-custom skills
+    if (pillar.scope === 'user-only' && !isCustom) continue;
+
+    // Check excludeKeywords — skip if any match
+    if (pillar.excludeKeywords?.some(kw => normalized.includes(kw))) continue;
+
+    // Score includeKeywords
+    let score = 0;
+    for (const [keyword, weight] of pillar.includeKeywords) {
+      if (normalized.includes(keyword)) score += weight;
+    }
+
+    if (score > bestScore || (score === bestScore && pillar.priority < bestPriority)) {
+      bestId = pillar.id;
+      bestScore = score;
+      bestPriority = pillar.priority;
+    }
+  }
+
+  return bestId;
 }
 
 interface SkillDeleteImpact {
@@ -807,34 +967,94 @@ function buildSkillSourceDescriptors(): SkillSourceDescriptor[] {
 function classifySkillGrouping(text: string) {
   const normalized = text.toLowerCase();
 
-  const purposeRules = [
-    { bucket: 'Engineering', keywords: ['code', 'typescript', 'javascript', 'react', 'deploy', 'build', 'api', 'plugin', 'agent', 'hook', 'mcp', 'convex', 'frontend', 'backend'] },
-    { bucket: 'Research', keywords: ['research', 'search', 'extract', 'scrape', 'summarize', 'analyze', 'audit', 'watcher', 'monitor'] },
-    { bucket: 'Content', keywords: ['copy', 'writing', 'headline', 'email', 'social', 'carousel', 'content', 'seo', 'blog'] },
-    { bucket: 'Design', keywords: ['design', 'figma', 'ui', 'ux', 'brand', 'visual', 'layout'] },
-    { bucket: 'Growth', keywords: ['marketing', 'ads', 'pricing', 'growth', 'cro', 'launch', 'sales', 'campaign'] },
-    { bucket: 'Ops', keywords: ['ops', 'automation', 'cron', 'workflow', 'project', 'process', 'kanban', 'pm'] },
-    { bucket: 'Data', keywords: ['data', 'kb', 'knowledge', 'storage', 'schema', 'spreadsheet', 'enrichment'] },
-    { bucket: 'Utility', keywords: ['tool', 'utils', 'helper', 'productivity', 'general'] },
+  // Weighted keyword matching — strong indicators score 2, weak/ambiguous ones score 1.
+  // Keywords that appear in almost every skill (agent, code, cursor, claude, etc.)
+  // are excluded or given low weight to prevent Engineering from winning by default.
+  const purposeRules: Array<{ bucket: string; keywords: [string, number][] }> = [
+    { bucket: 'Engineering', keywords: [
+      ['typescript', 2], ['javascript', 2], ['react', 2], ['deploy', 2], ['build system', 2],
+      ['api endpoint', 2], ['plugin', 2], ['hook', 2], ['mcp', 2], ['convex', 2],
+      ['frontend', 2], ['backend', 2], ['compiler', 2], ['linter', 2], ['testing framework', 2],
+      ['database', 1], ['sdk', 1], ['npm', 1], ['bundler', 1],
+    ]},
+    { bucket: 'Research', keywords: [
+      ['research', 2], ['extract', 1], ['scrape', 2], ['summarize', 1],
+      ['analyze', 1], ['audit', 2], ['watcher', 1], ['monitor', 1],
+    ]},
+    { bucket: 'Content', keywords: [
+      ['copywriting', 2], ['writing', 2], ['headline', 2], ['email sequence', 2],
+      ['social media', 2], ['social-media', 2], ['carousel', 2], ['content strategy', 2],
+      ['content-strategy', 2], ['seo', 2], ['blog', 2], ['editorial', 2],
+      ['viral', 2], ['engagement', 2], ['instagram', 2], ['linkedin', 2],
+      ['twitter', 2], ['tiktok', 2], ['algorithm rules', 2], ['content', 1],
+      ['copy', 1], ['social', 1],
+    ]},
+    { bucket: 'Design', keywords: [
+      ['design system', 2], ['figma', 2], ['ui design', 2], ['ux design', 2],
+      ['brand', 2], ['visual design', 2], ['layout', 1], ['typography', 2],
+      ['icon', 1], ['color palette', 2], ['accessibility', 1],
+    ]},
+    { bucket: 'Growth', keywords: [
+      ['marketing', 2], ['ads', 2], ['ad creative', 2], ['pricing', 2], ['growth', 2],
+      ['cro', 2], ['launch', 1], ['campaign', 2], ['funnel', 2], ['conversion', 2],
+      ['retention', 2], ['acquisition', 2],
+    ]},
+    { bucket: 'Ops', keywords: [
+      ['ops', 2], ['automation', 2], ['cron', 2], ['workflow', 2],
+      ['project management', 2], ['process', 1], ['kanban', 2], ['ci/cd', 2],
+    ]},
+    { bucket: 'Data', keywords: [
+      ['data pipeline', 2], ['knowledge base', 2], ['storage', 1], ['schema design', 2],
+      ['spreadsheet', 2], ['enrichment', 2], ['embedding', 2], ['rag', 2],
+    ]},
+    { bucket: 'Utility', keywords: [
+      ['productivity', 1], ['general', 1],
+    ]},
   ];
 
-  const departmentRules = [
-    { bucket: 'Engineering', keywords: ['code', 'typescript', 'javascript', 'deploy', 'plugin', 'mcp', 'react', 'convex', 'frontend', 'backend'] },
-    { bucket: 'Marketing', keywords: ['marketing', 'ads', 'seo', 'launch', 'content', 'copy', 'social', 'pricing', 'growth'] },
-    { bucket: 'Product/Design', keywords: ['design', 'figma', 'ui', 'ux', 'product', 'research', 'prototype'] },
-    { bucket: 'Sales', keywords: ['sales', 'cold-email', 'pricing', 'founder-sales', 'referral', 'pipeline'] },
-    { bucket: 'Operations', keywords: ['ops', 'automation', 'workflow', 'cron', 'project', 'process', 'kanban'] },
-    { bucket: 'Knowledge', keywords: ['knowledge', 'kb', 'summarize', 'search', 'extract', 'storage', 'research'] },
+  const departmentRules: Array<{ bucket: string; keywords: [string, number][] }> = [
+    { bucket: 'Engineering', keywords: [
+      ['typescript', 2], ['javascript', 2], ['deploy', 2], ['plugin', 2],
+      ['mcp', 2], ['react', 2], ['convex', 2], ['frontend', 2], ['backend', 2],
+      ['compiler', 2], ['linter', 2], ['sdk', 1], ['npm', 1],
+    ]},
+    { bucket: 'Marketing', keywords: [
+      ['marketing', 2], ['ads', 2], ['seo', 2], ['launch', 1],
+      ['content strategy', 2], ['content-strategy', 2], ['copy', 1], ['social media', 2],
+      ['social-media', 2], ['pricing', 1], ['growth', 2], ['viral', 2],
+      ['engagement', 2], ['campaign', 2], ['funnel', 2], ['twitter', 2],
+      ['instagram', 2], ['linkedin', 2], ['tiktok', 2], ['algorithm rules', 2],
+      ['carousel', 2], ['headline', 2], ['ad creative', 2], ['content', 1],
+      ['social', 1],
+    ]},
+    { bucket: 'Product/Design', keywords: [
+      ['design system', 2], ['figma', 2], ['ui design', 2], ['ux design', 2],
+      ['product', 1], ['research', 1], ['prototype', 2], ['brand', 2],
+      ['visual design', 2], ['typography', 2], ['color palette', 2],
+      ['interaction design', 2], ['accessibility', 1],
+    ]},
+    { bucket: 'Sales', keywords: [
+      ['sales', 2], ['cold email', 2], ['cold-email', 2], ['founder sales', 2],
+      ['founder-sales', 2], ['referral', 2], ['pipeline', 2], ['outreach', 2],
+    ]},
+    { bucket: 'Operations', keywords: [
+      ['ops', 2], ['automation', 2], ['workflow', 2], ['cron', 2],
+      ['project management', 2], ['process', 1], ['kanban', 2], ['ci/cd', 2],
+    ]},
+    { bucket: 'Knowledge', keywords: [
+      ['knowledge base', 2], ['knowledge', 1], ['summarize', 1], ['search', 1],
+      ['extract', 1], ['storage', 1], ['research', 1], ['rag', 2], ['embedding', 2],
+    ]},
   ];
 
   const pickBucket = (
-    rules: Array<{ bucket: string; keywords: string[] }>,
+    rules: Array<{ bucket: string; keywords: [string, number][] }>,
     fallback: string,
   ): { bucket: string; score: number } => {
     let best = { bucket: fallback, score: 0 };
     for (const rule of rules) {
-      const score = rule.keywords.reduce((count, keyword) => (
-        normalized.includes(keyword) ? count + 1 : count
+      const score = rule.keywords.reduce((total, [keyword, weight]) => (
+        normalized.includes(keyword) ? total + weight : total
       ), 0);
       if (score > best.score) best = { bucket: rule.bucket, score };
     }
@@ -843,7 +1063,7 @@ function classifySkillGrouping(text: string) {
 
   const purpose = pickBucket(purposeRules, 'Utility');
   const department = pickBucket(departmentRules, 'Operations');
-  const confidence = Math.max(0.42, Math.min(0.94, 0.42 + Math.max(purpose.score, department.score) * 0.13));
+  const confidence = Math.max(0.42, Math.min(0.94, 0.42 + Math.max(purpose.score, department.score) * 0.06));
 
   return {
     purpose: purpose.bucket,
@@ -875,7 +1095,8 @@ function invalidateSkillsIndexCache() {
 
 function buildSkillsIndex() {
   const sources = buildSkillSourceDescriptors();
-  const skillsMap = new Map<string, Omit<SkillsIndexSkill, 'isInMaster' | 'addedAt' | 'addedVia' | 'isCustom' | 'originCategory'> & { _installed: Set<string>; _groupingText: string[] }>();
+  const pillarsConfig = readSkillPillarsConfig();
+  const skillsMap = new Map<string, Omit<SkillsIndexSkill, 'isInMaster' | 'addedAt' | 'addedVia' | 'isCustom' | 'originCategory' | 'pillar'> & { _installed: Set<string>; _groupingText: string[] }>();
   const foldersSet = new Map<string, { name: string; root: string; sourceId: string }>();
   const installsConfig = readSkillInstallsConfig();
 
@@ -978,16 +1199,32 @@ function buildSkillsIndex() {
 
   const resolvedMasterRoot = path.resolve(AGENTS_SKILLS_ROOT);
   const agentIds = AGENTS.filter(agent => agent.skillsRoot).map(agent => agent.id);
+  const classificationIndex = readClassificationIndex();
   const skills = [...skillsMap.values()]
     .map(skill => {
       skill.variants.sort((left, right) => left.sourceRank - right.sourceRank || left.label.localeCompare(right.label));
       const preferred = skill.variants[0];
-      const grouping = classifySkillGrouping(skill._groupingText.join('\n'));
-      // Frontmatter department overrides heuristic
+      const grouping: SkillsIndexSkill['grouping'] = classifySkillGrouping(skill._groupingText.join('\n'));
+
+      // Layer 2: Agent classification (overrides heuristic if contentHash matches)
+      const agentClassification = classificationIndex?.skills[skill.id];
+      if (agentClassification && preferred) {
+        const currentHash = computeSkillContentHash(preferred.path);
+        if (currentHash && currentHash === agentClassification.contentHash) {
+          grouping.department = agentClassification.department;
+          grouping.confidence = 0.95;
+          grouping.source = 'agent';
+          grouping.tags = agentClassification.tags;
+          grouping.useCases = agentClassification.useCases;
+          grouping.agentSummary = agentClassification.summary;
+        }
+      }
+
+      // Layer 3: Frontmatter department overrides everything
       if (preferred?.frontmatter.department) {
         grouping.department = preferred.frontmatter.department;
         grouping.confidence = 1.0;
-        grouping.source = 'frontmatter' as any;
+        grouping.source = 'frontmatter';
       }
       const installedAgentIds = agentIds.filter(agentId => skill._installed.has(agentId));
       const missingAgentIds = agentIds.filter(agentId => !skill._installed.has(agentId));
@@ -1007,10 +1244,17 @@ function buildSkillsIndex() {
 
       const addedVia = installMeta?.addedVia || null;
       const isFromOwnedRepo = skill.variants.some(v => ownedSourceIds.has(v.sourceId));
-      const isCustom = isFromOwnedRepo || addedVia === 'create';
+      const isCustom = isFromOwnedRepo || addedVia != null;
       const originCategory: 'custom' | 'community' | 'built-in' = isCustom
         ? 'custom'
         : isInMaster ? 'built-in' : 'community';
+
+      const pillar = classifySkillPillar(
+        skill._groupingText.join('\n'),
+        skill.id,
+        pillarsConfig.pillars,
+        isCustom,
+      );
 
       return {
         id: skill.id,
@@ -1024,6 +1268,7 @@ function buildSkillsIndex() {
         addedVia,
         isCustom,
         originCategory,
+        pillar,
         grouping,
       };
     })
@@ -1057,6 +1302,15 @@ function buildSkillsIndex() {
       })),
     skills,
     folders,
+    pillars: pillarsConfig.pillars.map(p => ({
+      id: p.id,
+      name: p.name,
+      emoji: p.emoji,
+      color: p.color,
+      description: p.description,
+      priority: p.priority,
+      scope: p.scope,
+    })),
     repos: reposConfig.repos.map(r => ({
       id: r.id,
       name: r.name,
@@ -1255,6 +1509,12 @@ function debouncedRefresh(reason: string) {
       initAgents();
       invalidateSkillsIndexCache();
       console.log(`[fs-watch] Refreshed: ${reason} — ${AGENTS.length} agents, ${SKILL_LIBRARIES.length} libs`);
+      // Auto-build delta embeddings after refresh (fire-and-forget)
+      if (GEMINI_API_KEY) {
+        autoBuildDeltaEmbeddings()
+          .then(r => { if (r.embedded > 0) console.log(`[embeddings] Delta build after refresh: ${r.embedded} new`); })
+          .catch(() => {});
+      }
     } catch (e: any) {
       console.error(`[fs-watch] Refresh failed (${reason}):`, e.message);
     }
@@ -1419,9 +1679,7 @@ if (hasClientBuild) {
   app.use(express.static(CLIENT_DIST));
   app.get('/login', (_req, res) => res.sendFile(CLIENT_INDEX));
 } else {
-  // Fallback to legacy index.html for development
-  const LEGACY_HTML = path.join(__dirname, '..', 'index.html');
-  app.get('/login', (_req, res) => res.sendFile(LEGACY_HTML));
+  console.warn('[agent-hub] dist-client/ not found — run "npm run build" first');
 }
 
 app.post('/api/login', (req, res) => {
@@ -1496,7 +1754,16 @@ function readClaudePlugins() {
 
   const enabledPlugins: string[] = settings.enabledPlugins || [];
 
-  const plugins = Object.entries(installed).map(([key, entry]: [string, any]) => {
+  // v2 format: { version: 2, plugins: { "name@mp": [...] } }; v1 flat: { "name@mp": { ... } }
+  const pluginsMap: Record<string, any> = (installed as any).plugins || installed;
+
+  const plugins = Object.entries(pluginsMap)
+    // Skip non-plugin keys that may exist at top level (e.g. "version")
+    .filter(([, val]) => val && typeof val === 'object')
+    .map(([key, rawEntry]: [string, any]) => {
+    // v2 stores each plugin as an array of version entries — take latest (first)
+    const entry = Array.isArray(rawEntry) ? rawEntry[0] || {} : rawEntry;
+
     const name = entry.name || key.split('@')[0];
     const marketplace = entry.marketplace || key.split('@').slice(1).join('@') || '';
     const installPath = entry.installPath || '';
@@ -1509,16 +1776,18 @@ function readClaudePlugins() {
     // Resolve marketplace repo URL
     const marketplaceRepo = marketplaces[marketplace]?.repo || undefined;
 
-    // Count skills under installPath
+    // Find skills: prefer installPath/skills/*/SKILL.md, fall back to top-level dirs
     let skills: { name: string; path: string; directoryName: string }[] = [];
     if (installPath && fs.existsSync(installPath)) {
       try {
-        const entries = fs.readdirSync(installPath, { withFileTypes: true });
+        const skillsSubdir = path.join(installPath, 'skills');
+        const scanDir = fs.existsSync(skillsSubdir) ? skillsSubdir : installPath;
+        const entries = fs.readdirSync(scanDir, { withFileTypes: true });
         skills = entries
           .filter(e => e.isDirectory() && !e.name.startsWith('.'))
           .map(e => ({
             name: e.name,
-            path: path.join(installPath, e.name),
+            path: path.join(scanDir, e.name),
             directoryName: e.name,
           }));
       } catch {}
@@ -2194,73 +2463,6 @@ app.get('/api/setup/run', (req, res) => {
 });
 
 // Catch-all: serve React SPA or legacy HTML
-// ── CRON JOBS API ─────────────────────────────────────────────
-
-const CRON_JOBS_PATH = path.join(OPENCLAW_ROOT, 'cron', 'jobs.json');
-
-function readCronJobs() {
-  if (!fs.existsSync(CRON_JOBS_PATH)) return { version: 1, jobs: [] };
-  try { return JSON.parse(fs.readFileSync(CRON_JOBS_PATH, 'utf8')); }
-  catch { return { version: 1, jobs: [] }; }
-}
-
-function writeCronJobs(data: any) {
-  fs.mkdirSync(path.dirname(CRON_JOBS_PATH), { recursive: true });
-  // Backup first
-  if (fs.existsSync(CRON_JOBS_PATH)) {
-    fs.copyFileSync(CRON_JOBS_PATH, CRON_JOBS_PATH + '.bak');
-  }
-  fs.writeFileSync(CRON_JOBS_PATH, JSON.stringify(data, null, 2));
-}
-
-// GET all cron jobs
-app.get('/api/crons', auth, (_req, res) => {
-  try { res.json(readCronJobs()); }
-  catch (e: any) { res.status(500).json({ error: e.message }); }
-});
-
-// POST create new cron job
-app.post('/api/crons', auth, (req, res) => {
-  try {
-    const data = readCronJobs();
-    const now = Date.now();
-    const job = {
-      id: crypto.randomUUID(),
-      ...req.body,
-      createdAtMs: now,
-      updatedAtMs: now,
-      state: {},
-    };
-    data.jobs.push(job);
-    writeCronJobs(data);
-    res.json({ ok: true, job });
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
-});
-
-// PATCH update cron job
-app.patch('/api/crons/:id', auth, (req, res) => {
-  try {
-    const data = readCronJobs();
-    const idx = data.jobs.findIndex((j: any) => j.id === req.params.id);
-    if (idx === -1) return res.status(404).json({ error: 'Job not found' });
-    data.jobs[idx] = { ...data.jobs[idx], ...req.body, updatedAtMs: Date.now() };
-    writeCronJobs(data);
-    res.json({ ok: true, job: data.jobs[idx] });
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
-});
-
-// DELETE cron job
-app.delete('/api/crons/:id', auth, (req, res) => {
-  try {
-    const data = readCronJobs();
-    const before = data.jobs.length;
-    data.jobs = data.jobs.filter((j: any) => j.id !== req.params.id);
-    if (data.jobs.length === before) return res.status(404).json({ error: 'Job not found' });
-    writeCronJobs(data);
-    res.json({ ok: true });
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
-});
-
 // ── HQ (Headquarters) CONFIG ────────────────────────────────
 // Stores linked folder paths for the HQ page
 
@@ -2319,6 +2521,44 @@ function refreshSkillsReposAllowedRoots() {
 }
 refreshSkillsReposAllowedRoots();
 
+// ── SKILL CLASSIFICATIONS (agent-generated) ─────────────
+const SKILL_CLASSIFICATIONS_PATH = path.join(path.dirname(CONFIG_PATH), 'skill-classifications.json');
+
+interface SkillClassification {
+  department: string;
+  tags: string[];
+  useCases: string[];
+  summary: string;
+  source: 'agent';
+  classifiedAt: string;
+  contentHash: string;
+}
+
+interface ClassificationIndex {
+  version: number;
+  classifiedAt: string;
+  skills: Record<string, SkillClassification>;
+}
+
+function readClassificationIndex(): ClassificationIndex | null {
+  if (fs.existsSync(SKILL_CLASSIFICATIONS_PATH)) {
+    try {
+      const data = JSON.parse(fs.readFileSync(SKILL_CLASSIFICATIONS_PATH, 'utf8'));
+      if (data && data.version === 1 && data.skills) return data;
+    } catch { /* fall through */ }
+  }
+  return null;
+}
+
+function computeSkillContentHash(skillPath: string): string {
+  try {
+    const content = fs.readFileSync(skillPath, 'utf8');
+    return crypto.createHash('sha256').update(content).digest('hex');
+  } catch {
+    return '';
+  }
+}
+
 // ── STARRED SKILLS CONFIG ────────────────────────────────
 const STARRED_SKILLS_CONFIG_PATH = path.join(path.dirname(CONFIG_PATH), 'starred-skills.config.json');
 
@@ -2355,6 +2595,22 @@ app.post('/api/skills/unstar', auth, (req, res) => {
   delete config.starredAt[skillId];
   writeStarredSkillsConfig(config);
   res.json({ ok: true, starred: config.starred });
+});
+
+// ── SKILL PILLARS CONFIG API ─────────────────────────────
+
+app.get('/api/skill-pillars/config', auth, (_req, res) => {
+  res.json(readSkillPillarsConfig());
+});
+
+app.post('/api/skill-pillars/config', auth, (req, res) => {
+  const config = req.body;
+  if (!config || !Array.isArray(config.pillars)) {
+    return res.status(400).json({ error: 'Invalid pillar config: pillars array required' });
+  }
+  writeSkillPillarsConfig({ version: 1, pillars: config.pillars });
+  invalidateSkillsIndexCache();
+  res.json({ ok: true });
 });
 
 // Native folder picker — opens OS dialog, returns selected path (async, non-blocking)
@@ -2683,6 +2939,15 @@ function buildSkillEmbeddingText(skill: SkillsIndexSkill): string {
     `Purpose: ${skill.grouping.purpose}`,
   ];
   if (variant?.frontmatter.author) parts.push(`Author: ${variant.frontmatter.author}`);
+  // Add description if different from summary
+  if (variant?.frontmatter.description && variant.frontmatter.description !== skill.summary) {
+    parts.push(`Details: ${variant.frontmatter.description}`);
+  }
+  // Directory name is often semantically meaningful (e.g. "browser-use", "email-send")
+  if (variant?.directoryName) parts.push(`Directory: ${variant.directoryName}`);
+  // Collect unique ecosystem names
+  const ecosystems = [...new Set(skill.variants.map(v => v.ecosystem))];
+  if (ecosystems.length) parts.push(`Ecosystems: ${ecosystems.join(', ')}`);
   // Collect unique tags from all variant labels
   const labels = [...new Set(skill.variants.map(v => v.sourceLabel))];
   if (labels.length) parts.push(`Sources: ${labels.join(', ')}`);
@@ -2757,56 +3022,61 @@ app.get('/api/embeddings/status', auth, (_req, res) => {
   });
 });
 
+// Shared delta-build logic: embeds only skills missing from cache
+async function autoBuildDeltaEmbeddings(): Promise<{ embedded: number; total: number; cached?: boolean }> {
+  const index = getCachedSkillsIndex();
+  const existingCache = loadEmbeddingsCache();
+  const currentSkillIds = new Set(index.skills.map(s => s.id));
+
+  // Determine which skills need embedding
+  const cachedIds = new Set(existingCache ? Object.keys(existingCache.skills) : []);
+  const needsEmbedding = index.skills.filter(s => !cachedIds.has(s.id));
+
+  // If all skills are already cached, just prune stale
+  if (needsEmbedding.length === 0 && existingCache) {
+    const pruned: Record<string, number[]> = {};
+    for (const id of currentSkillIds) {
+      if (existingCache.skills[id]) pruned[id] = existingCache.skills[id];
+    }
+    saveEmbeddingsCache({ ...existingCache, skills: pruned });
+    return { embedded: 0, total: currentSkillIds.size, cached: true };
+  }
+
+  // Batch embed in chunks of 100 (API limit)
+  const BATCH_SIZE = 100;
+  const newEmbeddings: Record<string, number[]> = {};
+  for (let i = 0; i < needsEmbedding.length; i += BATCH_SIZE) {
+    const chunk = needsEmbedding.slice(i, i + BATCH_SIZE);
+    const texts = chunk.map(buildSkillEmbeddingText);
+    const vectors = await batchEmbedTexts(texts, 'RETRIEVAL_DOCUMENT');
+    for (let j = 0; j < chunk.length; j++) {
+      newEmbeddings[chunk[j].id] = vectors[j];
+    }
+  }
+
+  // Merge with existing cache, prune stale
+  const mergedSkills: Record<string, number[]> = {};
+  for (const id of currentSkillIds) {
+    if (newEmbeddings[id]) mergedSkills[id] = newEmbeddings[id];
+    else if (existingCache?.skills[id]) mergedSkills[id] = existingCache.skills[id];
+  }
+
+  const cache: EmbeddingCacheFile = {
+    model: EMBEDDING_MODEL,
+    dimensions: EMBEDDING_DIMENSIONS,
+    skills: mergedSkills,
+  };
+  saveEmbeddingsCache(cache);
+  return { embedded: needsEmbedding.length, total: currentSkillIds.size };
+}
+
 // POST /api/embeddings/build — batch embed all skills (or delta)
 app.post('/api/embeddings/build', auth, async (_req, res) => {
   if (!GEMINI_API_KEY) return res.status(400).json({ error: 'GEMINI_API_KEY not set' });
 
   try {
-    const index = getCachedSkillsIndex();
-    const existingCache = loadEmbeddingsCache();
-    const currentSkillIds = new Set(index.skills.map(s => s.id));
-
-    // Determine which skills need embedding
-    const cachedIds = new Set(existingCache ? Object.keys(existingCache.skills) : []);
-    const needsEmbedding = index.skills.filter(s => !cachedIds.has(s.id));
-
-    // If all skills are already cached, just return
-    if (needsEmbedding.length === 0 && existingCache) {
-      // Prune stale entries
-      const pruned: Record<string, number[]> = {};
-      for (const id of currentSkillIds) {
-        if (existingCache.skills[id]) pruned[id] = existingCache.skills[id];
-      }
-      saveEmbeddingsCache({ ...existingCache, skills: pruned });
-      return res.json({ ok: true, embedded: 0, total: currentSkillIds.size, cached: true });
-    }
-
-    // Batch embed in chunks of 100 (API limit)
-    const BATCH_SIZE = 100;
-    const newEmbeddings: Record<string, number[]> = {};
-    for (let i = 0; i < needsEmbedding.length; i += BATCH_SIZE) {
-      const chunk = needsEmbedding.slice(i, i + BATCH_SIZE);
-      const texts = chunk.map(buildSkillEmbeddingText);
-      const vectors = await batchEmbedTexts(texts, 'RETRIEVAL_DOCUMENT');
-      for (let j = 0; j < chunk.length; j++) {
-        newEmbeddings[chunk[j].id] = vectors[j];
-      }
-    }
-
-    // Merge with existing cache, prune stale
-    const mergedSkills: Record<string, number[]> = {};
-    for (const id of currentSkillIds) {
-      if (newEmbeddings[id]) mergedSkills[id] = newEmbeddings[id];
-      else if (existingCache?.skills[id]) mergedSkills[id] = existingCache.skills[id];
-    }
-
-    const cache: EmbeddingCacheFile = {
-      model: EMBEDDING_MODEL,
-      dimensions: EMBEDDING_DIMENSIONS,
-      skills: mergedSkills,
-    };
-    saveEmbeddingsCache(cache);
-    res.json({ ok: true, embedded: needsEmbedding.length, total: currentSkillIds.size });
+    const result = await autoBuildDeltaEmbeddings();
+    res.json({ ok: true, ...result });
   } catch (e: any) {
     res.status(500).json({ error: e.message });
   }
@@ -2843,7 +3113,7 @@ app.post('/api/embeddings/rebuild', auth, async (_req, res) => {
   }
 });
 
-// POST /api/embeddings/query — embed a query and rank skills by similarity
+// POST /api/embeddings/query — embed a query and rank skills by hybrid similarity
 app.post('/api/embeddings/query', auth, async (req, res) => {
   if (!GEMINI_API_KEY) return res.status(400).json({ error: 'GEMINI_API_KEY not set' });
 
@@ -2858,16 +3128,34 @@ app.post('/api/embeddings/query', auth, async (req, res) => {
 
     const queryVector = await embedSingleText(text, 'RETRIEVAL_QUERY');
 
-    const results: { skillId: string; score: number }[] = [];
+    // Build a quick lookup for skill metadata (for keyword scoring)
+    const index = getCachedSkillsIndex();
+    const skillMap = new Map(index.skills.map(s => [s.id, s]));
+
+    // Compute keyword match ratio against query terms
+    const queryTerms = text.toLowerCase().split(/\s+/).filter(Boolean);
+    function keywordScore(skillId: string): number {
+      const skill = skillMap.get(skillId);
+      if (!skill || queryTerms.length === 0) return 0;
+      const haystack = [skill.name, skill.summary, skill.grouping.department, skill.grouping.purpose,
+        ...(skill.variants[0]?.directoryName ? [skill.variants[0].directoryName] : []),
+      ].join(' ').toLowerCase();
+      const matched = queryTerms.filter(t => haystack.includes(t)).length;
+      return matched / queryTerms.length;
+    }
+
+    const results: { skillId: string; score: number; keywordScore: number; combined: number }[] = [];
     for (const [skillId, skillVector] of Object.entries(cache.skills)) {
       const score = cosineSimilarity(queryVector, skillVector);
-      if (score >= 0.35) {
-        results.push({ skillId, score });
+      const kw = keywordScore(skillId);
+      const combined = Math.max(score, kw * 0.85);
+      if (score >= 0.20 || kw > 0) {
+        results.push({ skillId, score, keywordScore: kw, combined });
       }
     }
 
-    results.sort((a, b) => b.score - a.score);
-    res.json({ results: results.slice(0, 30) });
+    results.sort((a, b) => b.combined - a.combined);
+    res.json({ results: results.slice(0, 50) });
   } catch (e: any) {
     res.status(500).json({ error: e.message });
   }
@@ -2877,7 +3165,23 @@ app.get('*', auth, (_req, res) => {
   if (hasClientBuild) {
     res.sendFile(CLIENT_INDEX);
   } else {
-    res.sendFile(path.join(__dirname, '..', 'index.html'));
+    res.status(503).json({ error: 'Client not built. Run "npm run build" first.' });
   }
 });
-app.listen(PORT, () => console.log(`Agent Hub :${PORT}`));
+app.listen(PORT, () => {
+  console.log(`Agent Hub :${PORT}`);
+  // Auto-build embeddings on startup if API key is set
+  if (GEMINI_API_KEY) {
+    setTimeout(() => {
+      const cache = loadEmbeddingsCache();
+      const index = getCachedSkillsIndex();
+      const cachedCount = cache ? Object.keys(cache.skills).length : 0;
+      if (cachedCount < index.skills.length) {
+        console.log(`[embeddings] Auto-building delta: ${cachedCount} cached, ${index.skills.length} total`);
+        autoBuildDeltaEmbeddings()
+          .then(r => console.log(`[embeddings] Auto-build done: ${r.embedded} new, ${r.total} total`))
+          .catch(e => console.error('[embeddings] Auto-build failed:', e.message));
+      }
+    }, 3000);
+  }
+});

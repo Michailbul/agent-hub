@@ -2,7 +2,6 @@ import { useEffect } from 'react'
 import { useCanvasStore } from '@/store/canvas'
 import { AgentCanvas } from './AgentCanvas'
 import { SkillBrowser } from './SkillBrowser'
-import { SidePanel } from './SidePanel'
 import { AgentInspector } from './AgentInspector'
 
 interface CanvasViewProps {
@@ -16,7 +15,7 @@ export function CanvasView({ onNavigateToFiles, themeClass }: CanvasViewProps) {
   const data = useCanvasStore(s => s.data)
   const loadData = useCanvasStore(s => s.loadData)
   const setOnNavigateToFiles = useCanvasStore(s => s.setOnNavigateToFiles)
-  const sidePanelMode = useCanvasStore(s => s.sidePanelMode)
+  const selectedAgentId = useCanvasStore(s => s.selectedAgentId)
   const browserOpen = useCanvasStore(s => s.browserOpen)
 
   useEffect(() => {
@@ -59,8 +58,7 @@ export function CanvasView({ onNavigateToFiles, themeClass }: CanvasViewProps) {
           <AgentCanvas />
         </div>
         {browserOpen && <SkillBrowser />}
-        {sidePanelMode?.kind === 'agent-inspector' && <AgentInspector />}
-        {sidePanelMode?.kind === 'skill-preview' && <SidePanel />}
+        {selectedAgentId && <AgentInspector />}
       </div>
     </div>
   )

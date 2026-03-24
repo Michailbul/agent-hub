@@ -66,7 +66,7 @@ export function SkillPreview() {
       <div className="flex items-center gap-2">
         <h3 className="text-sm font-medium text-foreground">{skill.name}</h3>
         <Badge variant="secondary" className="text-[10px]">
-          {skill.department}
+          {skill.pillarName}
         </Badge>
       </div>
 

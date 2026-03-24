@@ -1,5 +1,4 @@
 import { memo, useEffect, useState } from 'react'
-import { Handle, Position } from '@xyflow/react'
 import type { NodeProps } from '@xyflow/react'
 
 // Department → color mapping (Notion-style muted)
@@ -61,10 +60,6 @@ export const AgentNode = memo(function AgentNode({ data }: NodeProps) {
       onDragLeave={() => d.onDragLeave()}
       onDrop={(e) => d.onDrop(e, d.agentId)}
     >
-      {/* Connection handles */}
-      <Handle type="target" position={Position.Left} className="cv-handle" />
-      <Handle type="source" position={Position.Right} className="cv-handle" />
-
       {/* Card header */}
       <div className="cv-card-header">
         <span className="cv-card-emoji">{d.emoji}</span>

@@ -20,9 +20,9 @@ export function CommandPalette({ skills, onSelectSkill, onClose }: CommandPalett
     return skills
       .filter(s => {
         const name = s.displayName.toLowerCase()
-        const dept = s.department.toLowerCase()
+        const pillar = s.pillarName.toLowerCase()
         const family = (s.familyLabel || '').toLowerCase()
-        return name.includes(q) || dept.includes(q) || family.includes(q)
+        return name.includes(q) || pillar.includes(q) || family.includes(q)
       })
       .slice(0, 30)
   }, [query, skills])
@@ -98,7 +98,7 @@ export function CommandPalette({ skills, onSelectSkill, onClose }: CommandPalett
                 >
                   <Feather size={14} strokeWidth={1.5} className="kl-command-item-icon" />
                   <span className="kl-command-item-name">{skill.displayName}</span>
-                  <span className="kl-command-item-meta">{skill.department}</span>
+                  <span className="kl-command-item-meta">{skill.pillarName}</span>
                 </button>
               ))}
             </>

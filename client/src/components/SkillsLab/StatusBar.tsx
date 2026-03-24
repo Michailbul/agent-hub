@@ -14,7 +14,7 @@ export function StatusBar({ filtered, total, scope, hasFilters, onResetFilters }
         <span>{filtered}/{total} skills</span>
       </div>
       <div className="kl-status-bar-section">
-        <span>{scope === 'agents' ? 'Agents' : scope === 'claude-code' ? 'Claude Code' : scope}</span>
+        <span>{scope === 'agents' ? 'Agents' : scope === 'claude-code' ? 'Claude Code' : scope === 'openclaw' ? 'OpenClaw' : scope}</span>
       </div>
       {hasFilters && (
         <>

@@ -1,0 +1,34 @@
+# Source code (compiled output is in dist/ and dist-client/)
+src/
+client/
+tsconfig.json
+tsup.config.ts
+
+# Dev and build artifacts
+node_modules/
+.build/
+*.tsbuildinfo
+dist-check/
+test-results/
+
+# Planning and internal docs
+pm/
+PRD.md
+PRD-skills-lab-design.md
+TASK.md
+DESIGN-SYSTEM-V11.md
+AGENTS.md
+
+# macOS apps
+macos/
+
+# Config and env
+.env
+agent-hub.config.json
+docker-compose.yml
+
+# Misc
+.git/
+.github/
+.claude/
+*.log

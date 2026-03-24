@@ -4,3 +4,8 @@ docker-compose.yml
 .env
 *.log
 dist/
+dist-client/
+dist-check/
+test-results/
+.build/
+*.tsbuildinfo

@@ -49,13 +49,13 @@ export function InspectorContent() {
   } else if (inspectorActiveItem.kind === 'skill') {
     const skill = data?.paletteSkills.find(s => s.id === inspectorActiveItem.skillId)
     if (skill) {
-      skillInfo = { name: skill.name, department: skill.department, summary: skill.summary }
+      skillInfo = { name: skill.name, department: skill.pillarName, summary: skill.summary }
       displayPath = 'SKILL.md'
     }
   } else if (inspectorActiveItem.kind === 'skill-file') {
     const skill = data?.paletteSkills.find(s => s.id === inspectorActiveItem.skillId)
     if (skill) {
-      skillInfo = { name: skill.name, department: skill.department, summary: '' }
+      skillInfo = { name: skill.name, department: skill.pillarName, summary: '' }
     }
     displayPath = inspectorActiveItem.path.split('/').pop() || inspectorActiveItem.path
   }

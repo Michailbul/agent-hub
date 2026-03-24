@@ -26,10 +26,10 @@ export function SkillCardView({
         >
           <span className="kl-skill-card-name">{skill.displayName}</span>
           <span className="kl-skill-card-desc">
-            {skill.department}{skill.familyLabel ? ` \u00b7 ${skill.familyLabel}` : ''}
+            {skill.pillarName}{skill.familyLabel ? ` \u00b7 ${skill.familyLabel}` : ''}
           </span>
           <div className="kl-skill-card-footer">
-            <span className="kl-skill-card-chip">{skill.department}</span>
+            <span className="kl-skill-card-chip">{skill.pillarName}</span>
             <button
               className={`kl-skill-card-star${starredIds.has(skill.id) ? ' starred' : ''}`}
               onClick={e => {

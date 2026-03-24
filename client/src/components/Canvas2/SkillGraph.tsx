@@ -37,8 +37,8 @@ function buildGraphData(skills: PaletteSkill[]) {
   const nodes: GNode[] = skills.map(s => {
     const n = s.installedAgentIds.length
     return {
-      id: s.id, label: s.name, department: s.department,
-      color: DEPT_COLORS[s.department] || DEFAULT_COLOR,
+      id: s.id, label: s.name, department: s.pillarName,
+      color: s.pillarColor || DEPT_COLORS[s.pillarName] || DEFAULT_COLOR,
       radius: NODE_MIN + (n / maxI) * (NODE_MAX - NODE_MIN),
       installCount: n,
     }
@@ -92,7 +92,7 @@ export function SkillGraph() {
 
   const paletteSkills = data?.paletteSkills || []
   const gd = useMemo(() => buildGraphData(paletteSkills), [paletteSkills])
-  const depts = useMemo(() => [...new Set(paletteSkills.map(s => s.department))].sort(), [paletteSkills])
+  const depts = useMemo(() => [...new Set(paletteSkills.map(s => s.pillarName))].sort(), [paletteSkills])
 
   const neighborsRef = useRef(new Map<string, Set<string>>())
   useMemo(() => {

@@ -44,17 +44,6 @@ export interface TreeData {
   studio: StudioSection
 }
 
-export interface PaneState {
-  id: string
-  path: string | null
-  label: string | null
-  content: string
-  isDirty: boolean
-  isLocal: boolean
-  isLoading?: boolean
-  mdMode?: 'rich' | 'markdown'
-}
-
 export interface AssignTarget {
   emoji: string
   label: string
@@ -62,4 +51,4 @@ export interface AssignTarget {
 }
 
 export type FilterSource = 'all' | 'studio' | 'community' | 'openclaw'
-export type AppView = 'editor' | 'crons' | 'skills-lab' | 'canvas' | 'headquarters' | 'design-system'
+export type AppView = 'skills-lab' | 'canvas' | 'headquarters'

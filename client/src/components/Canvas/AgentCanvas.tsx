@@ -178,26 +178,7 @@ function AgentCanvasInner() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data, selectedAgentId, inspectorActiveItem, dropTargetAgentId, deletingAgentId, openInspector, openInspectorAndBrowser, openInspectorToSkills, handleDeleteAgent, previewSkill, setDropTargetAgent, assignSkill, unassignSkill])
 
-  // Build edges from subagent relationships
-  const initialEdges = useMemo((): Edge[] => {
-    if (!data) return []
-    const edges: Edge[] = []
-    for (const agent of data.agents) {
-      for (const subId of agent.subagents) {
-        if (data.agents.some(a => a.id === subId)) {
-          edges.push({
-            id: `${agent.id}-${subId}`,
-            source: agent.id,
-            target: subId,
-            type: 'default',
-            animated: false,
-            style: { stroke: '#d4d3d0', strokeWidth: 1 },
-          })
-        }
-      }
-    }
-    return edges
-  }, [data])
+  const initialEdges = useMemo((): Edge[] => [], [])
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes)
   const [edges, , onEdgesChange] = useEdgesState(initialEdges)

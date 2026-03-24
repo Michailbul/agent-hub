@@ -19,10 +19,8 @@ import {
   Copy,
   ExternalLink,
   Feather,
-  Globe,
   Grid3x3,
   List,
-  Package,
   Search,
   Sparkles,
   Star,
@@ -37,6 +35,20 @@ interface SkillsLabV2Props {
   themePrefix: string
   variant?: string
 }
+
+const TOPIC_CHIPS: { label: string; query: string }[] = [
+  { label: 'Web Design', query: 'web design UI' },
+  { label: 'Mobile Design', query: 'mobile design app' },
+  { label: 'Frontend', query: 'frontend development' },
+  { label: 'Backend', query: 'backend development' },
+  { label: 'API', query: 'API integration' },
+  { label: 'Marketing', query: 'marketing strategy' },
+  { label: 'Content', query: 'content writing' },
+  { label: 'Automation', query: 'automation workflow' },
+  { label: 'AI / LLM', query: 'AI LLM machine learning' },
+  { label: 'DevOps', query: 'DevOps infrastructure' },
+  { label: 'Testing', query: 'testing QA' },
+]
 
 export function SkillsLabV2({ themePrefix: p, variant }: SkillsLabV2Props) {
   const sources = useSkillsLabStore(s => s.sources)
@@ -56,16 +68,16 @@ export function SkillsLabV2({ themePrefix: p, variant }: SkillsLabV2Props) {
   const toggleAgentNavExpanded = useSkillsLabStore(s => s.toggleAgentNavExpanded)
   const activeSavedView = useSkillsLabStore(s => s.activeSavedView)
   const setActiveSavedView = useSkillsLabStore(s => s.setActiveSavedView)
-  const activeSourceFilter = useSkillsLabStore(s => s.activeSourceFilter)
-  const setActiveSourceFilter = useSkillsLabStore(s => s.setActiveSourceFilter)
   const activeAgentFilter = useSkillsLabStore(s => s.activeAgentFilter)
   const setActiveAgentFilter = useSkillsLabStore(s => s.setActiveAgentFilter)
   const activeFamilyFilter = useSkillsLabStore(s => s.activeFamilyFilter)
   const setActiveFamilyFilter = useSkillsLabStore(s => s.setActiveFamilyFilter)
   const duplicateOnly = useSkillsLabStore(s => s.duplicateOnly)
-  const toggleDuplicateOnly = useSkillsLabStore(s => s.toggleDuplicateOnly)
   const activeDepartments = useSkillsLabStore(s => s.activeDepartments)
   const toggleDepartment = useSkillsLabStore(s => s.toggleDepartment)
+  const pillars = useSkillsLabStore(s => s.pillars)
+  const activePillars = useSkillsLabStore(s => s.activePillars)
+  const togglePillar = useSkillsLabStore(s => s.togglePillar)
   const clearAllFilters = useSkillsLabStore(s => s.clearAllFilters)
   const expandedSkillId = useSkillsLabStore(s => s.expandedSkillId)
   const setExpandedSkill = useSkillsLabStore(s => s.setExpandedSkill)
@@ -87,15 +99,13 @@ export function SkillsLabV2({ themePrefix: p, variant }: SkillsLabV2Props) {
   const installFromZip = useSkillsLabStore(s => s.installFromZip)
   const installFromCommand = useSkillsLabStore(s => s.installFromCommand)
   const clearInstallFeedback = useSkillsLabStore(s => s.clearInstallFeedback)
-  const previewRemoveDuplicates = useSkillsLabStore(s => s.previewRemoveDuplicates)
-  const removeDuplicates = useSkillsLabStore(s => s.removeDuplicates)
   const plugins = useSkillsLabStore(s => s.plugins)
   const pluginsLoaded = useSkillsLabStore(s => s.pluginsLoaded)
   const loadPlugins = useSkillsLabStore(s => s.loadPlugins)
-  const activeOriginFilter = useSkillsLabStore(s => s.activeOriginFilter)
-  const setActiveOriginFilter = useSkillsLabStore(s => s.setActiveOriginFilter)
   const activePluginFilter = useSkillsLabStore(s => s.activePluginFilter)
   const setActivePluginFilter = useSkillsLabStore(s => s.setActivePluginFilter)
+  const activeTagFilter = useSkillsLabStore(s => s.activeTagFilter)
+  const setActiveTagFilter = useSkillsLabStore(s => s.setActiveTagFilter)
   const previewDeleteSkill = useSkillsLabStore(s => s.previewDeleteSkill)
   const deleteSkill = useSkillsLabStore(s => s.deleteSkill)
   const categorizeSkill = useSkillsLabStore(s => s.categorizeSkill)
@@ -107,7 +117,7 @@ export function SkillsLabV2({ themePrefix: p, variant }: SkillsLabV2Props) {
   const isIndexing = useSkillsLabStore(s => s.isIndexing)
   const isSemanticSearching = useSkillsLabStore(s => s.isSemanticSearching)
   const semanticResults = useSkillsLabStore(s => s.semanticResults)
-  const semanticScores = useSkillsLabStore(s => s.semanticScores)
+  const combinedScores = useSkillsLabStore(s => s.combinedScores)
   const loadEmbeddingsStatus = useSkillsLabStore(s => s.loadEmbeddingsStatus)
   const buildIndex = useSkillsLabStore(s => s.buildIndex)
   const runSemanticSearch = useSkillsLabStore(s => s.runSemanticSearch)
@@ -128,7 +138,7 @@ export function SkillsLabV2({ themePrefix: p, variant }: SkillsLabV2Props) {
   const [focusedPanel, setFocusedPanel] = useState<FocusedPanel>(null)
   const [panelsReady, setPanelsReady] = useState(false)
   const [pendingAgentId, setPendingAgentId] = useState<string | null>(null)
-  const [duplicateCleanupPending, setDuplicateCleanupPending] = useState(false)
+
   const [commandInput, setCommandInput] = useState('')
   const [installDragActive, setInstallDragActive] = useState(false)
   const [installDialogOpen, setInstallDialogOpen] = useState(false)
@@ -190,48 +200,73 @@ export function SkillsLabV2({ themePrefix: p, variant }: SkillsLabV2Props) {
     [...claudeDeptCounts.keys()].sort(),
   [claudeDeptCounts])
 
+  // OpenClaw scoped skills and department counts
+  const openclawSkills = useMemo(() => {
+    return skills.filter(skill =>
+      Object.values(skill.sourceVariants).some(v => v.ecosystem === 'openclaw'),
+    )
+  }, [skills])
+
+  const openclawDeptCounts = useMemo(() => {
+    const map = new Map<string, number>()
+    for (const s of openclawSkills) map.set(s.department, (map.get(s.department) || 0) + 1)
+    return map
+  }, [openclawSkills])
+
+  const openclawDepartments = useMemo(() =>
+    [...openclawDeptCounts.keys()].sort(),
+  [openclawDeptCounts])
+
   const scopedSkills = useMemo(() => {
-    if (sidebarMode === 'agents' && activeAgentFilter) {
-      return skills.filter(s => s.installedAgentIds.includes(activeAgentFilter))
-    }
     if (sidebarMode === 'claude-code') return claudeSkills
+    if (sidebarMode === 'openclaw') {
+      if (activeAgentFilter) return openclawSkills.filter(s => s.installedAgentIds.includes(activeAgentFilter))
+      return openclawSkills
+    }
     return skills
-  }, [skills, claudeSkills, sidebarMode, activeAgentFilter])
+  }, [skills, claudeSkills, openclawSkills, sidebarMode, activeAgentFilter])
 
   // Precompute counts for departments and sources to avoid inline .filter() in render
   const deptCounts = useMemo(() => {
-    const pool = sidebarMode === 'agents' ? scopedSkills : sidebarMode === 'claude-code' ? claudeSkills : skills
+    const pool = sidebarMode === 'claude-code' ? claudeSkills : sidebarMode === 'openclaw' ? openclawSkills : skills
     const map = new Map<string, number>()
     for (const s of pool) map.set(s.department, (map.get(s.department) || 0) + 1)
     return map
-  }, [skills, scopedSkills, claudeSkills, sidebarMode])
+  }, [skills, scopedSkills, claudeSkills, openclawSkills, sidebarMode])
 
-  const sourceCounts = useMemo(() => {
+  // Pillar counts for sidebar nav
+  const pillarCounts = useMemo(() => {
+    const pool = sidebarMode === 'claude-code' ? claudeSkills : sidebarMode === 'openclaw' ? openclawSkills : skills
     const map = new Map<string, number>()
-    for (const s of skills) {
-      for (const srcId of Object.keys(s.sourceVariants)) {
-        map.set(srcId, (map.get(srcId) || 0) + 1)
-      }
-    }
+    for (const s of pool) map.set(s.pillar, (map.get(s.pillar) || 0) + 1)
     return map
-  }, [skills])
+  }, [skills, claudeSkills, openclawSkills, sidebarMode])
 
-  const originCounts = useMemo(() => {
-    const counts = { custom: 0, community: 0, 'built-in': 0 }
-    for (const s of skills) counts[s.originCategory]++
-    return counts
-  }, [skills])
+  // Dynamic tags derived from agent classifications (replaces hardcoded TOPIC_CHIPS)
+  const topTags = useMemo(() => {
+    const pool = sidebarMode === 'claude-code' ? claudeSkills : sidebarMode === 'openclaw' ? openclawSkills : skills
+    const counts = new Map<string, number>()
+    for (const s of pool) {
+      for (const tag of s.tags) counts.set(tag, (counts.get(tag) || 0) + 1)
+    }
+    return [...counts.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 15)
+      .map(([tag, count]) => ({ tag, count }))
+  }, [skills, claudeSkills, openclawSkills, sidebarMode])
+
+  const hasClassifications = topTags.length > 0
 
   const hasActiveFilters = Boolean(
     searchQuery.trim()
     || activeSavedView !== 'all'
-    || activeSourceFilter
     || activeAgentFilter
     || activeFamilyFilter
-    || activeOriginFilter
     || activePluginFilter
     || duplicateOnly
-    || activeDepartments.size > 0,
+    || activeDepartments.size > 0
+    || activePillars.size > 0
+    || activeTagFilter,
   )
   const selectedFamily = activeFamilyFilter
     ? families.find(family => family.key === activeFamilyFilter) || null
@@ -239,31 +274,11 @@ export function SkillsLabV2({ themePrefix: p, variant }: SkillsLabV2Props) {
   const selectedAgent = activeAgentFilter
     ? agents.find(agent => agent.id === activeAgentFilter) || null
     : null
-  const selectedSource = activeSourceFilter
-    ? sources.find(source => source.id === activeSourceFilter) || null
-    : null
-
   const filteredSkills = useMemo(
     () => getFilteredSkills(),
-    [getFilteredSkills, skills, sources, agents, searchQuery, activeSavedView, activeSourceFilter, activeAgentFilter, activeFamilyFilter, activeOriginFilter, activePluginFilter, duplicateOnly, activeDepartments, semanticResults],
+    [getFilteredSkills, skills, sources, agents, searchQuery, activeSavedView, activeAgentFilter, activeFamilyFilter, activePluginFilter, duplicateOnly, activeDepartments, activePillars, activeTagFilter, semanticResults],
   )
   const starredCount = starredSkillIds.size
-  const removableDuplicateSkillIds = useMemo(
-    () => filteredSkills
-      .filter(skill => Object.values(skill.sourceVariants).some(
-        variant => variant.kind === 'library' && variant.sourceId !== skill.canonicalSource,
-      ))
-      .map(skill => skill.id),
-    [filteredSkills],
-  )
-  const removableDuplicateCount = useMemo(
-    () => filteredSkills.reduce((count, skill) => (
-      count + Object.values(skill.sourceVariants).filter(
-        variant => variant.kind === 'library' && variant.sourceId !== skill.canonicalSource,
-      ).length
-    ), 0),
-    [filteredSkills],
-  )
 
   const selectedSkill = expandedSkillId ? skills.find(skill => skill.id === expandedSkillId) || null : null
   // Derive variant from the agent's workspace source if agent is filtered, else canonical
@@ -305,7 +320,7 @@ export function SkillsLabV2({ themePrefix: p, variant }: SkillsLabV2Props) {
     if (!hasEmbeddings) return
     const timer = setTimeout(() => {
       void runSemanticSearch(searchQuery)
-    }, 400)
+    }, 250)
     return () => clearTimeout(timer)
   }, [searchQuery, hasEmbeddings, runSemanticSearch, clearSemanticResults])
 
@@ -409,27 +424,6 @@ export function SkillsLabV2({ themePrefix: p, variant }: SkillsLabV2Props) {
     }
   }
 
-  const handleRemoveDuplicates = async (skillIds: string[]) => {
-    if (skillIds.length === 0) { window.alert('No removable duplicate sources found.'); return }
-    setDuplicateCleanupPending(true)
-    try {
-      const plan = await previewRemoveDuplicates(skillIds)
-      if (plan.totalVariants === 0) { window.alert('No removable duplicate sources found.'); return }
-      const confirmLines = [
-        `Remove ${plan.totalVariants} duplicate source variant(s) across ${plan.totalSkills} skill(s)?`,
-        'The primary source for each skill will be kept.',
-        plan.totalInstalls > 0 ? `This will also remove ${plan.totalInstalls} linked agent install(s).` : 'No agent installs will be removed.',
-      ]
-      if (plan.blockedVariants > 0) confirmLines.push(`${plan.blockedVariants} duplicate variant(s) cannot be removed automatically and will be skipped.`)
-      if (!window.confirm(confirmLines.join('\n\n'))) return
-      const result = await removeDuplicates(skillIds)
-      window.alert(result.totalVariants > 0 ? `Removed ${result.totalVariants} duplicate variant(s) across ${result.totalSkills} skill(s).` : 'No removable duplicate sources were found.')
-    } catch (err) {
-      window.alert(err instanceof Error ? err.message : 'Duplicate cleanup failed')
-    } finally {
-      setDuplicateCleanupPending(false)
-    }
-  }
 
   const handleZipInstall = async (file: File) => {
     if (!file.name.toLowerCase().endsWith('.zip')) { setInstallNotice({ tone: 'error', text: 'Only .zip skill bundles are supported.' }); return }
@@ -464,19 +458,19 @@ export function SkillsLabV2({ themePrefix: p, variant }: SkillsLabV2Props) {
       || skill.sourceVariants[skill.canonicalSource] || Object.values(skill.sourceVariants)[0]
     const sourceLabel = variant?.sourceLabel || skill.canonicalSource
     const meta = sourceLabel
-    const semScore = semanticScores.get(skill.id)
+    const relevanceScore = combinedScores.get(skill.id)
 
     return (
       <button
         key={skill.id}
-        className={`${p}-skill-row${expandedSkillId === skill.id ? ' active' : ''}${skill.isDuplicate ? ` ${p}-skill-row-duplicate` : ''}${semScore !== undefined ? ` ${p}-skill-row-semantic` : ''}`}
+        className={`${p}-skill-row${expandedSkillId === skill.id ? ' active' : ''}${relevanceScore !== undefined ? ` ${p}-skill-row-semantic` : ''}`}
         onClick={e => { e.stopPropagation(); openSkill(skill.id) }}
       >
         <span className={`${p}-skill-name`}>{skill.displayName}</span>
-        {semScore !== undefined && (
-          <span className={`${p}-semantic-badge`} title={`Semantic similarity: ${(semScore * 100).toFixed(0)}%`}>
+        {relevanceScore !== undefined && (
+          <span className={`${p}-semantic-badge`} title={`Relevance: ${Math.min(Math.round(relevanceScore * 100), 100)}%`}>
             <Sparkles size={10} strokeWidth={1.5} />
-            {(semScore * 100).toFixed(0)}%
+            {Math.min(Math.round(relevanceScore * 100), 100)}%
           </span>
         )}
         <span className={`${p}-skill-meta`}>{meta}</span>
@@ -530,14 +524,9 @@ export function SkillsLabV2({ themePrefix: p, variant }: SkillsLabV2Props) {
     const chips: { key: string; label: string; onRemove: () => void }[] = []
     if (activeSavedView === 'starred') chips.push({ key: 'view', label: 'Starred', onRemove: () => setActiveSavedView('all') })
     if (activeSavedView === 'recent') chips.push({ key: 'view', label: 'Sort: Recent first', onRemove: () => setActiveSavedView('all') })
-    if (duplicateOnly) chips.push({ key: 'dupes', label: 'Duplicates', onRemove: () => toggleDuplicateOnly() })
+
     if (selectedFamily) chips.push({ key: 'family', label: `Family: ${selectedFamily.label}`, onRemove: () => setActiveFamilyFilter(null) })
     if (selectedAgent) chips.push({ key: 'agent', label: `Agent: ${selectedAgent.label}`, onRemove: () => setActiveAgentFilter(null) })
-    if (selectedSource) chips.push({ key: 'source', label: `Source: ${selectedSource.label}`, onRemove: () => setActiveSourceFilter(null) })
-    if (activeOriginFilter) {
-      const originLabels: Record<string, string> = { custom: 'Custom Made', community: 'Community', 'built-in': 'Built-in' }
-      chips.push({ key: 'origin', label: `Origin: ${originLabels[activeOriginFilter]}`, onRemove: () => setActiveOriginFilter(null) })
-    }
     if (activePluginFilter) {
       const pluginName = plugins.find(pl => pl.id === activePluginFilter)?.name || activePluginFilter
       chips.push({ key: 'plugin', label: `Plugin: ${pluginName}`, onRemove: () => setActivePluginFilter(null) })
@@ -545,18 +534,27 @@ export function SkillsLabV2({ themePrefix: p, variant }: SkillsLabV2Props) {
     for (const dept of activeDepartments) {
       chips.push({ key: `dept-${dept}`, label: dept, onRemove: () => toggleDepartment(dept) })
     }
+    for (const pillarId of activePillars) {
+      const pillar = pillars.find(p => p.id === pillarId)
+      chips.push({ key: `pillar-${pillarId}`, label: pillar?.name || pillarId, onRemove: () => togglePillar(pillarId) })
+    }
     return chips
-  }, [activeSavedView, duplicateOnly, selectedFamily, selectedAgent, selectedSource, activeOriginFilter, activeDepartments, setActiveSavedView, toggleDepartment, toggleDuplicateOnly, setActiveFamilyFilter, setActiveAgentFilter, setActiveSourceFilter, setActiveOriginFilter])
+  }, [activeSavedView, duplicateOnly, selectedFamily, selectedAgent, activeDepartments, activePillars, pillars, setActiveSavedView, toggleDepartment, togglePillar, setActiveFamilyFilter, setActiveAgentFilter])
 
   const listedSkills = filteredSkills
   const navSkillCount = skills.length
 
-  // Results panel title: show active department if single, else generic
+  // Results panel title: show active pillar if single, else generic
   const resultsPanelTitle = useMemo(() => {
+    if (activePillars.size === 1) {
+      const pillarId = [...activePillars][0]
+      const pillar = pillars.find(p => p.id === pillarId)
+      return pillar ? pillar.name : pillarId
+    }
     if (activeDepartments.size === 1) return [...activeDepartments][0]
     if (selectedAgent) return `${selectedAgent.emoji} ${selectedAgent.label}`
     return 'Skills'
-  }, [activeDepartments, selectedAgent])
+  }, [activePillars, activeDepartments, selectedAgent, pillars])
 
   if (loading && !loaded) {
     return (
@@ -606,7 +604,7 @@ export function SkillsLabV2({ themePrefix: p, variant }: SkillsLabV2Props) {
                 <Search size={14} strokeWidth={1.5} className={`${p}-search-icon`} />
                 <input
                   className={`${p}-search-input`}
-                  placeholder={hasEmbeddings ? 'Search skills (semantic)...' : 'Search skills...'}
+                  placeholder="Search skills..."
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
                 />
@@ -634,17 +632,42 @@ export function SkillsLabV2({ themePrefix: p, variant }: SkillsLabV2Props) {
                     disabled={isIndexing}
                     title={hasEmbeddings ? 'Rebuild semantic index' : 'Build semantic index'}
                   >
-                    {isIndexing ? 'Indexing...' : hasEmbeddings ? 'Rebuild' : 'Build Index'}
+                    {isIndexing ? 'Indexing...' : hasEmbeddings ? 'Reindex' : 'Build Index'}
                   </button>
                 </div>
               )}
 
+              <div className={`${p}-topic-chips`} onClick={e => e.stopPropagation()}>
+                {hasClassifications ? (
+                  topTags.map(({ tag, count }) => (
+                    <button
+                      key={tag}
+                      className={`${p}-topic-chip${activeTagFilter === tag ? ' active' : ''}`}
+                      onClick={() => setActiveTagFilter(activeTagFilter === tag ? null : tag)}
+                      title={`${count} skill${count === 1 ? '' : 's'}`}
+                    >
+                      {tag}
+                    </button>
+                  ))
+                ) : (
+                  TOPIC_CHIPS.map(chip => (
+                    <button
+                      key={chip.query}
+                      className={`${p}-topic-chip${searchQuery === chip.query ? ' active' : ''}`}
+                      onClick={() => setSearchQuery(searchQuery === chip.query ? '' : chip.query)}
+                    >
+                      {chip.label}
+                    </button>
+                  ))
+                )}
+              </div>
+
               <div className={`${p}-mode-switch`} onClick={e => e.stopPropagation()}>
                 <button
-                  className={`${p}-mode-pill${sidebarMode === 'agents' ? ' active' : ''}`}
-                  onClick={() => setSidebarMode('agents')}
+                  className={`${p}-mode-pill${sidebarMode === 'openclaw' ? ' active' : ''}`}
+                  onClick={() => setSidebarMode('openclaw')}
                 >
-                  Agents
+                  OpenClaw
                 </button>
                 <button
                   className={`${p}-mode-pill${sidebarMode === 'claude-code' ? ' active' : ''}`}
@@ -659,9 +682,70 @@ export function SkillsLabV2({ themePrefix: p, variant }: SkillsLabV2Props) {
             <div className={`${p}-nav-tree`}>
               <div className={`${p}-nav-divider`} />
 
-              {sidebarMode === 'agents' ? (
+              {sidebarMode === 'claude-code' && (
                 <>
-                  {/* Agent list */}
+                  {/* Installed Plugins */}
+                  <div className={`${p}-nav-section`}>
+                    <div className={`${p}-nav-section-label`}>Installed Plugins</div>
+                    {!pluginsLoaded ? (
+                      <div className={`${p}-nav-section-empty`}>Loading plugins...</div>
+                    ) : plugins.length === 0 ? (
+                      <div className={`${p}-nav-section-empty`}>No plugins installed</div>
+                    ) : (
+                      plugins.map(plugin => {
+                        const isActive = activePluginFilter === plugin.id
+                        return (
+                          <button
+                            key={plugin.id}
+                            className={`${p}-nav-section-item${isActive ? ' active' : ''}`}
+                            onClick={e => { e.stopPropagation(); setActivePluginFilter(isActive ? null : plugin.id) }}
+                          >
+                            <span className={`${p}-nav-section-item-left`}>
+                              <span
+                                className={`${p}-nav-section-item-dot`}
+                                style={{ background: plugin.enabled ? '#22c55e' : '#6b7280' }}
+                              />
+                              <span className={`${p}-nav-section-item-name`}>{plugin.name}</span>
+                            </span>
+                            <span className={`${p}-nav-section-item-count`}>{plugin.version || plugin.skillCount}</span>
+                          </button>
+                        )
+                      })
+                    )}
+                  </div>
+
+                  <div className={`${p}-nav-divider`} />
+
+                  {/* Skills Library — pillars */}
+                  <div className={`${p}-nav-section`}>
+                    <div className={`${p}-nav-section-label`}>Pillars</div>
+                    {pillars.filter(pl => pillarCounts.has(pl.id)).map(pl => {
+                      const isActive = activePillars.has(pl.id)
+                      const count = pillarCounts.get(pl.id) || 0
+                      return (
+                        <button
+                          key={pl.id}
+                          className={`${p}-nav-section-item${isActive ? ' active' : ''}`}
+                          onClick={e => { e.stopPropagation(); togglePillar(pl.id) }}
+                        >
+                          <span className={`${p}-nav-section-item-left`}>
+                            <span
+                              className={`${p}-nav-section-item-dot`}
+                              style={{ background: pl.color }}
+                            />
+                            <span className={`${p}-nav-section-item-name`}>{pl.name}</span>
+                          </span>
+                          <span className={`${p}-nav-section-item-count`}>{count}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </>
+              )}
+
+              {sidebarMode === 'openclaw' && (
+                <>
+                  {/* Agents — as filters within openclaw */}
                   <div className={`${p}-nav-section`}>
                     <div className={`${p}-nav-section-label`}>Agents</div>
                     {agents.map(agent => {
@@ -729,7 +813,6 @@ export function SkillsLabV2({ themePrefix: p, variant }: SkillsLabV2Props) {
                                     className={`${p}-agent-dept-item${isDeptActive ? ' active' : ''}`}
                                     onClick={e => {
                                       e.stopPropagation()
-                                      // Enforce agent scope: selecting a dept inside an agent also sets the agent filter
                                       if (!isActive) setActiveAgentFilter(agent.id)
                                       toggleDepartment(dept)
                                     }}
@@ -748,75 +831,26 @@ export function SkillsLabV2({ themePrefix: p, variant }: SkillsLabV2Props) {
 
                   <div className={`${p}-nav-divider`} />
 
-                  {/* Departments */}
+                  {/* Skills Library — pillars */}
                   <div className={`${p}-nav-section`}>
-                    <div className={`${p}-nav-section-label`}>Departments</div>
-                    {departments.map(dept => {
-                      const isActive = activeDepartments.has(dept)
+                    <div className={`${p}-nav-section-label`}>Pillars</div>
+                    {pillars.filter(pl => pillarCounts.has(pl.id)).map(pl => {
+                      const isActive = activePillars.has(pl.id)
+                      const count = pillarCounts.get(pl.id) || 0
                       return (
                         <button
-                          key={dept}
+                          key={pl.id}
                           className={`${p}-nav-section-item${isActive ? ' active' : ''}`}
-                          onClick={e => { e.stopPropagation(); toggleDepartment(dept) }}
+                          onClick={e => { e.stopPropagation(); togglePillar(pl.id) }}
                         >
                           <span className={`${p}-nav-section-item-left`}>
-                            <span className={`${p}-nav-section-item-name`}>{dept}</span>
+                            <span
+                              className={`${p}-nav-section-item-dot`}
+                              style={{ background: pl.color }}
+                            />
+                            <span className={`${p}-nav-section-item-name`}>{pl.name}</span>
                           </span>
-                          <span className={`${p}-nav-section-item-count`}>{deptCounts.get(dept) || 0}</span>
-                        </button>
-                      )
-                    })}
-                  </div>
-                </>
-              ) : (
-                <>
-                  {/* Installed Plugins */}
-                  <div className={`${p}-nav-section`}>
-                    <div className={`${p}-nav-section-label`}>Installed Plugins</div>
-                    {!pluginsLoaded ? (
-                      <div className={`${p}-nav-section-empty`}>Loading plugins...</div>
-                    ) : plugins.length === 0 ? (
-                      <div className={`${p}-nav-section-empty`}>No plugins installed</div>
-                    ) : (
-                      plugins.map(plugin => {
-                        const isActive = activePluginFilter === plugin.id
-                        return (
-                          <button
-                            key={plugin.id}
-                            className={`${p}-nav-section-item${isActive ? ' active' : ''}`}
-                            onClick={e => { e.stopPropagation(); setActivePluginFilter(isActive ? null : plugin.id) }}
-                          >
-                            <span className={`${p}-nav-section-item-left`}>
-                              <span
-                                className={`${p}-nav-section-item-dot`}
-                                style={{ background: plugin.enabled ? '#22c55e' : '#6b7280' }}
-                              />
-                              <span className={`${p}-nav-section-item-name`}>{plugin.name}</span>
-                            </span>
-                            <span className={`${p}-nav-section-item-count`}>{plugin.version || plugin.skillCount}</span>
-                          </button>
-                        )
-                      })
-                    )}
-                  </div>
-
-                  <div className={`${p}-nav-divider`} />
-
-                  {/* Skills Library — claude departments */}
-                  <div className={`${p}-nav-section`}>
-                    <div className={`${p}-nav-section-label`}>Skills Library</div>
-                    {claudeDepartments.map(dept => {
-                      const isActive = activeDepartments.has(dept)
-                      return (
-                        <button
-                          key={dept}
-                          className={`${p}-nav-section-item${isActive ? ' active' : ''}`}
-                          onClick={e => { e.stopPropagation(); toggleDepartment(dept) }}
-                        >
-                          <span className={`${p}-nav-section-item-left`}>
-                            <span className={`${p}-nav-section-item-name`}>{dept}</span>
-                          </span>
-                          <span className={`${p}-nav-section-item-count`}>{claudeDeptCounts.get(dept) || 0}</span>
+                          <span className={`${p}-nav-section-item-count`}>{count}</span>
                         </button>
                       )
                     })}
@@ -824,7 +858,7 @@ export function SkillsLabV2({ themePrefix: p, variant }: SkillsLabV2Props) {
                 </>
               )}
 
-              {/* ═══ Shared sections (both modes) ═══ */}
+              {/* ═══ Shared sections (all modes) ═══ */}
 
               <div className={`${p}-nav-divider`} />
 
@@ -851,61 +885,11 @@ export function SkillsLabV2({ themePrefix: p, variant }: SkillsLabV2Props) {
                   </span>
                 </button>
               </div>
-
-              <div className={`${p}-nav-divider`} />
-
-              {/* Origin */}
-              <div className={`${p}-nav-section`}>
-                <div className={`${p}-nav-section-label`}>Origin</div>
-                {([
-                  { key: 'custom' as const, label: 'Custom Made', Icon: Sparkles },
-                  { key: 'community' as const, label: 'Community', Icon: Globe },
-                  { key: 'built-in' as const, label: 'Built-in', Icon: Package },
-                ]).map(({ key, label, Icon }) => (
-                  <button
-                    key={key}
-                    className={`${p}-nav-section-item${activeOriginFilter === key ? ' active' : ''}`}
-                    onClick={e => { e.stopPropagation(); setActiveOriginFilter(key) }}
-                  >
-                    <span className={`${p}-nav-section-item-left`}>
-                      <Icon size={13} strokeWidth={1.5} />
-                      <span className={`${p}-nav-section-item-name`}>{label}</span>
-                    </span>
-                    <span className={`${p}-nav-section-item-count`}>{originCounts[key]}</span>
-                  </button>
-                ))}
-              </div>
-
-              <div className={`${p}-nav-divider`} />
-
-              {/* Sources */}
-              <div className={`${p}-nav-section`}>
-                <div className={`${p}-nav-section-label`}>Sources</div>
-                {sources.map(source => {
-                  const isActive = activeSourceFilter === source.id
-                  return (
-                    <button
-                      key={source.id}
-                      className={`${p}-nav-section-item${isActive ? ' active' : ''}`}
-                      onClick={e => { e.stopPropagation(); setActiveSourceFilter(isActive ? null : source.id) }}
-                    >
-                      <span className={`${p}-nav-section-item-left`}>
-                        <span
-                          className={`${p}-nav-section-item-dot`}
-                          style={{ background: source.color }}
-                        />
-                        <span className={`${p}-nav-section-item-name`}>{source.label}</span>
-                      </span>
-                      <span className={`${p}-nav-section-item-count`}>{sourceCounts.get(source.id) || 0}</span>
-                    </button>
-                  )
-                })}
-              </div>
             </div>
 
             {/* Status */}
             <div className={`${p}-nav-status`}>
-              <span>{listedSkills.length} of {skills.length}</span>
+              <span>{listedSkills.length} of {sidebarMode === 'claude-code' ? claudeSkills.length : sidebarMode === 'openclaw' ? openclawSkills.length : skills.length}</span>
               {hasActiveFilters && (
                 <button className={`${p}-nav-status-clear`} onClick={e => { e.stopPropagation(); clearAllFilters() }}>
                   Clear
@@ -958,10 +942,15 @@ export function SkillsLabV2({ themePrefix: p, variant }: SkillsLabV2Props) {
             <Search size={13} strokeWidth={1.5} className={`${p}-results-search-icon`} />
             <input
               className={`${p}-results-search-input`}
-              placeholder={hasEmbeddings ? 'Search skills (semantic)...' : 'Filter skills...'}
+              placeholder="Search skills..."
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
             />
+            {isSemanticSearching && (
+              <span className={`${p}-search-spinner`} title="Searching...">
+                <Sparkles size={12} strokeWidth={1.5} />
+              </span>
+            )}
             {searchQuery && (
               <button className={`${p}-results-search-clear`} onClick={() => setSearchQuery('')}>&times;</button>
             )}
@@ -997,20 +986,6 @@ export function SkillsLabV2({ themePrefix: p, variant }: SkillsLabV2Props) {
               </div>
             )}
 
-            {removableDuplicateCount > 0 && (
-              <div className={`${p}-filter-summary`} style={{ margin: '8px' }} onClick={e => e.stopPropagation()}>
-                <span className={`${p}-filter-summary-count`}>{removableDuplicateCount} removable duplicates</span>
-                <div className={`${p}-filter-actions`}>
-                  <button
-                    className={`${p}-filter-bulk`}
-                    onClick={() => { void handleRemoveDuplicates(removableDuplicateSkillIds) }}
-                    disabled={duplicateCleanupPending}
-                  >
-                    {duplicateCleanupPending ? 'Removing...' : 'Remove duplicates'}
-                  </button>
-                </div>
-              </div>
-            )}
           </div>
         </aside>
 
@@ -1089,7 +1064,6 @@ export function SkillsLabV2({ themePrefix: p, variant }: SkillsLabV2Props) {
               <div className={`${p}-welcome-stats`}>
                 <span className={`${p}-stat`}>{skills.length} skills</span>
                 <span className={`${p}-stat`}>{agents.length} agents</span>
-                <span className={`${p}-stat`}>{sources.length} sources</span>
               </div>
             </div>
           </div>
@@ -1115,7 +1089,12 @@ export function SkillsLabV2({ themePrefix: p, variant }: SkillsLabV2Props) {
             <section className={`${p}-meta-section`}>
               <div className={`${p}-meta-skill-name`}>{selectedSkill.displayName}</div>
               <div className={`${p}-meta-badges`}>
-                <span className={`${p}-meta-badge`}>{selectedSkill.department}</span>
+                {(() => {
+                  const pl = pillars.find(p2 => p2.id === selectedSkill.pillar)
+                  return pl
+                    ? <span className={`${p}-meta-badge`} style={{ borderColor: pl.color, color: pl.color }}>{pl.name}</span>
+                    : <span className={`${p}-meta-badge`}>{selectedSkill.department}</span>
+                })()}
                 {selectedVariant?.sourceLabel && <span className={`${p}-meta-badge`}>{selectedVariant.sourceLabel}</span>}
                 {selectedSkillHasClaude && <span className={`${p}-meta-badge`}>Claude Code</span>}
               </div>
@@ -1123,37 +1102,65 @@ export function SkillsLabV2({ themePrefix: p, variant }: SkillsLabV2Props) {
               <div className={`${p}-meta-divider`} />
 
               <p className={`${p}-meta-desc`}>
-                {selectedSkill.familyLabel
-                  ? `${selectedSkill.displayName} — part of the ${selectedSkill.familyLabel} skill family.`
-                  : `${selectedSkill.displayName} — ${selectedSkill.department.toLowerCase()} skill.`}
+                {selectedSkill.agentSummary
+                  ? selectedSkill.agentSummary
+                  : selectedSkill.familyLabel
+                    ? `${selectedSkill.displayName} — part of the ${selectedSkill.familyLabel} skill family.`
+                    : `${selectedSkill.displayName} — ${(pillars.find(p2 => p2.id === selectedSkill.pillar)?.name || selectedSkill.department).toLowerCase()} skill.`}
                 {selectedSkill.installedAgentIds.length > 0
                   ? ` Active on ${selectedSkill.installedAgentIds.length} agent(s).`
                   : ' Not installed on any agents.'}
               </p>
 
+              {selectedSkill.useCases.length > 0 && (
+                <>
+                  <div className={`${p}-meta-divider`} />
+                  <div className={`${p}-meta-group-label`}>Use Cases</div>
+                  <ul className={`${p}-meta-use-cases`}>
+                    {selectedSkill.useCases.map((uc, i) => (
+                      <li key={i} className={`${p}-meta-use-case`}>{uc}</li>
+                    ))}
+                  </ul>
+                </>
+              )}
+
               <div className={`${p}-meta-divider`} />
 
-              <div className={`${p}-meta-group-label`}>Department</div>
-              <select
-                className={`${p}-dept-select`}
-                value={selectedSkill.department}
-                onChange={async e => {
-                  e.stopPropagation()
-                  try { await categorizeSkill(selectedSkill.id, e.target.value) }
-                  catch (err) { window.alert(err instanceof Error ? err.message : 'Failed to categorize') }
-                }}
-              >
-                {departments.map(dept => (
-                  <option key={dept} value={dept}>{dept}</option>
-                ))}
-              </select>
+              <div className={`${p}-meta-group-label`}>Pillar</div>
+              <div className={`${p}-meta-tags`}>
+                {(() => {
+                  const pl = pillars.find(p2 => p2.id === selectedSkill.pillar)
+                  return pl
+                    ? <span className={`${p}-tag`} style={{ borderColor: pl.color, color: pl.color }}>{pl.name}</span>
+                    : <span className={`${p}-tag`}>{selectedSkill.pillar}</span>
+                })()}
+              </div>
 
               <div className={`${p}-meta-group-label`} style={{ marginTop: 8 }}>Tags</div>
               <div className={`${p}-meta-tags`}>
-                <span className={`${p}-tag`}>{selectedSkill.department}</span>
-                {selectedVariant?.sourceLabel && <span className={`${p}-tag`}>{selectedVariant.sourceLabel}</span>}
-                {selectedSkillHasClaude && <span className={`${p}-tag`}>Claude Code</span>}
-                {selectedSkill.familyLabel && <span className={`${p}-tag`}>{selectedSkill.familyLabel}</span>}
+                {(() => {
+                  const pl = pillars.find(p2 => p2.id === selectedSkill.pillar)
+                  return <span className={`${p}-tag`}>{pl?.name || selectedSkill.department}</span>
+                })()}
+                {selectedSkill.tags.map(tag => (
+                  <span
+                    key={tag}
+                    className={`${p}-tag ${p}-tag-clickable${activeTagFilter === tag ? ` ${p}-tag-active` : ''}`}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => setActiveTagFilter(activeTagFilter === tag ? null : tag)}
+                    onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setActiveTagFilter(activeTagFilter === tag ? null : tag) } }}
+                  >
+                    {tag}
+                  </span>
+                ))}
+                {selectedSkill.tags.length === 0 && (
+                  <>
+                    {selectedVariant?.sourceLabel && <span className={`${p}-tag`}>{selectedVariant.sourceLabel}</span>}
+                    {selectedSkillHasClaude && <span className={`${p}-tag`}>Claude Code</span>}
+                    {selectedSkill.familyLabel && <span className={`${p}-tag`}>{selectedSkill.familyLabel}</span>}
+                  </>
+                )}
               </div>
             </section>
 
@@ -1210,19 +1217,6 @@ export function SkillsLabV2({ themePrefix: p, variant }: SkillsLabV2Props) {
               </section>
             )}
 
-            <section className={`${p}-meta-group`}>
-              <div className={`${p}-meta-group-label`}>Presence</div>
-              <div className={`${p}-meta-sources`}>
-                {sources.map(src => (
-                  <div key={src.id} className={`${p}-meta-source-row`}>
-                    <span className={`${p}-meta-source-dot`} style={{ background: selectedSkill.presence[src.id] !== 'absent' ? src.color : '#E5E5E5' }} />
-                    <span className={`${p}-meta-source-name`}>{src.label}</span>
-                    <span className={`${p}-meta-source-kind ${selectedSkill.presence[src.id]}`}>{selectedSkill.presence[src.id]}</span>
-                  </div>
-                ))}
-              </div>
-            </section>
-
             <section className={`${p}-meta-actions`}>
               <div className={`${p}-action-grid`}>
                 <span title="Coming soon">
@@ -1266,7 +1260,7 @@ export function SkillsLabV2({ themePrefix: p, variant }: SkillsLabV2Props) {
       </div>
 
       {/* Status bar */}
-      <StatusBar filtered={listedSkills.length} total={skills.length} scope={sidebarMode} hasFilters={hasActiveFilters} onResetFilters={clearAllFilters} />
+      <StatusBar filtered={listedSkills.length} total={sidebarMode === 'claude-code' ? claudeSkills.length : sidebarMode === 'openclaw' ? openclawSkills.length : skills.length} scope={sidebarMode} hasFilters={hasActiveFilters} onResetFilters={clearAllFilters} />
 
       {/* Command palette */}
       {commandOpen && (

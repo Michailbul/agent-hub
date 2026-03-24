@@ -42,14 +42,18 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/Michailbul/agent-hub"
+    "url": "https://github.com/laniameda/agent-hub"
+  },
+  "homepage": "https://github.com/laniameda/agent-hub#readme",
+  "bugs": {
+    "url": "https://github.com/laniameda/agent-hub/issues"
   },
   "engines": {
     "node": ">=18"
   },
   "files": [
     "dist/",
-    "index.html",
+    "dist-client/",
     "README.md",
     "agent-hub.config.example.json",
     "docker-compose.example.yml"

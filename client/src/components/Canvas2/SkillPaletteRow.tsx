@@ -67,7 +67,7 @@ export function SkillPaletteRow({ skill, onAssign, onPreview, onContextMenu }: S
             {skill.name}
           </span>
           <Badge variant="secondary" className="text-[9px] h-4 px-1.5 shrink-0">
-            {skill.department}
+            {skill.pillarName}
           </Badge>
         </div>
         {skill.summary && (

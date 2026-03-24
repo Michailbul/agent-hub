@@ -161,13 +161,16 @@
 
 /* ═══ Navigator — Perplexity / ElevenLabs sidebar ═══ */
 .st-nav {
+  display: flex; flex-direction: column;
   flex-shrink: 0;
+  min-width: 0;
+  overflow: hidden;
   border-right: 1px solid var(--sh-border);
   background: var(--sh-sidebar-bg);
 }
 
 /* ── Search ── */
-.st-nav-controls { padding: 0; display: flex; flex-direction: column; gap: 0; flex-shrink: 0; }
+.st-nav-controls { padding: 0; display: flex; flex-direction: column; gap: 0; flex-shrink: 0; overflow: hidden; }
 .st-search-bar {
   display: flex;
   align-items: center;
@@ -211,10 +214,11 @@
 }
 .st-mode-pill {
   display: inline-flex; align-items: center; justify-content: center; gap: 4px;
-  flex: 1; padding: 5px 12px; background: none;
+  flex: 1; padding: 5px 8px; background: none;
   border: none; border-radius: 6px;
   color: var(--sh-text-tertiary); cursor: pointer;
-  font-size: 12px; font-weight: 500; font-family: inherit;
+  font-size: 11px; font-weight: 500; font-family: inherit;
+  white-space: nowrap;
   transition: all 120ms ease;
 }
 .st-mode-pill:hover { color: var(--sh-text-primary); }
@@ -227,6 +231,40 @@
 .st-canvas[data-theme="dark"] .st-mode-pill.active {
   background: var(--sh-surface-active);
   box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+
+/* ── Topic quick-filter chips ── */
+.st-topic-chips {
+  display: flex; flex-wrap: wrap; gap: 4px;
+  padding: 0 16px 8px;
+  overflow-x: auto;
+  scrollbar-width: none;          /* Firefox */
+  -ms-overflow-style: none;       /* IE/Edge */
+}
+.st-topic-chips::-webkit-scrollbar { display: none; }
+.st-topic-chip {
+  display: inline-flex; align-items: center; flex-shrink: 0;
+  padding: 2px 8px; background: none;
+  border: 1px solid var(--sh-border);
+  border-radius: 99px; cursor: pointer;
+  font-size: 10.5px; font-weight: 450; font-family: inherit;
+  color: var(--sh-text-secondary);
+  transition: all 120ms ease;
+  white-space: nowrap;
+}
+.st-topic-chip:hover {
+  color: var(--sh-text-primary);
+  border-color: var(--sh-text-secondary);
+}
+.st-topic-chip.active {
+  background: var(--sh-coral);
+  color: #fff;
+  border-color: var(--sh-coral);
+}
+.st-canvas[data-theme="dark"] .st-topic-chip.active {
+  background: var(--sh-coral);
+  color: #fff;
+  border-color: var(--sh-coral);
 }
 
 /* ── Agent nav rows ── */
@@ -676,6 +714,15 @@
 .st-tag {
   font-size: 11px; font-weight: 400; color: var(--sh-text-secondary);
   padding: 2px 8px; border-radius: 4px; background: var(--sh-surface);
+  border: 0.5px solid var(--sh-border-subtle);
+}
+.st-tag-clickable { cursor: pointer; transition: background 0.15s, color 0.15s, border-color 0.15s; }
+.st-tag-clickable:hover { background: var(--sh-surface-hover); color: var(--sh-text-primary); }
+.st-tag-active { background: var(--sh-accent-bg, #e0e7ff); color: var(--sh-accent-text, #3730a3); border-color: var(--sh-accent-border, #818cf8); }
+.st-meta-use-cases { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.st-meta-use-case {
+  font-size: 12px; color: var(--sh-text-secondary); line-height: 1.45;
+  padding: 6px 10px; border-radius: 6px; background: var(--sh-surface);
   border: 0.5px solid var(--sh-border-subtle);
 }
 .st-meta-agents { display: flex; flex-direction: column; gap: 4px; }
@@ -1364,9 +1411,9 @@
 .st-semantic-badge {
   display: inline-flex; align-items: center; gap: 3px;
   font-size: 10px; font-weight: 500;
-  color: #34d399;
-  background: rgba(52, 211, 153, 0.08);
-  border: 0.5px solid rgba(52, 211, 153, 0.2);
+  color: var(--sh-coral);
+  background: rgba(194, 122, 80, 0.08);
+  border: 0.5px solid rgba(194, 122, 80, 0.2);
   border-radius: 4px;
   padding: 1px 5px;
   flex-shrink: 0;
@@ -1374,7 +1421,7 @@
 }
 
 .st-skill-row-semantic {
-  border-left: 2px solid rgba(52, 211, 153, 0.3);
+  border-left: 2px solid rgba(194, 122, 80, 0.3);
 }
 
 /* ── Results panel search ── */
@@ -1488,9 +1535,17 @@
   }
   .st-search-input { font-size: 16px; /* prevent iOS zoom on focus */ }
 
+  /* Topic chips — wrap into vertical columns on narrow screens */
+  .st-topic-chips {
+    padding: 0 12px 6px; gap: 5px;
+    flex-wrap: wrap; overflow-x: visible;
+    display: grid; grid-template-columns: repeat(2, 1fr);
+  }
+  .st-topic-chip { padding: 4px 10px; font-size: 11px; min-height: 30px; white-space: normal; text-align: center; justify-content: center; }
+
   /* Mode switch */
   .st-mode-switch { margin: 0 12px 8px; }
-  .st-mode-pill { font-size: 12px; padding: 6px 12px; min-height: 36px; }
+  .st-mode-pill { font-size: 11px; padding: 6px 8px; min-height: 36px; white-space: nowrap; }
 
   /* Nav items — larger touch targets */
   .st-agent-nav-item { height: 40px; padding: 0 12px; }

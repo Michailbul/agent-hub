@@ -108,7 +108,7 @@ function AgentCanvasInner() {
       const pos = saved[agent.id] || autoLayout(data.agents.length, i)
       const skills = agent.skills.slice(0, 10).map(skill => {
         const palette = data.paletteSkills.find(p => p.id === skill.id)
-        return { ...skill, department: palette?.department || 'Utility', variantPath: palette?.variantPath || '' }
+        return { ...skill, department: palette?.pillarName || palette?.department || 'Utility', variantPath: palette?.variantPath || '' }
       })
       const subagentLabels = agent.subagents
         .map(subId => data.agents.find(a => a.id === subId)?.label)

@@ -9,6 +9,7 @@ import {
   buildEmbeddingsIndex,
   queryEmbeddings,
   type SkillsIndexData,
+  type PillarDefinition,
   type ClaudePlugin,
   type SemanticSearchResult,
 } from '@/lib/api'
@@ -56,6 +57,8 @@ export interface UnifiedSkill {
   displayName: string
   description: string
   department: string
+  pillar: string
+  pillarName: string
   canonicalSource: string
   presence: Record<string, PresenceKind>
   installedAgentIds: string[]
@@ -70,6 +73,9 @@ export interface UnifiedSkill {
   originCategory: 'custom' | 'community' | 'built-in'
   familyKey: string | null
   familyLabel: string | null
+  tags: string[]
+  useCases: string[]
+  agentSummary: string | null
   metadata: {
     author?: string
     source?: string
@@ -135,7 +141,7 @@ export const SKILL_CONTENT: Record<string, string> = {}
 export type LabVariant = 'skills-1'
 export type SortField = 'name' | 'department'
 export type SortDir = 'asc' | 'desc'
-export type SidebarMode = 'agents' | 'claude-code'
+export type SidebarMode = 'agents' | 'claude-code' | 'openclaw'
 export type SkillsLabSavedView = 'all' | 'starred' | 'recent'
 export type OriginFilter = 'custom' | 'community' | 'built-in' | null
 
@@ -145,6 +151,7 @@ interface SkillsLabStore {
   sources: SkillSource[]
   agents: LabAgent[]
   departments: string[]
+  pillars: PillarDefinition[]
   families: SkillFamily[]
   loading: boolean
   loaded: boolean
@@ -159,6 +166,8 @@ interface SkillsLabStore {
   activeFamilyFilter: string | null
   duplicateOnly: boolean
   activeDepartments: Set<string>
+  activePillars: Set<string>
+  activeTagFilter: string | null
   expandedSkillId: string | null
   activeSkillFile: string | null
   sortField: SortField
@@ -189,6 +198,7 @@ interface SkillsLabStore {
   isSemanticSearching: boolean
   semanticResults: SemanticSearchResult[]
   semanticScores: Map<string, number>
+  combinedScores: Map<string, number>
 
   setVariant: (v: LabVariant) => void
   setSearchQuery: (q: string) => void
@@ -201,6 +211,9 @@ interface SkillsLabStore {
   toggleDuplicateOnly: () => void
   toggleDepartment: (dept: string) => void
   clearDepartments: () => void
+  togglePillar: (pillarId: string) => void
+  clearPillars: () => void
+  setActiveTagFilter: (tag: string | null) => void
   clearAllFilters: () => void
   setExpandedSkill: (id: string | null) => void
   setActiveSkillFile: (path: string | null) => void
@@ -282,7 +295,7 @@ function formatFamilyLabel(key: string): string {
   return `${key.charAt(0).toUpperCase()}${key.slice(1)}-*`
 }
 
-function mapSkills(data: SkillsIndexData): UnifiedSkill[] {
+function mapSkills(data: SkillsIndexData, pillarLookup: Map<string, string>): UnifiedSkill[] {
   const provisional = data.skills.map(sk => {
     const libraryVariants = sk.variants.filter(variant => variant.kind !== 'workspace')
     // Build presence from variants
@@ -315,6 +328,11 @@ function mapSkills(data: SkillsIndexData): UnifiedSkill[] {
       displayName: sk.name,
       description: sk.summary,
       department: sk.grouping.department,
+      pillar: sk.pillar || 'utility',
+      pillarName: pillarLookup.get(sk.pillar || 'utility') || sk.grouping.department,
+      tags: sk.grouping.tags || [],
+      useCases: sk.grouping.useCases || [],
+      agentSummary: sk.grouping.agentSummary || null,
       canonicalSource: preferred?.sourceId || '',
       presence,
       installedAgentIds: sk.installedAgentIds,
@@ -421,12 +439,15 @@ function buildSkillSearchIndex(
     skill.displayName,
     skill.description,
     skill.department,
+    skill.pillarName,
     skill.metadata.author,
     skill.metadata.source,
     skill.metadata.license,
     ...relatedSources,
     ...variantTokens,
     ...installedAgents.flatMap(agent => [agent.label, agent.role, agent.skillsRoot]),
+    ...skill.tags,
+    ...(skill.agentSummary ? [skill.agentSummary] : []),
   ]
     .filter(Boolean)
     .join('\n')
@@ -480,13 +501,14 @@ export const useSkillsLabStore = create<SkillsLabStore>((set, get) => ({
   sources: [],
   agents: [],
   departments: [],
+  pillars: [],
   families: [],
   loading: false,
   loaded: false,
   error: null,
 
   searchQuery: '',
-  sidebarMode: 'agents',
+  sidebarMode: 'openclaw',
   expandedAgentNavIds: new Set(),
   activeSavedView: 'all',
   activeSourceFilter: null,
@@ -494,6 +516,8 @@ export const useSkillsLabStore = create<SkillsLabStore>((set, get) => ({
   activeFamilyFilter: null,
   duplicateOnly: false,
   activeDepartments: new Set(),
+  activePillars: new Set(),
+  activeTagFilter: null,
   expandedSkillId: null,
   activeSkillFile: null,
   sortField: 'name',
@@ -521,6 +545,7 @@ export const useSkillsLabStore = create<SkillsLabStore>((set, get) => ({
   isSemanticSearching: false,
   semanticResults: [],
   semanticScores: new Map(),
+  combinedScores: new Map(),
 
   setVariant: (v) => set({ variant: v }),
   setSearchQuery: (q) => set({ searchQuery: q }),
@@ -530,10 +555,10 @@ export const useSkillsLabStore = create<SkillsLabStore>((set, get) => ({
     searchQuery: '',
     activeSavedView: null,
     activeDepartments: new Set(),
-    activeSourceFilter: null,
+    activePillars: new Set(),
+    activeTagFilter: null,
     activeAgentFilter: null,
     activeFamilyFilter: null,
-    activeOriginFilter: null,
     activePluginFilter: null,
     duplicateOnly: false,
   }),
@@ -546,8 +571,9 @@ export const useSkillsLabStore = create<SkillsLabStore>((set, get) => ({
   setActiveSourceFilter: (id) => set(s => ({ activeSourceFilter: s.activeSourceFilter === id ? null : id })),
   setActiveAgentFilter: (id) => set(s => ({
     activeAgentFilter: s.activeAgentFilter === id ? null : id,
-    // Auto-clear dept filters when switching agents to prevent confusing empty results
+    // Auto-clear dept/pillar filters when switching agents to prevent confusing empty results
     activeDepartments: s.activeAgentFilter !== id ? new Set() : s.activeDepartments,
+    activePillars: s.activeAgentFilter !== id ? new Set() : s.activePillars,
   })),
   setActiveFamilyFilter: (id) => set(s => ({ activeFamilyFilter: s.activeFamilyFilter === id ? null : id })),
   toggleDuplicateOnly: () => set(s => ({ duplicateOnly: !s.duplicateOnly })),
@@ -557,6 +583,13 @@ export const useSkillsLabStore = create<SkillsLabStore>((set, get) => ({
     return { activeDepartments: next }
   }),
   clearDepartments: () => set({ activeDepartments: new Set() }),
+  togglePillar: (pillarId) => set(s => {
+    const next = new Set(s.activePillars)
+    if (next.has(pillarId)) next.delete(pillarId); else next.add(pillarId)
+    return { activePillars: next }
+  }),
+  clearPillars: () => set({ activePillars: new Set() }),
+  setActiveTagFilter: (tag) => set({ activeTagFilter: tag }),
   clearAllFilters: () => set({
     activeSourceFilter: null,
     activeAgentFilter: null,
@@ -565,6 +598,8 @@ export const useSkillsLabStore = create<SkillsLabStore>((set, get) => ({
     activePluginFilter: null,
     duplicateOnly: false,
     activeDepartments: new Set(),
+    activePillars: new Set(),
+    activeTagFilter: null,
     searchQuery: '',
   }),
   setExpandedSkill: (id) => set(s => ({
@@ -607,7 +642,8 @@ export const useSkillsLabStore = create<SkillsLabStore>((set, get) => ({
       const data = await fetchSkillsIndex()
       const sources = mapSources(data)
       const agents = mapAgents(data)
-      const skills = mapSkills(data)
+      const pillarLookup = new Map((data.pillars || []).map(p => [p.id, p.name]))
+      const skills = mapSkills(data, pillarLookup)
       const departments = [...new Set(skills.map(s => s.department))].sort()
       const families = Object.entries(
         skills.reduce<Record<string, number>>((acc, skill) => {
@@ -624,11 +660,19 @@ export const useSkillsLabStore = create<SkillsLabStore>((set, get) => ({
         agents,
         skills,
         departments,
+        pillars: data.pillars || [],
         families,
         repos: data.repos || [],
         loading: false,
         loaded: true,
         starredSkillIds,
+      })
+      // Auto-build embeddings if API key is present and index is stale
+      void get().loadEmbeddingsStatus().then(() => {
+        const { hasApiKey, hasEmbeddings, embeddingSkillCount } = get()
+        if (hasApiKey && (!hasEmbeddings || embeddingSkillCount < skills.length)) {
+          void get().buildIndex(false) // delta build, non-blocking
+        }
       })
     } catch (e: any) {
       set({ loading: false, error: e.message })
@@ -733,6 +777,7 @@ export const useSkillsLabStore = create<SkillsLabStore>((set, get) => ({
   setActivePluginFilter: (id) => set(s => ({
     activePluginFilter: s.activePluginFilter === id ? null : id,
     activeDepartments: new Set(),
+    activePillars: new Set(),
   })),
 
   installFromZip: async (file) => {
@@ -805,7 +850,7 @@ export const useSkillsLabStore = create<SkillsLabStore>((set, get) => ({
     }
   },
 
-  clearSemanticResults: () => set({ semanticResults: [], semanticScores: new Map() }),
+  clearSemanticResults: () => set({ semanticResults: [], semanticScores: new Map(), combinedScores: new Map() }),
 
   previewDeleteSkill: async (skillId: string, sourceId?: string | null) => {
     const res = await fetch('/api/skills/delete-preview', {
@@ -961,19 +1006,87 @@ export const useSkillsLabStore = create<SkillsLabStore>((set, get) => ({
       }
     }
 
+    // OpenClaw mode: scope to skills with an openclaw ecosystem variant
+    if (sidebarMode === 'openclaw') {
+      result = result.filter(skill =>
+        Object.values(skill.sourceVariants).some(v => v.ecosystem === 'openclaw'),
+      )
+    }
+
     if (activeSavedView === 'starred') {
       const { starredSkillIds } = get()
       result = result.filter(skill => starredSkillIds.has(skill.id))
     }
 
+    // ── Hybrid search: unified keyword + semantic scoring ──
+    const { semanticResults, semanticScores, activeOriginFilter } = get()
+
     if (searchQuery) {
       const searchTerms = normalizeSearchTerms(searchQuery)
-      result = result.filter(skill => {
+      // 1. Keyword hits (client-side AND-matching)
+      const keywordHitIds = new Set<string>()
+      for (const skill of result) {
         const searchIndex = getCachedSearchIndex(skill, sources, agents)
-        return searchTerms.every(term => searchIndex.includes(term))
-      })
+        if (searchTerms.every(term => searchIndex.includes(term))) {
+          keywordHitIds.add(skill.id)
+        }
+      }
+
+      // 2. Semantic hits from server
+      const semanticHitIds = new Set(semanticResults.map(r => r.skillId))
+      const semanticScoreMap = new Map(semanticResults.map(r => [r.skillId, r]))
+
+      // 3. Union both sets with combinedScore
+      const combinedScoreMap = new Map<string, number>()
+      const unionIds = new Set([...keywordHitIds, ...semanticHitIds])
+      for (const id of unionIds) {
+        const isKw = keywordHitIds.has(id)
+        const semResult = semanticScoreMap.get(id)
+        let score: number
+        if (isKw && semResult) {
+          // Both keyword and semantic: guaranteed relevant + semantic boost
+          score = 1.0 + (semResult.score || 0)
+        } else if (isKw) {
+          score = 1.0
+        } else if (semResult) {
+          score = semResult.combined ?? semResult.score
+        } else {
+          score = 0
+        }
+        combinedScoreMap.set(id, score)
+      }
+
+      // Build result from the union
+      // For semantic-only hits, use the scoped `result` list (respects claude-code/plugin filters)
+      // then fall back to all skills for semantic hits outside scope — those get filtered below
+      const scopedById = new Map(result.map(s => [s.id, s]))
+      const allById = new Map(skills.map(s => [s.id, s]))
+      const unionSkills: UnifiedSkill[] = []
+      for (const id of unionIds) {
+        const skill = scopedById.get(id) || allById.get(id)
+        if (skill) unionSkills.push(skill)
+      }
+      result = unionSkills
+
+      // Store combinedScores for UI
+      set({ combinedScores: combinedScoreMap })
+    } else {
+      set({ combinedScores: new Map() })
     }
 
+    // ── Re-apply scope filters to semantic-only additions ──
+    if (sidebarMode === 'claude-code') {
+      result = result.filter(skill =>
+        Object.values(skill.sourceVariants).some(v => v.ecosystem === 'claude'),
+      )
+    }
+    if (sidebarMode === 'openclaw') {
+      result = result.filter(skill =>
+        Object.values(skill.sourceVariants).some(v => v.ecosystem === 'openclaw'),
+      )
+    }
+
+    // ── Apply non-search filters ──
     if (activeSourceFilter) {
       result = result.filter(s => s.presence[activeSourceFilter] !== 'absent')
     }
@@ -990,7 +1103,6 @@ export const useSkillsLabStore = create<SkillsLabStore>((set, get) => ({
       result = result.filter(s => s.isDuplicate)
     }
 
-    const { activeOriginFilter } = get()
     if (activeOriginFilter) {
       result = result.filter(s => s.originCategory === activeOriginFilter)
     }
@@ -999,34 +1111,22 @@ export const useSkillsLabStore = create<SkillsLabStore>((set, get) => ({
       result = result.filter(s => activeDepartments.has(s.department))
     }
 
-    // Merge semantic results when searching
-    const { semanticResults, semanticScores } = get()
-    if (searchQuery && semanticResults.length > 0) {
-      const literalIds = new Set(result.map(s => s.id))
-      const semanticOnly = semanticResults
-        .filter(r => !literalIds.has(r.skillId))
-        .map(r => skills.find(s => s.id === r.skillId))
-        .filter((s): s is UnifiedSkill => Boolean(s))
-      // Apply same non-search filters to semantic results
-      let filteredSemantic = semanticOnly
-      if (sidebarMode === 'claude-code') {
-        filteredSemantic = filteredSemantic.filter(skill =>
-          Object.values(skill.sourceVariants).some(v => v.ecosystem === 'claude'),
-        )
-      }
-      if (activeSourceFilter) filteredSemantic = filteredSemantic.filter(s => s.presence[activeSourceFilter] !== 'absent')
-      if (activeAgentFilter) filteredSemantic = filteredSemantic.filter(s => s.installedAgentIds.includes(activeAgentFilter))
-      if (activeFamilyFilter) filteredSemantic = filteredSemantic.filter(s => s.familyKey === activeFamilyFilter)
-      if (duplicateOnly) filteredSemantic = filteredSemantic.filter(s => s.isDuplicate)
-      if (activeOriginFilter) filteredSemantic = filteredSemantic.filter(s => s.originCategory === activeOriginFilter)
-      if (activeDepartments.size > 0) filteredSemantic = filteredSemantic.filter(s => activeDepartments.has(s.department))
-      // Sort semantic results by score descending
-      filteredSemantic.sort((a, b) => (semanticScores.get(b.id) || 0) - (semanticScores.get(a.id) || 0))
-      result = [...result, ...filteredSemantic]
+    const { activePillars } = get()
+    if (activePillars.size > 0) {
+      result = result.filter(s => activePillars.has(s.pillar))
     }
 
-    // Sort (skip if we have mixed literal+semantic results during search — literal first, then semantic by score)
-    if (!searchQuery || semanticResults.length === 0) {
+    const { activeTagFilter } = get()
+    if (activeTagFilter) {
+      result = result.filter(s => s.tags.includes(activeTagFilter))
+    }
+
+    // ── Sort ──
+    if (searchQuery) {
+      // Sort by combined score descending when searching
+      const scores = get().combinedScores
+      result = [...result].sort((a, b) => (scores.get(b.id) || 0) - (scores.get(a.id) || 0))
+    } else {
       result = [...result].sort((a, b) => {
         if (activeSavedView === 'recent') {
           return getAddedAtMs(b) - getAddedAtMs(a) || a.name.localeCompare(b.name)

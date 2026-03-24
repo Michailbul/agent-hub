@@ -6,9 +6,10 @@ interface SkillPaletteRowProps {
   onAssign?: () => void
   onPreview?: () => void
   onContextMenu?: (e: React.MouseEvent) => void
+  expandIcon?: React.ReactNode
 }
 
-export function SkillPaletteRow({ skill, onAssign, onPreview, onContextMenu }: SkillPaletteRowProps) {
+export function SkillPaletteRow({ skill, onAssign, onPreview, onContextMenu, expandIcon }: SkillPaletteRowProps) {
   const handleDragStart = useCallback((e: React.DragEvent) => {
     e.dataTransfer.setData(
       'application/x-canvas-skill',
@@ -30,39 +31,41 @@ export function SkillPaletteRow({ skill, onAssign, onPreview, onContextMenu }: S
       draggable
       onDragStart={handleDragStart}
       onContextMenu={onContextMenu}
+      onClick={onPreview}
     >
-      <span className={`cv-palette-dot${skill.installedAgentIds.length > 0 ? ' active' : ''}`} />
+      {expandIcon && (
+        <span className="cv-palette-expand-icon">
+          {expandIcon}
+        </span>
+      )}
+      {!expandIcon && <span className={`cv-palette-dot${skill.installedAgentIds.length > 0 ? ' active' : ''}`} />}
       <span className="cv-palette-grip">&#x2801;&#x2801;</span>
       <div className="cv-palette-row-body">
         <div className="cv-palette-row-main">
-          <span
-            className="cv-palette-row-name cv-palette-row-name-link"
-            onClick={onPreview}
-            title="Preview skill"
-          >
-            {skill.name}
-          </span>
-          <span className="cv-palette-row-dept">{skill.department}</span>
+          <span className="cv-palette-row-name">{skill.name}</span>
+          <span className="cv-palette-row-dept">{skill.pillarName}</span>
         </div>
         {skill.summary && (
           <div className="cv-palette-row-summary">{skill.summary}</div>
         )}
-        <div className="cv-palette-row-footer">
-          {skill.installedAgentIds.length > 0 && (
-            <span className="cv-palette-row-installed">
-              installed on {skill.installedAgentIds.length} agent{skill.installedAgentIds.length !== 1 ? 's' : ''}
-            </span>
-          )}
-          {onAssign && (
-            <button
-              className="cv-btn-assign"
-              onClick={(e) => { e.stopPropagation(); onAssign() }}
-              title="Add to selected agent"
-            >
-              + Add
-            </button>
-          )}
-        </div>
+        {(skill.installedAgentIds.length > 0 || onAssign) && (
+          <div className="cv-palette-row-footer">
+            {skill.installedAgentIds.length > 0 && (
+              <span className="cv-palette-row-installed">
+                installed on {skill.installedAgentIds.length} agent{skill.installedAgentIds.length !== 1 ? 's' : ''}
+              </span>
+            )}
+            {onAssign && (
+              <button
+                className="cv-btn-assign"
+                onClick={(e) => { e.stopPropagation(); onAssign() }}
+                title="Add to selected agent"
+              >
+                + Add
+              </button>
+            )}
+          </div>
+        )}
       </div>
     </div>
   )
