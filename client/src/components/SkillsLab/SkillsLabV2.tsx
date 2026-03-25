@@ -183,77 +183,65 @@ export function SkillsLabV2({ themePrefix: p, variant }: SkillsLabV2Props) {
     if (sidebarMode === 'claude-code') void loadPlugins()
   }, [sidebarMode, loadPlugins])
 
-  // Claude Code scoped skills and department counts
-  const claudeSkills = useMemo(() => {
-    return skills.filter(skill =>
-      Object.values(skill.sourceVariants).some(v => v.ecosystem === 'claude'),
+  // Ecosystem-scoped skill pools
+  const filterByEcosystem = (eco: string) =>
+    skills.filter(skill =>
+      Object.values(skill.sourceVariants).some(v =>
+        eco === 'agents' ? (v.ecosystem === 'agents' || v.ecosystem === 'agent') : v.ecosystem === eco
+      ),
     )
-  }, [skills])
 
-  const claudeDeptCounts = useMemo(() => {
-    const map = new Map<string, number>()
-    for (const s of claudeSkills) map.set(s.department, (map.get(s.department) || 0) + 1)
-    return map
-  }, [claudeSkills])
+  const claudeSkills = useMemo(() => filterByEcosystem('claude'), [skills])
+  const openclawSkills = useMemo(() => filterByEcosystem('openclaw'), [skills])
+  const agentsSkills = useMemo(() => filterByEcosystem('agents'), [skills])
+  const codexSkills = useMemo(() => filterByEcosystem('codex'), [skills])
 
-  const claudeDepartments = useMemo(() =>
-    [...claudeDeptCounts.keys()].sort(),
-  [claudeDeptCounts])
-
-  // OpenClaw scoped skills and department counts
-  const openclawSkills = useMemo(() => {
-    return skills.filter(skill =>
-      Object.values(skill.sourceVariants).some(v => v.ecosystem === 'openclaw'),
-    )
-  }, [skills])
-
-  const openclawDeptCounts = useMemo(() => {
-    const map = new Map<string, number>()
-    for (const s of openclawSkills) map.set(s.department, (map.get(s.department) || 0) + 1)
-    return map
-  }, [openclawSkills])
-
-  const openclawDepartments = useMemo(() =>
-    [...openclawDeptCounts.keys()].sort(),
-  [openclawDeptCounts])
+  // Mode tab counts
+  const modeTabCounts = useMemo(() => ({
+    all: skills.length,
+    claude: claudeSkills.length,
+    openclaw: openclawSkills.length,
+    agents: agentsSkills.length,
+    codex: codexSkills.length,
+  }), [skills, claudeSkills, openclawSkills, agentsSkills, codexSkills])
 
   const scopedSkills = useMemo(() => {
-    if (sidebarMode === 'claude-code') return claudeSkills
-    if (sidebarMode === 'openclaw') {
-      if (activeAgentFilter) return openclawSkills.filter(s => s.installedAgentIds.includes(activeAgentFilter))
-      return openclawSkills
+    const pool = sidebarMode === 'claude-code' ? claudeSkills
+      : sidebarMode === 'openclaw' ? openclawSkills
+      : sidebarMode === 'agents' ? agentsSkills
+      : sidebarMode === 'codex' ? codexSkills
+      : skills
+    if (sidebarMode === 'openclaw' && activeAgentFilter) {
+      return pool.filter(s => s.installedAgentIds.includes(activeAgentFilter))
     }
-    return skills
-  }, [skills, claudeSkills, openclawSkills, sidebarMode, activeAgentFilter])
+    return pool
+  }, [skills, claudeSkills, openclawSkills, agentsSkills, codexSkills, sidebarMode, activeAgentFilter])
 
   // Precompute counts for departments and sources to avoid inline .filter() in render
   const deptCounts = useMemo(() => {
-    const pool = sidebarMode === 'claude-code' ? claudeSkills : sidebarMode === 'openclaw' ? openclawSkills : skills
     const map = new Map<string, number>()
-    for (const s of pool) map.set(s.department, (map.get(s.department) || 0) + 1)
+    for (const s of scopedSkills) map.set(s.department, (map.get(s.department) || 0) + 1)
     return map
-  }, [skills, scopedSkills, claudeSkills, openclawSkills, sidebarMode])
+  }, [scopedSkills])
 
   // Pillar counts for sidebar nav
   const pillarCounts = useMemo(() => {
-    const pool = sidebarMode === 'claude-code' ? claudeSkills : sidebarMode === 'openclaw' ? openclawSkills : skills
     const map = new Map<string, number>()
-    for (const s of pool) map.set(s.pillar, (map.get(s.pillar) || 0) + 1)
+    for (const s of scopedSkills) map.set(s.pillar, (map.get(s.pillar) || 0) + 1)
     return map
-  }, [skills, claudeSkills, openclawSkills, sidebarMode])
+  }, [scopedSkills])
 
   // Dynamic tags derived from agent classifications (replaces hardcoded TOPIC_CHIPS)
   const topTags = useMemo(() => {
-    const pool = sidebarMode === 'claude-code' ? claudeSkills : sidebarMode === 'openclaw' ? openclawSkills : skills
     const counts = new Map<string, number>()
-    for (const s of pool) {
+    for (const s of scopedSkills) {
       for (const tag of s.tags) counts.set(tag, (counts.get(tag) || 0) + 1)
     }
     return [...counts.entries()]
       .sort((a, b) => b[1] - a[1])
       .slice(0, 15)
       .map(([tag, count]) => ({ tag, count }))
-  }, [skills, claudeSkills, openclawSkills, sidebarMode])
+  }, [scopedSkills])
 
   const hasClassifications = topTags.length > 0
 
@@ -664,17 +652,43 @@ export function SkillsLabV2({ themePrefix: p, variant }: SkillsLabV2Props) {
 
               <div className={`${p}-mode-switch`} onClick={e => e.stopPropagation()}>
                 <button
-                  className={`${p}-mode-pill${sidebarMode === 'openclaw' ? ' active' : ''}`}
-                  onClick={() => setSidebarMode('openclaw')}
+                  className={`${p}-mode-pill${sidebarMode === 'all' ? ' active' : ''}`}
+                  onClick={() => setSidebarMode('all')}
                 >
-                  OpenClaw
+                  All <span className={`${p}-mode-count`}>{modeTabCounts.all}</span>
                 </button>
-                <button
-                  className={`${p}-mode-pill${sidebarMode === 'claude-code' ? ' active' : ''}`}
-                  onClick={() => setSidebarMode('claude-code')}
-                >
-                  Claude Code
-                </button>
+                {modeTabCounts.openclaw > 0 && (
+                  <button
+                    className={`${p}-mode-pill${sidebarMode === 'openclaw' ? ' active' : ''}`}
+                    onClick={() => setSidebarMode('openclaw')}
+                  >
+                    OpenClaw
+                  </button>
+                )}
+                {modeTabCounts.claude > 0 && (
+                  <button
+                    className={`${p}-mode-pill${sidebarMode === 'claude-code' ? ' active' : ''}`}
+                    onClick={() => setSidebarMode('claude-code')}
+                  >
+                    Claude
+                  </button>
+                )}
+                {modeTabCounts.agents > 0 && (
+                  <button
+                    className={`${p}-mode-pill${sidebarMode === 'agents' ? ' active' : ''}`}
+                    onClick={() => setSidebarMode('agents')}
+                  >
+                    Agents
+                  </button>
+                )}
+                {modeTabCounts.codex > 0 && (
+                  <button
+                    className={`${p}-mode-pill${sidebarMode === 'codex' ? ' active' : ''}`}
+                    onClick={() => setSidebarMode('codex')}
+                  >
+                    Codex
+                  </button>
+                )}
               </div>
             </div>
 
@@ -714,32 +728,6 @@ export function SkillsLabV2({ themePrefix: p, variant }: SkillsLabV2Props) {
                     )}
                   </div>
 
-                  <div className={`${p}-nav-divider`} />
-
-                  {/* Skills Library — pillars */}
-                  <div className={`${p}-nav-section`}>
-                    <div className={`${p}-nav-section-label`}>Pillars</div>
-                    {pillars.filter(pl => pillarCounts.has(pl.id)).map(pl => {
-                      const isActive = activePillars.has(pl.id)
-                      const count = pillarCounts.get(pl.id) || 0
-                      return (
-                        <button
-                          key={pl.id}
-                          className={`${p}-nav-section-item${isActive ? ' active' : ''}`}
-                          onClick={e => { e.stopPropagation(); togglePillar(pl.id) }}
-                        >
-                          <span className={`${p}-nav-section-item-left`}>
-                            <span
-                              className={`${p}-nav-section-item-dot`}
-                              style={{ background: pl.color }}
-                            />
-                            <span className={`${p}-nav-section-item-name`}>{pl.name}</span>
-                          </span>
-                          <span className={`${p}-nav-section-item-count`}>{count}</span>
-                        </button>
-                      )
-                    })}
-                  </div>
                 </>
               )}
 
@@ -829,36 +817,37 @@ export function SkillsLabV2({ themePrefix: p, variant }: SkillsLabV2Props) {
                     })}
                   </div>
 
-                  <div className={`${p}-nav-divider`} />
-
-                  {/* Skills Library — pillars */}
-                  <div className={`${p}-nav-section`}>
-                    <div className={`${p}-nav-section-label`}>Pillars</div>
-                    {pillars.filter(pl => pillarCounts.has(pl.id)).map(pl => {
-                      const isActive = activePillars.has(pl.id)
-                      const count = pillarCounts.get(pl.id) || 0
-                      return (
-                        <button
-                          key={pl.id}
-                          className={`${p}-nav-section-item${isActive ? ' active' : ''}`}
-                          onClick={e => { e.stopPropagation(); togglePillar(pl.id) }}
-                        >
-                          <span className={`${p}-nav-section-item-left`}>
-                            <span
-                              className={`${p}-nav-section-item-dot`}
-                              style={{ background: pl.color }}
-                            />
-                            <span className={`${p}-nav-section-item-name`}>{pl.name}</span>
-                          </span>
-                          <span className={`${p}-nav-section-item-count`}>{count}</span>
-                        </button>
-                      )
-                    })}
-                  </div>
                 </>
               )}
 
               {/* ═══ Shared sections (all modes) ═══ */}
+
+              <div className={`${p}-nav-divider`} />
+
+              {/* Pillars — shared across all modes */}
+              <div className={`${p}-nav-section`}>
+                <div className={`${p}-nav-section-label`}>Pillars</div>
+                {pillars.filter(pl => pillarCounts.has(pl.id)).map(pl => {
+                  const isActive = activePillars.has(pl.id)
+                  const count = pillarCounts.get(pl.id) || 0
+                  return (
+                    <button
+                      key={pl.id}
+                      className={`${p}-nav-section-item${isActive ? ' active' : ''}`}
+                      onClick={e => { e.stopPropagation(); togglePillar(pl.id) }}
+                    >
+                      <span className={`${p}-nav-section-item-left`}>
+                        <span
+                          className={`${p}-nav-section-item-dot`}
+                          style={{ background: pl.color }}
+                        />
+                        <span className={`${p}-nav-section-item-name`}>{pl.name}</span>
+                      </span>
+                      <span className={`${p}-nav-section-item-count`}>{count}</span>
+                    </button>
+                  )
+                })}
+              </div>
 
               <div className={`${p}-nav-divider`} />
 

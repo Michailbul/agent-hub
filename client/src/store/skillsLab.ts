@@ -141,7 +141,7 @@ export const SKILL_CONTENT: Record<string, string> = {}
 export type LabVariant = 'skills-1'
 export type SortField = 'name' | 'department'
 export type SortDir = 'asc' | 'desc'
-export type SidebarMode = 'agents' | 'claude-code' | 'openclaw'
+export type SidebarMode = 'all' | 'agents' | 'claude-code' | 'openclaw' | 'codex'
 export type SkillsLabSavedView = 'all' | 'starred' | 'recent'
 export type OriginFilter = 'custom' | 'community' | 'built-in' | null
 
@@ -508,7 +508,7 @@ export const useSkillsLabStore = create<SkillsLabStore>((set, get) => ({
   error: null,
 
   searchQuery: '',
-  sidebarMode: 'openclaw',
+  sidebarMode: 'all',
   expandedAgentNavIds: new Set(),
   activeSavedView: 'all',
   activeSourceFilter: null,
@@ -988,29 +988,33 @@ export const useSkillsLabStore = create<SkillsLabStore>((set, get) => ({
     const { sidebarMode, activePluginFilter, plugins } = get()
     let result = skills
 
-    // Claude Code mode: scope to skills with a claude ecosystem variant
-    if (sidebarMode === 'claude-code') {
+    // Ecosystem-scoped modes
+    const ecosystemFilter = sidebarMode === 'claude-code' ? 'claude'
+      : sidebarMode === 'openclaw' ? 'openclaw'
+      : sidebarMode === 'agents' ? 'agents'
+      : sidebarMode === 'codex' ? 'codex'
+      : null // 'all' mode — no ecosystem filter
+
+    if (ecosystemFilter) {
       result = result.filter(skill =>
-        Object.values(skill.sourceVariants).some(v => v.ecosystem === 'claude'),
+        Object.values(skill.sourceVariants).some(v =>
+          ecosystemFilter === 'agents'
+            ? (v.ecosystem === 'agents' || v.ecosystem === 'agent')
+            : v.ecosystem === ecosystemFilter,
+        ),
       )
-      // If a plugin filter is active, further narrow to skills whose directory name matches plugin skills
-      if (activePluginFilter) {
-        const plugin = plugins.find(p => p.id === activePluginFilter)
-        if (plugin) {
-          const pluginDirNames = new Set(plugin.skills.map(s => s.directoryName))
-          result = result.filter(skill => {
-            const dirName = skill.id.split('/').pop() || skill.name
-            return pluginDirNames.has(dirName) || pluginDirNames.has(skill.name)
-          })
-        }
-      }
     }
 
-    // OpenClaw mode: scope to skills with an openclaw ecosystem variant
-    if (sidebarMode === 'openclaw') {
-      result = result.filter(skill =>
-        Object.values(skill.sourceVariants).some(v => v.ecosystem === 'openclaw'),
-      )
+    // Claude Code: plugin sub-filter
+    if (sidebarMode === 'claude-code' && activePluginFilter) {
+      const plugin = plugins.find(p => p.id === activePluginFilter)
+      if (plugin) {
+        const pluginDirNames = new Set(plugin.skills.map(s => s.directoryName))
+        result = result.filter(skill => {
+          const dirName = skill.id.split('/').pop() || skill.name
+          return pluginDirNames.has(dirName) || pluginDirNames.has(skill.name)
+        })
+      }
     }
 
     if (activeSavedView === 'starred') {
@@ -1075,14 +1079,13 @@ export const useSkillsLabStore = create<SkillsLabStore>((set, get) => ({
     }
 
     // ── Re-apply scope filters to semantic-only additions ──
-    if (sidebarMode === 'claude-code') {
+    if (ecosystemFilter) {
       result = result.filter(skill =>
-        Object.values(skill.sourceVariants).some(v => v.ecosystem === 'claude'),
-      )
-    }
-    if (sidebarMode === 'openclaw') {
-      result = result.filter(skill =>
-        Object.values(skill.sourceVariants).some(v => v.ecosystem === 'openclaw'),
+        Object.values(skill.sourceVariants).some(v =>
+          ecosystemFilter === 'agents'
+            ? (v.ecosystem === 'agents' || v.ecosystem === 'agent')
+            : v.ecosystem === ecosystemFilter,
+        ),
       )
     }
 
