@@ -148,6 +148,15 @@ export function SkillsLabV2({ themePrefix: p, variant }: SkillsLabV2Props) {
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list')
   const density = 'compact' as const
   const [commandOpen, setCommandOpen] = useState(false)
+  const [moreMenuOpen, setMoreMenuOpen] = useState(false)
+
+  // Close more-menu on any outside click
+  useEffect(() => {
+    if (!moreMenuOpen) return
+    const close = () => setMoreMenuOpen(false)
+    document.addEventListener('click', close, { once: true })
+    return () => document.removeEventListener('click', close)
+  }, [moreMenuOpen])
 
   // Dark / light mode — uses global theme store
   const { theme: colorMode } = useThemeStore()
@@ -651,42 +660,90 @@ export function SkillsLabV2({ themePrefix: p, variant }: SkillsLabV2Props) {
               </div>
 
               <div className={`${p}-mode-switch`} onClick={e => e.stopPropagation()}>
-                <button
-                  className={`${p}-mode-pill${sidebarMode === 'openclaw' ? ' active' : ''}`}
-                  onClick={() => setSidebarMode('openclaw')}
-                >
-                  .openclaw
-                </button>
-                <button
-                  className={`${p}-mode-pill${sidebarMode === 'claude-code' ? ' active' : ''}`}
-                  onClick={() => setSidebarMode('claude-code')}
-                >
-                  .claude
-                </button>
-                {(sidebarMode === 'agents' || modeTabCounts.agents > 0) && (
-                  <button
-                    className={`${p}-mode-pill${sidebarMode === 'agents' ? ' active' : ''}`}
-                    onClick={() => setSidebarMode('agents')}
-                  >
-                    .agents
-                  </button>
+                {sidebarMode === 'agents' || sidebarMode === 'codex' || sidebarMode === 'all' ? (
+                  // Non-default mode active — show it as active tab + a back pill
+                  <>
+                    <button
+                      className={`${p}-mode-pill active`}
+                      onClick={() => setSidebarMode('openclaw')}
+                      title="Click to return to .openclaw"
+                    >
+                      {sidebarMode === 'agents' ? '.agents' : sidebarMode === 'codex' ? '.codex' : 'all'}
+                    </button>
+                    <button
+                      className={`${p}-mode-pill`}
+                      onClick={() => setSidebarMode('openclaw')}
+                    >
+                      .openclaw
+                    </button>
+                    <button
+                      className={`${p}-mode-pill`}
+                      onClick={() => setSidebarMode('claude-code')}
+                    >
+                      .claude
+                    </button>
+                  </>
+                ) : (
+                  // Default: .openclaw and .claude tabs
+                  <>
+                    <button
+                      className={`${p}-mode-pill${sidebarMode === 'openclaw' ? ' active' : ''}`}
+                      onClick={() => setSidebarMode('openclaw')}
+                    >
+                      .openclaw
+                    </button>
+                    <button
+                      className={`${p}-mode-pill${sidebarMode === 'claude-code' ? ' active' : ''}`}
+                      onClick={() => setSidebarMode('claude-code')}
+                    >
+                      .claude
+                    </button>
+                  </>
                 )}
-                {(sidebarMode === 'codex' || modeTabCounts.codex > 0) && (
+                {/* More dropdown for .agents, .codex, all */}
+                <div style={{ position: 'relative' }}>
                   <button
-                    className={`${p}-mode-pill${sidebarMode === 'codex' ? ' active' : ''}`}
-                    onClick={() => setSidebarMode('codex')}
+                    className={`${p}-mode-pill`}
+                    onClick={() => setMoreMenuOpen(v => !v)}
+                    title="More skill libraries"
+                    style={{ padding: '2px 6px', fontSize: 11 }}
                   >
-                    .codex
+                    ···
                   </button>
-                )}
-                {sidebarMode === 'all' && (
-                  <button
-                    className={`${p}-mode-pill active`}
-                    onClick={() => setSidebarMode('openclaw')}
-                  >
-                    all
-                  </button>
-                )}
+                  {moreMenuOpen && (
+                    <div
+                      className={`${p}-mode-dropdown`}
+                      style={{
+                        position: 'absolute', top: '100%', right: 0, marginTop: 4, zIndex: 50,
+                        background: 'var(--color-surface, #1a1a1a)', border: '1px solid var(--color-border, #333)',
+                        borderRadius: 8, padding: 4, minWidth: 130, boxShadow: '0 8px 24px rgba(0,0,0,.4)',
+                      }}
+                    >
+                      {[
+                        { id: 'agents' as const, label: '.agents', count: modeTabCounts.agents },
+                        { id: 'codex' as const, label: '.codex', count: modeTabCounts.codex },
+                        { id: 'all' as const, label: 'All skills', count: modeTabCounts.all },
+                      ].map(item => (
+                        <button
+                          key={item.id}
+                          className={`${p}-mode-dropdown-item`}
+                          style={{
+                            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                            width: '100%', padding: '6px 10px', border: 'none', background: 'none',
+                            color: 'var(--color-text, #ccc)', fontSize: 12, cursor: 'pointer',
+                            borderRadius: 6, fontFamily: 'var(--font-mono, monospace)',
+                          }}
+                          onMouseEnter={e => (e.currentTarget.style.background = 'var(--color-hover, #2a2a2a)')}
+                          onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+                          onClick={() => { setSidebarMode(item.id); setMoreMenuOpen(false) }}
+                        >
+                          <span>{item.label}</span>
+                          <span style={{ opacity: 0.5, fontSize: 11 }}>{item.count}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
