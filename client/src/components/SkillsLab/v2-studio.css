@@ -205,12 +205,13 @@
 
 /* ── Mode switch — By Agent / All Skills toggle ── */
 .st-mode-switch {
-  display: flex; gap: 2px;
+  display: flex; gap: 2px; align-items: center;
   background: var(--sh-surface-hover);
   border: 0.5px solid var(--sh-border-subtle);
   border-radius: 8px;
   margin: 0 16px 12px;
   padding: 3px;
+  position: relative;
 }
 .st-mode-pill {
   display: inline-flex; align-items: center; justify-content: center; gap: 4px;
@@ -221,6 +222,30 @@
   white-space: nowrap;
   transition: all 120ms ease;
 }
+.st-mode-more-wrap { flex: 0 0 auto; position: relative; }
+.st-mode-more-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 28px; height: 26px; padding: 0; background: none;
+  border: none; border-radius: 6px;
+  color: var(--sh-text-tertiary); cursor: pointer;
+  font-size: 14px; font-weight: 700; letter-spacing: 1px;
+  transition: all 120ms ease;
+}
+.st-mode-more-btn:hover { color: var(--sh-text-primary); background: var(--sh-surface-active); }
+.st-mode-dropdown {
+  position: absolute; top: calc(100% + 6px); right: -3px; z-index: 50;
+  min-width: 140px; padding: 4px; border-radius: 8px;
+  background: var(--sh-surface-hover); border: 1px solid var(--sh-border-subtle);
+  box-shadow: 0 8px 24px rgba(0,0,0,.4);
+}
+.st-mode-dropdown-item {
+  display: flex; align-items: center; justify-content: space-between;
+  width: 100%; padding: 6px 10px; border: none; background: none;
+  color: var(--sh-text-secondary); font-size: 12px; cursor: pointer;
+  border-radius: 6px; font-family: var(--sh-font-mono, monospace);
+}
+.st-mode-dropdown-item:hover { background: var(--sh-surface-active); color: var(--sh-text-primary); }
+.st-mode-dropdown-count { opacity: 0.5; font-size: 11px; }
 .st-mode-pill:hover { color: var(--sh-text-primary); }
 .st-mode-pill.active {
   background: var(--sh-bg);

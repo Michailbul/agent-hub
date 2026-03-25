@@ -701,24 +701,16 @@ export function SkillsLabV2({ themePrefix: p, variant }: SkillsLabV2Props) {
                   </>
                 )}
                 {/* More dropdown for .agents, .codex, all */}
-                <div style={{ position: 'relative' }}>
+                <div className={`${p}-mode-more-wrap`}>
                   <button
-                    className={`${p}-mode-pill`}
-                    onClick={() => setMoreMenuOpen(v => !v)}
+                    className={`${p}-mode-more-btn`}
+                    onClick={e => { e.stopPropagation(); setMoreMenuOpen(v => !v) }}
                     title="More skill libraries"
-                    style={{ padding: '2px 6px', fontSize: 11 }}
                   >
                     ···
                   </button>
                   {moreMenuOpen && (
-                    <div
-                      className={`${p}-mode-dropdown`}
-                      style={{
-                        position: 'absolute', top: '100%', right: 0, marginTop: 4, zIndex: 50,
-                        background: 'var(--color-surface, #1a1a1a)', border: '1px solid var(--color-border, #333)',
-                        borderRadius: 8, padding: 4, minWidth: 130, boxShadow: '0 8px 24px rgba(0,0,0,.4)',
-                      }}
-                    >
+                    <div className={`${p}-mode-dropdown`}>
                       {[
                         { id: 'agents' as const, label: '.agents', count: modeTabCounts.agents },
                         { id: 'codex' as const, label: '.codex', count: modeTabCounts.codex },
@@ -727,18 +719,10 @@ export function SkillsLabV2({ themePrefix: p, variant }: SkillsLabV2Props) {
                         <button
                           key={item.id}
                           className={`${p}-mode-dropdown-item`}
-                          style={{
-                            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                            width: '100%', padding: '6px 10px', border: 'none', background: 'none',
-                            color: 'var(--color-text, #ccc)', fontSize: 12, cursor: 'pointer',
-                            borderRadius: 6, fontFamily: 'var(--font-mono, monospace)',
-                          }}
-                          onMouseEnter={e => (e.currentTarget.style.background = 'var(--color-hover, #2a2a2a)')}
-                          onMouseLeave={e => (e.currentTarget.style.background = 'none')}
                           onClick={() => { setSidebarMode(item.id); setMoreMenuOpen(false) }}
                         >
                           <span>{item.label}</span>
-                          <span style={{ opacity: 0.5, fontSize: 11 }}>{item.count}</span>
+                          <span className={`${p}-mode-dropdown-count`}>{item.count}</span>
                         </button>
                       ))}
                     </div>
