@@ -209,8 +209,14 @@ interface SkillsLabStore {
   setActiveAgentFilter: (id: string | null) => void
   setActiveFamilyFilter: (id: string | null) => void
   toggleDuplicateOnly: () => void
+  selectDepartment: (dept: string) => void
+  addDepartment: (dept: string) => void
+  removeDepartment: (dept: string) => void
   toggleDepartment: (dept: string) => void
   clearDepartments: () => void
+  selectPillar: (pillarId: string) => void
+  addPillar: (pillarId: string) => void
+  removePillar: (pillarId: string) => void
   togglePillar: (pillarId: string) => void
   clearPillars: () => void
   setActiveTagFilter: (tag: string | null) => void
@@ -577,12 +583,36 @@ export const useSkillsLabStore = create<SkillsLabStore>((set, get) => ({
   })),
   setActiveFamilyFilter: (id) => set(s => ({ activeFamilyFilter: s.activeFamilyFilter === id ? null : id })),
   toggleDuplicateOnly: () => set(s => ({ duplicateOnly: !s.duplicateOnly })),
+  selectDepartment: (dept) => set({ activeDepartments: new Set([dept]) }),
+  addDepartment: (dept) => set(s => {
+    const next = new Set(s.activeDepartments)
+    next.add(dept)
+    return { activeDepartments: next }
+  }),
+  removeDepartment: (dept) => set(s => {
+    if (!s.activeDepartments.has(dept)) return s
+    const next = new Set(s.activeDepartments)
+    next.delete(dept)
+    return { activeDepartments: next }
+  }),
   toggleDepartment: (dept) => set(s => {
     const next = new Set(s.activeDepartments)
     if (next.has(dept)) next.delete(dept); else next.add(dept)
     return { activeDepartments: next }
   }),
   clearDepartments: () => set({ activeDepartments: new Set() }),
+  selectPillar: (pillarId) => set({ activePillars: new Set([pillarId]) }),
+  addPillar: (pillarId) => set(s => {
+    const next = new Set(s.activePillars)
+    next.add(pillarId)
+    return { activePillars: next }
+  }),
+  removePillar: (pillarId) => set(s => {
+    if (!s.activePillars.has(pillarId)) return s
+    const next = new Set(s.activePillars)
+    next.delete(pillarId)
+    return { activePillars: next }
+  }),
   togglePillar: (pillarId) => set(s => {
     const next = new Set(s.activePillars)
     if (next.has(pillarId)) next.delete(pillarId); else next.add(pillarId)
@@ -1046,36 +1076,41 @@ export const useSkillsLabStore = create<SkillsLabStore>((set, get) => ({
         keywordScores.set(skill.id, kwScore)
       }
 
-      // 2. Semantic hits from server
-      const semanticHitIds = new Set(semanticResults.map(r => r.skillId))
+      // 2. Semantic hits from server — only include if score is meaningful
+      const SEMANTIC_MIN_SCORE = 0.45
       const semanticScoreMap = new Map(semanticResults.map(r => [r.skillId, r]))
 
-      // 3. Union both sets with combinedScore
+      // 3. Combine: keyword hits always included, semantic-only hits need threshold
       const combinedScoreMap = new Map<string, number>()
-      const unionIds = new Set([...keywordScores.keys(), ...semanticHitIds])
-      for (const id of unionIds) {
-        const kwScore = keywordScores.get(id)
+      // Start with all keyword hits
+      for (const [id, kwScore] of keywordScores) {
         const semResult = semanticScoreMap.get(id)
-        let score: number
-        if (kwScore !== undefined && semResult) {
-          score = kwScore + (semResult.score || 0)
-        } else if (kwScore !== undefined) {
-          score = kwScore
-        } else if (semResult) {
-          score = semResult.combined ?? semResult.score
-        } else {
-          score = 0
+        combinedScoreMap.set(id, kwScore + (semResult?.score || 0))
+      }
+      // Add semantic-only hits above threshold
+      for (const [skillId, semResult] of semanticScoreMap) {
+        if (keywordScores.has(skillId)) continue // already counted
+        const semScore = semResult.combined ?? semResult.score
+        if (semScore >= SEMANTIC_MIN_SCORE) {
+          combinedScoreMap.set(skillId, semScore)
         }
-        combinedScoreMap.set(id, score)
+      }
+      const unionIds = new Set(combinedScoreMap.keys())
+
+      // If strong matches exist (name/desc hits), prune weak body-only keyword matches
+      const hasStrongMatches = [...combinedScoreMap.values()].some(s => s >= 0.6)
+      if (hasStrongMatches) {
+        for (const [id, score] of combinedScoreMap) {
+          if (score < 0.4) combinedScoreMap.delete(id)
+        }
       }
 
-      // Build result from the union
-      // For semantic-only hits, use the scoped `result` list (respects claude-code/plugin filters)
-      // then fall back to all skills for semantic hits outside scope — those get filtered below
+      // Build result from the scored set
+      const finalIds = new Set(combinedScoreMap.keys())
       const scopedById = new Map(result.map(s => [s.id, s]))
       const allById = new Map(skills.map(s => [s.id, s]))
       const unionSkills: UnifiedSkill[] = []
-      for (const id of unionIds) {
+      for (const id of finalIds) {
         const skill = scopedById.get(id) || allById.get(id)
         if (skill) unionSkills.push(skill)
       }
