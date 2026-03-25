@@ -503,8 +503,9 @@
 .st-skill-list { display: flex; flex-direction: column; gap: 1px; padding: 0 8px; }
 .st-skill-row {
   display: flex; align-items: center; gap: 10px;
-  width: 100%; padding: 0 10px; height: 34px;
+  width: 100%; padding: 0 28px 0 10px; height: 34px;
   background: none; border: none; border-radius: 6px;
+  overflow: hidden;
   cursor: pointer; color: var(--sh-text-primary);
   font-size: 13px; font-weight: 400; font-family: inherit;
   text-align: left; position: relative;
@@ -525,7 +526,7 @@
 }
 .st-skill-row-duplicate { }
 .st-skill-name { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
-.st-skill-meta { font-size: 11px; color: var(--sh-text-tertiary); flex-shrink: 0; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.st-skill-meta { font-size: 11px; color: var(--sh-text-tertiary); flex-shrink: 0; white-space: nowrap; font-variant-numeric: tabular-nums; max-width: 120px; overflow: hidden; text-overflow: ellipsis; }
 
 /* ── Star ── */
 .st-star-btn {
