@@ -1154,7 +1154,7 @@ function buildSkillsIndex() {
 
   for (const source of sources) {
     const entries = fs.readdirSync(source.root, { withFileTypes: true })
-      .filter(entry => entry.isDirectory() && !isSkippableSkillDir(entry.name))
+      .filter(entry => (entry.isDirectory() || entry.isSymbolicLink()) && !isSkippableSkillDir(entry.name))
       .map(entry => entry.name)
       .sort((left, right) => left.localeCompare(right));
 
@@ -1172,7 +1172,7 @@ function buildSkillsIndex() {
       let hasChildSkills = false;
       try {
         const subEntries = fs.readdirSync(subDir, { withFileTypes: true })
-          .filter(entry => entry.isDirectory() && !isSkippableSkillDir(entry.name));
+          .filter(entry => (entry.isDirectory() || entry.isSymbolicLink()) && !isSkippableSkillDir(entry.name));
         for (const subEntry of subEntries) {
           const subSkillPath = path.join(subDir, subEntry.name, 'SKILL.md');
           if (fs.existsSync(subSkillPath)) {
