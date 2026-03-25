@@ -3132,30 +3132,41 @@ app.post('/api/embeddings/query', auth, async (req, res) => {
     const index = getCachedSkillsIndex();
     const skillMap = new Map(index.skills.map(s => [s.id, s]));
 
-    // Compute keyword match ratio against query terms
+    // Compute weighted keyword score: name/dir match = 1.0, summary = 0.6, dept/purpose = 0.4
     const queryTerms = text.toLowerCase().split(/\s+/).filter(Boolean);
     function keywordScore(skillId: string): number {
       const skill = skillMap.get(skillId);
       if (!skill || queryTerms.length === 0) return 0;
-      const haystack = [skill.name, skill.summary, skill.grouping.department, skill.grouping.purpose,
-        ...(skill.variants[0]?.directoryName ? [skill.variants[0].directoryName] : []),
-      ].join(' ').toLowerCase();
-      const matched = queryTerms.filter(t => haystack.includes(t)).length;
-      return matched / queryTerms.length;
+      const nameField = [skill.name, skill.variants[0]?.directoryName || ''].join(' ').toLowerCase();
+      const summaryField = (skill.summary || '').toLowerCase();
+      const metaField = [skill.grouping.department, skill.grouping.purpose, skill.pillar].join(' ').toLowerCase();
+      let total = 0;
+      for (const term of queryTerms) {
+        if (nameField.includes(term)) total += 1.0;
+        else if (summaryField.includes(term)) total += 0.6;
+        else if (metaField.includes(term)) total += 0.4;
+        // no match for this term = 0
+      }
+      return total / queryTerms.length;
     }
 
     const results: { skillId: string; score: number; keywordScore: number; combined: number }[] = [];
     for (const [skillId, skillVector] of Object.entries(cache.skills)) {
       const score = cosineSimilarity(queryVector, skillVector);
       const kw = keywordScore(skillId);
-      const combined = Math.max(score, kw * 0.85);
-      if (score >= 0.20 || kw > 0) {
+      // Weighted combination: semantic + keyword boost (not just max)
+      const combined = kw >= 0.8
+        ? score + kw          // strong keyword match: boost semantic score
+        : kw > 0
+          ? Math.max(score, kw * 0.7)  // weak keyword: modest boost
+          : score;            // semantic only
+      if (score >= 0.35 || kw >= 0.6) {
         results.push({ skillId, score, keywordScore: kw, combined });
       }
     }
 
     results.sort((a, b) => b.combined - a.combined);
-    res.json({ results: results.slice(0, 50) });
+    res.json({ results: results.slice(0, 30) });
   } catch (e: any) {
     res.status(500).json({ error: e.message });
   }
