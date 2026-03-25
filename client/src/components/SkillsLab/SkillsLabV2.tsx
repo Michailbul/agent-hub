@@ -77,6 +77,7 @@ export function SkillsLabV2({ themePrefix: p, variant }: SkillsLabV2Props) {
   const toggleDepartment = useSkillsLabStore(s => s.toggleDepartment)
   const pillars = useSkillsLabStore(s => s.pillars)
   const activePillars = useSkillsLabStore(s => s.activePillars)
+  const selectPillar = useSkillsLabStore(s => s.selectPillar)
   const togglePillar = useSkillsLabStore(s => s.togglePillar)
   const clearAllFilters = useSkillsLabStore(s => s.clearAllFilters)
   const expandedSkillId = useSkillsLabStore(s => s.expandedSkillId)
@@ -451,7 +452,15 @@ export function SkillsLabV2({ themePrefix: p, variant }: SkillsLabV2Props) {
 
   const renderSkillRow = (skill: UnifiedSkill) => {
     const agentWorkspaceKey = activeAgentFilter ? `workspace-${activeAgentFilter}` : null
+    // Prefer the variant matching the active sidebar mode's ecosystem
+    const ecosystemKey = sidebarMode === 'claude-code' ? 'claude'
+      : sidebarMode === 'openclaw' ? 'openclaw-library'
+      : sidebarMode === 'agents' ? 'agents'
+      : sidebarMode === 'codex' ? 'codex'
+      : null
+    const modeVariant = ecosystemKey ? skill.sourceVariants[ecosystemKey] : null
     const variant = (agentWorkspaceKey ? skill.sourceVariants[agentWorkspaceKey] : null)
+      || modeVariant
       || skill.sourceVariants[skill.canonicalSource] || Object.values(skill.sourceVariants)[0]
     const sourceLabel = variant?.sourceLabel || skill.canonicalSource
     const meta = sourceLabel
@@ -843,8 +852,32 @@ export function SkillsLabV2({ themePrefix: p, variant }: SkillsLabV2Props) {
                                       toggleDepartment(dept)
                                     }}
                                   >
-                                    <span>{dept}</span>
-                                    <span className={`${p}-nav-section-item-count`}>{count}</span>
+                                    <span className={`${p}-agent-dept-main`}>
+                                      <span>{dept}</span>
+                                      <span className={`${p}-nav-section-item-count`}>{count}</span>
+                                    </span>
+                                    <span
+                                      className={`${p}-filter-only`}
+                                      onClick={e => {
+                                        e.stopPropagation()
+                                        if (!isActive) setActiveAgentFilter(agent.id)
+                                        useSkillsLabStore.getState().selectDepartment(dept)
+                                      }}
+                                      role="button"
+                                      tabIndex={0}
+                                      aria-label={`Show only ${dept}`}
+                                      title={`Show only ${dept}`}
+                                      onKeyDown={e => {
+                                        if (e.key === 'Enter' || e.key === ' ') {
+                                          e.preventDefault()
+                                          e.stopPropagation()
+                                          if (!isActive) setActiveAgentFilter(agent.id)
+                                          useSkillsLabStore.getState().selectDepartment(dept)
+                                        }
+                                      }}
+                                    >
+                                      Only
+                                    </span>
                                   </button>
                                 )
                               })}
@@ -874,14 +907,33 @@ export function SkillsLabV2({ themePrefix: p, variant }: SkillsLabV2Props) {
                       className={`${p}-nav-section-item${isActive ? ' active' : ''}`}
                       onClick={e => { e.stopPropagation(); togglePillar(pl.id) }}
                     >
-                      <span className={`${p}-nav-section-item-left`}>
-                        <span
-                          className={`${p}-nav-section-item-dot`}
-                          style={{ background: pl.color }}
-                        />
-                        <span className={`${p}-nav-section-item-name`}>{pl.name}</span>
+                      <span className={`${p}-nav-section-main`}>
+                        <span className={`${p}-nav-section-item-left`}>
+                          <span
+                            className={`${p}-nav-section-item-dot`}
+                            style={{ background: pl.color }}
+                          />
+                          <span className={`${p}-nav-section-item-name`}>{pl.name}</span>
+                        </span>
+                        <span className={`${p}-nav-section-item-count`}>{count}</span>
                       </span>
-                      <span className={`${p}-nav-section-item-count`}>{count}</span>
+                      <span
+                        className={`${p}-filter-only`}
+                        onClick={e => { e.stopPropagation(); selectPillar(pl.id) }}
+                        role="button"
+                        tabIndex={0}
+                        aria-label={`Show only ${pl.name}`}
+                        title={`Show only ${pl.name}`}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            selectPillar(pl.id)
+                          }
+                        }}
+                      >
+                        Only
+                      </span>
                     </button>
                   )
                 })}
