@@ -1027,13 +1027,23 @@ export const useSkillsLabStore = create<SkillsLabStore>((set, get) => ({
 
     if (searchQuery) {
       const searchTerms = normalizeSearchTerms(searchQuery)
-      // 1. Keyword hits (client-side AND-matching)
-      const keywordHitIds = new Set<string>()
+      // 1. Keyword hits with relevance scoring
+      //    Name/pillar match = strong (1.0), description = medium (0.6), body = weak (0.3)
+      const keywordScores = new Map<string, number>()
       for (const skill of result) {
-        const searchIndex = getCachedSearchIndex(skill, sources, agents)
-        if (searchTerms.every(term => searchIndex.includes(term))) {
-          keywordHitIds.add(skill.id)
+        const nameField = `${skill.name} ${skill.displayName} ${skill.pillarName}`.toLowerCase()
+        const descField = (skill.description || '').toLowerCase()
+        const fullIndex = getCachedSearchIndex(skill, sources, agents)
+        if (!searchTerms.every(term => fullIndex.includes(term))) continue
+
+        let kwScore = 0
+        for (const term of searchTerms) {
+          if (nameField.includes(term)) kwScore += 1.0
+          else if (descField.includes(term)) kwScore += 0.6
+          else kwScore += 0.3
         }
+        kwScore = kwScore / searchTerms.length // normalize to 0-1 per term
+        keywordScores.set(skill.id, kwScore)
       }
 
       // 2. Semantic hits from server
@@ -1042,16 +1052,15 @@ export const useSkillsLabStore = create<SkillsLabStore>((set, get) => ({
 
       // 3. Union both sets with combinedScore
       const combinedScoreMap = new Map<string, number>()
-      const unionIds = new Set([...keywordHitIds, ...semanticHitIds])
+      const unionIds = new Set([...keywordScores.keys(), ...semanticHitIds])
       for (const id of unionIds) {
-        const isKw = keywordHitIds.has(id)
+        const kwScore = keywordScores.get(id)
         const semResult = semanticScoreMap.get(id)
         let score: number
-        if (isKw && semResult) {
-          // Both keyword and semantic: guaranteed relevant + semantic boost
-          score = 1.0 + (semResult.score || 0)
-        } else if (isKw) {
-          score = 1.0
+        if (kwScore !== undefined && semResult) {
+          score = kwScore + (semResult.score || 0)
+        } else if (kwScore !== undefined) {
+          score = kwScore
         } else if (semResult) {
           score = semResult.combined ?? semResult.score
         } else {

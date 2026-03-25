@@ -464,10 +464,9 @@ export function SkillsLabV2({ themePrefix: p, variant }: SkillsLabV2Props) {
         onClick={e => { e.stopPropagation(); openSkill(skill.id) }}
       >
         <span className={`${p}-skill-name`}>{skill.displayName}</span>
-        {relevanceScore !== undefined && (
-          <span className={`${p}-semantic-badge`} title={`Relevance: ${Math.min(Math.round(relevanceScore * 100), 100)}%`}>
+        {relevanceScore !== undefined && relevanceScore > 0 && (
+          <span className={`${p}-semantic-badge`} title={`Score: ${relevanceScore.toFixed(2)}`}>
             <Sparkles size={10} strokeWidth={1.5} />
-            {Math.min(Math.round(relevanceScore * 100), 100)}%
           </span>
         )}
         <span className={`${p}-skill-meta`}>{meta}</span>
