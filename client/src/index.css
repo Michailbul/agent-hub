@@ -2030,11 +2030,10 @@ body{font-family:'Inter',var(--font-sans);color:var(--text-primary);
   transition:background 80ms, box-shadow 80ms;
 }
 .cv-card-skill.active{
-  background:rgba(255,122,100,.1);
-  box-shadow:inset 2px 0 0 var(--cv-coral);
+  background:rgba(255,255,255,.04);
 }
 .cv-card-skill:hover .cv-card-skill-name{color:var(--cv-ink)}
-.cv-card-skill.active .cv-card-skill-name{color:var(--cv-ink);font-weight:500}
+.cv-card-skill.active .cv-card-skill-name{color:var(--cv-ink)}
 .cv-card-skill-remove{
   display:flex;align-items:center;justify-content:center;
   margin-left:auto;
@@ -2056,9 +2055,7 @@ body{font-family:'Inter',var(--font-sans);color:var(--text-primary);
 .cv-card-skill-dot{
   width:5px;height:5px;border-radius:50%;flex-shrink:0;
 }
-.cv-card-skill.active .cv-card-skill-dot{
-  box-shadow:0 0 0 2px rgba(255,122,100,.18);
-}
+.cv-card-skill.active .cv-card-skill-dot{}
 .cv-card-skill-name{
   font:400 10.5px/1.3 var(--cv-font);color:var(--cv-text-secondary);
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
