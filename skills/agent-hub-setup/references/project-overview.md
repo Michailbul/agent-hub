@@ -2,7 +2,7 @@
 
 ## What Is Agent Hub
 
-Agent Hub is a self-hosted web editor for AI agent instruction files and skills. It provides a visual UI to manage the OpenClaw agent ecosystem — editing SOUL.md, MISSION.md, IDENTITY.md, managing skill libraries, configuring cron jobs, and visualizing agent relationships.
+Agent Hub is a self-hosted web editor for AI agent instruction files and skills. It provides a visual UI to manage the OpenClaw agent ecosystem — editing SOUL.md, MISSION.md, IDENTITY.md, managing skill libraries across ecosystems (.openclaw, .claude, .agents, .codex), configuring skill pillars, and visualizing agent relationships on a canvas.
 
 - **License:** MIT, open source
 - **Repo:** `https://github.com/Michailbul/agent-hub`
@@ -17,13 +17,14 @@ Agent Hub is a self-hosted web editor for AI agent instruction files and skills.
 |---|---|
 | Server | Node.js 18+, Express 4, TypeScript |
 | Build (server) | tsup → CommonJS, target node18 |
-| Client | React 19, Vite, TypeScript |
-| Editor | CodeMirror 6 (markdown), Tiptap (rich text) |
+| Client | React 19, Vite 7, TypeScript |
+| Editor | CodeMirror 6 (markdown) |
 | State | Zustand |
-| Diagrams | XYFlow (React Flow) for agent canvas |
-| Styling | CSS variables, Inter + JetBrains Mono fonts |
+| Canvas | XYFlow (React Flow) for agent canvas |
+| Styling | TailwindCSS v4, shadcn/ui primitives, CSS variables |
 | Container | Docker, Node 22 Alpine, multi-stage build |
 | Auth | Cookie-based (`agent_hub_auth`), simple password |
+| Search | Gemini embeddings for semantic skill search (optional) |
 
 ---
 
@@ -32,29 +33,34 @@ Agent Hub is a self-hosted web editor for AI agent instruction files and skills.
 ```
 agent-hub/
 ├── src/
-│   ├── server.ts          # Express API server (all routes, path resolution, config)
+│   ├── server.ts          # Express API server (~3000 lines — all routes, path resolution, config, skill pillars)
 │   ├── cli.ts             # CLI entrypoint (--no-open, --vps, --tunnel flags)
 │   ├── setup-agent.ts     # Initial setup wizard (detects CLI, spawns subprocess)
 │   └── setup-prompt.ts    # Premade prompt for workspace scanning
 ├── client/
 │   ├── src/
-│   │   ├── App.tsx        # Main React app with routing
+│   │   ├── App.tsx        # Main React app — views: skills-lab, canvas, headquarters
 │   │   ├── index.css      # Global styles
-│   │   ├── components/    # React components (Crons, Canvas, Sidebar, Layout, etc.)
-│   │   ├── store/         # Zustand stores (crons.ts, canvas.ts, hq.ts, skills.ts)
-│   │   ├── types/         # TypeScript type definitions
-│   │   └── lib/           # Utilities (API client, CodeMirror theme)
+│   │   ├── components/
+│   │   │   ├── Canvas/        # Original canvas view (skill browser, inspector, agent nodes)
+│   │   │   ├── Canvas2/       # Redesigned canvas with shadcn/ui (skill graph, inspector tree)
+│   │   │   ├── SkillsLab/     # Skills Lab — browse/filter/manage skills with pillar nav
+│   │   │   ├── Headquarters/  # HQ — linked context folders, native file picker
+│   │   │   ├── Layout/        # TopBar
+│   │   │   └── ui/            # shadcn/ui primitives
+│   │   ├── store/         # Zustand stores (canvas.ts, skillsLab.ts, hq.ts, auth.ts, ui.ts, theme.ts)
+│   │   ├── types/         # TypeScript type definitions (canvas.ts, hq.ts, index.ts)
+│   │   └── lib/           # Utilities (api.ts, CodeMirror themes, hooks)
 │   ├── package.json       # React/Vite deps
 │   └── vite.config.ts
 ├── dist/                  # Compiled server (cli.js, server.js) — git-ignored
-├── dist-client/           # Compiled React app (index.html + assets) — checked in
-├── skills/                # Bundled skills (including this setup skill)
+├── dist-client/           # Compiled React app (index.html + assets) — git-ignored
+├── skills/                # Bundled skills (agent-hub-setup, skill-classifier)
+├── CLAUDE.md              # Agent coding instructions for this repo
 ├── Dockerfile             # Multi-stage: builder + production
 ├── docker-compose.example.yml  # User template for Docker deployment
 ├── agent-hub.config.example.json  # Config template
-├── package.json           # Root package (Express server deps + build scripts)
-├── AGENTS.md              # Agent coding instructions for this repo
-└── index.html             # Legacy single-file frontend (fallback)
+└── package.json           # Root package (Express server deps + build scripts)
 ```
 
 ---
@@ -93,8 +99,7 @@ All routes except `/api/login` and `/api/setup/status` require auth (cookie `age
 |---|---|---|
 | `POST` | `/api/login` | Set auth cookie (body: `{password}`) |
 | `POST` | `/api/logout` | Clear auth cookie |
-| `GET` | `/api/setup/status` | Check if initial setup needed: `{needsSetup, cli, configPath}` |
-| `GET` | `/api/setup/run` | SSE stream: runs Claude/Codex setup wizard |
+| `GET` | `/api/setup/status` | Check if initial setup needed |
 | `POST` | `/api/refresh` | Rescan agents and skills without restart |
 
 ### Files
@@ -109,31 +114,57 @@ All routes except `/api/login` and `/api/setup/status` require auth (cookie `age
 
 | Method | Route | Description |
 |---|---|---|
-| `GET` | `/api/tree` | Full tree: agents with instructions/memory/pm/skills, libraries, studio |
-| `GET` | `/api/canvas/data` | Agent relationships, models, skills, telegram bindings, subagent edges |
-| `GET` | `/api/assign-targets` | Agent workspace targets for file assignment |
+| `GET` | `/api/tree` | Full tree: agents with instructions/memory/pm/skills, libraries |
+| `GET` | `/api/canvas/data` | Agent relationships, models, skills, subagent edges |
+| `DELETE` | `/api/agents/:id` | Delete an agent workspace |
 
 ### Skills
 
 | Method | Route | Description |
 |---|---|---|
-| `GET` | `/api/skills/index` | Full skills index with variants, sources, grouping |
-| `POST` | `/api/skill/copy` | Copy skill dir (body: `{src, destDir}`) |
-| `POST` | `/api/skill/move` | Move skill dir (body: `{src, destDir}`) |
-| `POST` | `/api/skill/delete` | Delete skill dir (body: `{src}`) |
-| `POST` | `/api/skill/rename` | Rename skill (body: `{src, newName}`) |
-| `POST` | `/api/skills/folder/create` | Create skill folder (body: `{root, name}`) |
-| `POST` | `/api/skills/assign` | Install skill to agent workspace (body: `{agentId, variantPath}`) |
-| `POST` | `/api/skills/unassign` | Remove skill from agent (body: `{agentId, skillId}`) |
+| `GET` | `/api/skills/index` | Full skills index with variants, sources, grouping, pillar, pillars metadata |
+| `POST` | `/api/skills/assign` | Install skill to agent workspace |
+| `POST` | `/api/skills/unassign` | Remove skill from agent |
+| `POST` | `/api/skills/install/zip` | Install skill from ZIP upload |
+| `POST` | `/api/skills/install/command` | Install skill via npx command |
+| `POST` | `/api/skills/delete` | Delete skill variant |
+| `POST` | `/api/skills/star` | Star a skill |
+| `POST` | `/api/skills/unstar` | Unstar a skill |
+| `POST` | `/api/skill/tag` | Override skill department classification |
 
-### Cron Jobs
+### Skill Pillars
 
 | Method | Route | Description |
 |---|---|---|
-| `GET` | `/api/crons` | Get all cron jobs (from `{OPENCLAW_ROOT}/cron/jobs.json`) |
-| `POST` | `/api/crons` | Create cron job (body: job object) |
-| `PATCH` | `/api/crons/:id` | Update cron job fields |
-| `DELETE` | `/api/crons/:id` | Delete cron job |
+| `GET` | `/api/skill-pillars/config` | Get pillar configuration (with keyword rules) |
+| `POST` | `/api/skill-pillars/config` | Write pillar config, invalidate cache |
+
+### Embeddings / Semantic Search
+
+| Method | Route | Description |
+|---|---|---|
+| `GET` | `/api/embeddings/status` | Check if Gemini embeddings are available |
+| `POST` | `/api/embeddings/build` | Build delta embeddings index |
+| `POST` | `/api/embeddings/rebuild` | Full rebuild of embeddings |
+| `POST` | `/api/embeddings/query` | Semantic search (body: `{text}`) |
+
+### HQ (Headquarters)
+
+| Method | Route | Description |
+|---|---|---|
+| `GET` | `/api/hq/config` | Get linked HQ folders |
+| `POST` | `/api/hq/link` | Link a new HQ folder |
+| `DELETE` | `/api/hq/unlink/:id` | Unlink an HQ folder |
+| `GET` | `/api/hq/browse` | Browse server directories |
+| `GET` | `/api/hq/pick-folder` | Open native OS file picker (macOS Finder / Linux zenity) |
+
+### Skills Repos
+
+| Method | Route | Description |
+|---|---|---|
+| `GET` | `/api/skills-repos/config` | List linked skill repos |
+| `POST` | `/api/skills-repos/link` | Link a skill repo |
+| `POST` | `/api/skills-repos/pull/:id` | Git pull a skill repo |
 
 ---
 
@@ -158,13 +189,7 @@ workspace-{agentId}/
 │   ├── vision.md
 │   ├── backlog.md
 │   └── problems.md
-├── kb/                  # Knowledge base
-│   ├── _inbox/
-│   ├── resources/
-│   ├── prompts/
-│   └── tutorials/
 ├── memory/              # Session logs (YYYY-MM-DD.md)
-├── todos/               # Task lists
 └── tmp/                 # Agent scratch space
 ```
 
@@ -175,12 +200,9 @@ workspace-{agentId}/
 **Role:** Role Description
 ```
 
-Agent Hub reads these three fields to populate the sidebar. All other content in IDENTITY.md is free-form.
-
 ### Workspace naming convention
 - `workspace` → agent ID `main` (the default/primary agent)
 - `workspace-meda` → agent ID `meda`
-- `workspace-persey` → agent ID `persey`
 - Pattern: `workspace-{id}` where `{id}` is the agent identifier
 
 ---
@@ -192,7 +214,6 @@ Each skill is a directory containing at minimum a `SKILL.md`:
 ```
 {skill-name}/
 ├── SKILL.md             # Required — YAML frontmatter + markdown instructions
-├── _meta.json           # Optional — metadata (ownerId, slug, version, publishedAt)
 ├── references/          # Optional — reference docs loaded on demand
 ├── scripts/             # Optional — executable automation
 └── assets/              # Optional — templates, images, fonts
@@ -206,50 +227,35 @@ description: What the skill does and when to use it
 ---
 ```
 
-Agent Hub parses `name` and `description` from frontmatter. All other frontmatter fields are passed through but not used by the server.
+---
+
+## Skill Pillars
+
+Skills are classified into action-oriented pillars (replaces old department buckets). Default pillars:
+
+| Pillar | Color | Key signals |
+|--------|-------|-------------|
+| Build | `#3b82f6` | typescript, react, deploy, api, frontend, backend, mcp |
+| Design | `#a855f7` | figma, ui design, ux, brand, design system, typography |
+| Write | `#f59e0b` | copywriting, social media, carousel, seo, blog, editorial |
+| Research | `#10b981` | research, scrape, analyze, audit, summarize |
+| Automate | `#6366f1` | workflow, cron, automation, ops, ci/cd |
+| Grow | `#ef4444` | marketing, ads, growth, campaign, funnel, conversion |
+| AI Creative | `#ec4899` | image generation, video generation, midjourney, prompt |
+| Data | `#14b8a6` | database, embedding, rag, knowledge base, enrichment |
+| Sell | `#f97316` | sales, cold email, outreach, founder sales |
+| Utility | `#94a3b8` | fallback bucket |
+
+Configurable via `~/.openclaw/agent-hub/skill-pillars.config.json`. Falls back to defaults when no config file exists.
 
 ---
 
 ## Security Model
 
-- **ALLOWED_ROOTS:** Every file operation is validated against a whitelist of allowed root paths. See [path-resolution.md](path-resolution.md) for how it's built.
-- **isAllowed(filePath):** Checks that the resolved path starts with (or equals) an allowed root.
-- **Auth:** Simple password via `HUB_PASSWORD` env var. Cookie `agent_hub_auth` set for 7 days.
+- **ALLOWED_ROOTS:** Every file operation is validated against a whitelist of allowed root paths.
+- **isWithinRoots(filePath, roots):** Checks that the resolved path starts with an allowed root.
+- **Auth:** Simple password via `HUB_PASSWORD` env var. Cookie `agent_hub_auth` set for 7 days. Only active when `NODE_ENV=production` or `HUB_AUTH=true`.
 - **No path traversal:** All paths are resolved with `path.resolve()` before checking.
-- **Docker:** Container runs with `--no-open` flag. Never runs with `--dangerously-skip-permissions`.
-
----
-
-## Cron Jobs
-
-Stored at `{OPENCLAW_ROOT}/cron/jobs.json`. Auto-backed up to `.bak` before every write.
-
-```json
-{
-  "version": 1,
-  "jobs": [
-    {
-      "id": "uuid",
-      "name": "job-name",
-      "description": "Human-readable description",
-      "enabled": true,
-      "schedule": { "kind": "cron", "expr": "0 17 * * *", "tz": "Europe/Minsk" },
-      "sessionTarget": "isolated",
-      "payload": {
-        "kind": "agentTurn",
-        "message": "Instructions to the agent",
-        "model": "sonnet",
-        "timeoutSeconds": 600
-      },
-      "delivery": {
-        "mode": "announce",
-        "channel": "telegram",
-        "to": "-1003718448183:topic:10"
-      }
-    }
-  ]
-}
-```
 
 ---
 
@@ -261,8 +267,6 @@ agent-hub --no-open      # Start server, don't open browser (VPS/headless)
 agent-hub --vps          # Alias for --no-open
 agent-hub --tunnel       # Start Cloudflare tunnel for public access
 ```
-
-`--tunnel` auto-installs `cloudflared` if not found, then spawns a tunnel to expose localhost:4001 publicly.
 
 ---
 

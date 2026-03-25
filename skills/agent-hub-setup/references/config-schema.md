@@ -2,13 +2,12 @@
 
 ## When Config Is Needed
 
-Agent Hub works **zero-config** for standard OpenClaw setups. Only create `agent-hub.config.json` when:
-- You want to add a Studio/HQ directory (not auto-discoverable)
+Agent Hub works **zero-config** for standard setups. Only create `agent-hub.config.json` when:
 - You have non-standard paths for workspaces or skills
 - You want to explicitly name skill libraries differently
-- You're linking directories outside the standard OpenClaw root
+- You're linking directories outside the standard roots
 
-If all workspaces live under `~/.openclaw/workspace-*` and skills under `~/.agents/skills/`, you don't need a config file.
+If workspaces live under `~/.openclaw/workspace-*` and skills under `~/.agents/skills/`, `~/.openclaw/skills/`, `~/.claude/skills/`, or `~/.codex/skills/`, you don't need a config file. HQ folders are linked via the UI, not the config file.
 
 ---
 
@@ -50,13 +49,6 @@ mkdir -p ~/.openclaw/agent-hub
       "root": "string (required, absolute path)"
     }
   ],
-  "studio": {
-    "id": "string (required)",
-    "label": "string (required)",
-    "emoji": "string",
-    "root": "string (required, absolute path)",
-    "files": ["file1.md", "file2.md"]
-  }
 }
 ```
 
@@ -70,7 +62,6 @@ mkdir -p ~/.openclaw/agent-hub
 | `agentsSkillsRoot` | string | No | Overrides AGENTS_SKILLS_ROOT env var / auto-discovery |
 | `agents` | array | No | If present, disables auto-discovery entirely |
 | `skillLibraries` | array | No | Custom skill library definitions |
-| `studio` | object | No | HQ/studio directory (only way to add one) |
 
 #### Agent Object
 
@@ -93,17 +84,21 @@ mkdir -p ~/.openclaw/agent-hub
 | `emoji` | string | No | Icon emoji |
 | `root` | string | Yes | Absolute path to skills directory |
 
-#### Studio Object
-
-| Field | Type | Required | Description |
-|---|---|---|---|
-| `id` | string | Yes | Unique identifier (typically `studio`) |
-| `label` | string | Yes | Display name (e.g., `Studio HQ`, `Headquarters`) |
-| `emoji` | string | No | Icon emoji |
-| `root` | string | Yes | Absolute path to studio directory |
-| `files` | string[] | No | Files to display in the studio panel |
-
 Paths support `~` expansion (resolved to `$HOME` at runtime).
+
+---
+
+## Additional Config Files
+
+These are managed via the UI or API, not manually:
+
+| File | Location | Purpose |
+|---|---|---|
+| HQ config | `~/.openclaw/agent-hub/hq.config.json` | Linked HQ folders (managed via Headquarters UI) |
+| Starred skills | `~/.openclaw/agent-hub/starred-skills.config.json` | Starred/favorited skills |
+| Skill pillars | `~/.openclaw/agent-hub/skill-pillars.config.json` | Custom pillar definitions (optional, falls back to defaults) |
+| Skill classifications | `~/.openclaw/agent-hub/skill-classifications.json` | Agent-generated skill metadata |
+| Skills repos | `~/.openclaw/agent-hub/skills-repos.config.json` | Linked skill git repos |
 
 ---
 
@@ -138,14 +133,7 @@ Volumes map host paths into `/data/` inside the container:
   "skillLibraries": [
     { "id": "shared", "label": "Shared Skills", "emoji": "🧩", "root": "/data/agents/skills" },
     { "id": "openclaw", "label": "OpenClaw Skills", "emoji": "🔧", "root": "/data/openclaw/skills" }
-  ],
-  "studio": {
-    "id": "studio",
-    "label": "Headquarters",
-    "emoji": "🏢",
-    "root": "/data/studio",
-    "files": ["vision.md", "projects.md", "roadmap.md"]
-  }
+  ]
 }
 ```
 
@@ -154,7 +142,6 @@ Matching `docker-compose.yml` volumes:
 volumes:
   - /root/.openclaw:/data/openclaw
   - /root/.agents:/data/agents
-  - /root/work/laniameda/laniameda-hq:/data/studio
 ```
 
 ---
@@ -166,18 +153,11 @@ No Docker — paths are native filesystem paths:
 ```json
 {
   "openclawRoot": "/Users/michael/.openclaw",
-  "agentsSkillsRoot": "/Users/michael/.agents/skills",
-  "studio": {
-    "id": "studio",
-    "label": "Laniameda HQ",
-    "emoji": "🏢",
-    "root": "/Users/michael/work/laniameda/laniameda-hq",
-    "files": ["vision.md", "roadmap.md"]
-  }
+  "agentsSkillsRoot": "/Users/michael/.agents/skills"
 }
 ```
 
-When `agents` array is omitted, auto-discovery runs and finds all `workspace-*` dirs under the openclawRoot. This is the recommended approach for local dev — only add studio since it can't be auto-discovered.
+When `agents` array is omitted, auto-discovery runs and finds all `workspace-*` dirs under the openclawRoot. HQ folders are linked via the Headquarters UI.
 
 ---
 
@@ -185,8 +165,7 @@ When `agents` array is omitted, auto-discovery runs and finds all `workspace-*` 
 
 No config file needed if:
 - `~/.openclaw/` exists with `workspace-*` directories
-- `~/.agents/skills/` exists with skill directories
-- No studio/HQ directory needed
+- Skill directories exist at standard paths (`~/.agents/skills/`, `~/.openclaw/skills/`, `~/.claude/skills/`, `~/.codex/skills/`)
 
 Agent Hub will auto-discover everything. Just set the env vars:
 ```bash

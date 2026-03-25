@@ -169,4 +169,6 @@ Then: Build ALLOWED_ROOTS from all discovered paths
 | `OPENCLAW_ROOT` | auto-discovered | Root containing `workspace-*` dirs |
 | `AGENTS_SKILLS_ROOT` | auto-discovered | Shared skills directory |
 | `CONFIG_PATH` | `~/.openclaw/agent-hub/agent-hub.config.json` | Config file location |
+| `GEMINI_API_KEY` | *(unset)* | Google Gemini key for semantic skill search |
+| `HUB_AUTH` | *(unset)* | Set to `true` to force auth in dev mode |
 | `HOME` | system default | Used for `~` expansion |

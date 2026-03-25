@@ -106,13 +106,15 @@ Agent Hub reads these fields from IDENTITY.md:
 ### 3c: Find skill directories
 
 ```bash
-ls ~/.agents/skills/ 2>/dev/null | head -20     # Shared skills
-ls ${OPENCLAW_ROOT}/skills/ 2>/dev/null | head -20  # OpenClaw skills
+ls ~/.agents/skills/ 2>/dev/null | head -20     # Shared skills (.agents ecosystem)
+ls ~/.openclaw/skills/ 2>/dev/null | head -20   # OpenClaw skills
+ls ~/.claude/skills/ 2>/dev/null | head -20     # Claude Code skills
+ls ~/.codex/skills/ 2>/dev/null | head -20      # Codex skills
 ```
 
-### 3d: Check for Studio/HQ directory
+### 3d: Check for HQ directories
 
-Ask the user if they have a headquarters or studio directory they want Agent Hub to display. This is the only thing that can't be auto-discovered — it requires explicit config.
+Ask the user if they have headquarters or context directories they want Agent Hub to display. HQ folders are linked via the UI (Headquarters view → Link Folder) or via API — they're not auto-discovered.
 
 ## Phase 4: Generate Configuration
 
@@ -122,8 +124,8 @@ Decide whether a config file is needed. See [references/config-schema.md](refere
 
 If all these are true, skip config — auto-discovery handles everything:
 - Workspaces live under `~/.openclaw/workspace-*`
-- Skills live under `~/.agents/skills/` and/or `~/.openclaw/skills/`
-- No Studio/HQ directory to link
+- Skills live under `~/.agents/skills/`, `~/.openclaw/skills/`, `~/.claude/skills/`, and/or `~/.codex/skills/`
+- HQ folders will be linked via the UI (no config needed)
 
 Just set env vars:
 ```bash
@@ -133,7 +135,7 @@ export OPENCLAW_ROOT="<discovered-path>"  # only if non-standard
 
 ### When config IS needed
 
-Create the config file if the user has a Studio/HQ directory or non-standard paths:
+Create the config file if the user has non-standard paths:
 
 ```bash
 mkdir -p ~/.openclaw/agent-hub
@@ -142,9 +144,9 @@ mkdir -p ~/.openclaw/agent-hub
 Then write `~/.openclaw/agent-hub/agent-hub.config.json`. See [references/config-schema.md](references/config-schema.md) for examples. Key rules:
 
 - Only include `agents` array if you need to override auto-discovery
-- Always include `studio` if the user has an HQ directory
 - For Docker: use `/data/` paths (matching volume mounts), not host paths
 - For bare metal: use absolute filesystem paths
+- HQ folders are managed via the UI, not the config file
 
 ### Docker config note
 
@@ -171,11 +173,11 @@ services:
       HUB_PASSWORD: "<user-chosen-password>"
       OPENCLAW_ROOT: "/data/openclaw"
       AGENTS_SKILLS_ROOT: "/data/agents/skills"
+      NODE_ENV: "production"
+      # GEMINI_API_KEY: "<optional-for-semantic-search>"
     volumes:
       - <host-openclaw-root>:/data/openclaw
       - <host-agents-dir>:/data/agents
-      # Studio/HQ (if applicable):
-      # - <host-hq-path>:/data/studio
 ```
 
 Replace `<placeholders>` with actual paths discovered in Phase 3.
@@ -233,11 +235,12 @@ Log in with the password set in HUB_PASSWORD.
 
 ### 6d: Verify agents appear
 
-In the sidebar, confirm:
-- All workspace agents are listed with correct names and emojis
-- Skill libraries appear
-- Studio/HQ appears (if configured)
-- Clicking an agent shows its instruction files (SOUL.md, MISSION.md, etc.)
+In the UI, confirm:
+- **Canvas view:** All agents appear as nodes with correct names and emojis
+- **Skills Lab:** Skills are listed with pillar classifications (Build, Design, Write, etc.)
+- **Skills Lab tabs:** .openclaw and .claude tabs show ecosystem-scoped skills
+- **Headquarters:** HQ folders can be linked via the Link Folder dialog (supports native file picker on macOS)
+- Clicking an agent opens the inspector showing its instruction files
 
 Report the results to the user.
 
@@ -253,10 +256,10 @@ Report the results to the user.
 - Check `~/.agents/skills/` exists and has subdirectories
 - In Docker: verify the `~/.agents` volume mount
 
-### Studio not showing
-- Studio requires explicit config — it's never auto-discovered
-- Create/update `~/.openclaw/agent-hub/agent-hub.config.json` with a `studio` block
-- Restart the server after config changes
+### HQ folders not showing
+- HQ folders are linked via the UI (Headquarters → Link Folder), not via config
+- Config is stored at `~/.openclaw/agent-hub/hq.config.json`
+- Use the native file picker (Choose button) or the in-app browser (Browse button)
 
 ### Auth issues
 - Default password is `changeme` — always override with HUB_PASSWORD
