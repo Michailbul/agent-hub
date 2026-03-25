@@ -1018,12 +1018,17 @@ export const useSkillsLabStore = create<SkillsLabStore>((set, get) => ({
     const { sidebarMode, activePluginFilter, plugins } = get()
     let result = skills
 
-    // Ecosystem-scoped modes
-    const ecosystemFilter = sidebarMode === 'claude-code' ? 'claude'
-      : sidebarMode === 'openclaw' ? 'openclaw'
+    // Ground truth: only show skills present in ~/.claude/skills
+    // Other ecosystem modes (openclaw, agents, codex) further narrow within that set
+    result = result.filter(skill =>
+      Object.values(skill.sourceVariants).some(v => v.ecosystem === 'claude'),
+    )
+
+    // Additional ecosystem scoping for non-claude modes
+    const ecosystemFilter = sidebarMode === 'openclaw' ? 'openclaw'
       : sidebarMode === 'agents' ? 'agents'
       : sidebarMode === 'codex' ? 'codex'
-      : null // 'all' mode — no ecosystem filter
+      : null // 'all' and 'claude-code' already filtered above
 
     if (ecosystemFilter) {
       result = result.filter(skill =>
@@ -1122,7 +1127,10 @@ export const useSkillsLabStore = create<SkillsLabStore>((set, get) => ({
       set({ combinedScores: new Map() })
     }
 
-    // ── Re-apply scope filters to semantic-only additions ──
+    // ── Re-apply ground truth: only .claude/skills ──
+    result = result.filter(skill =>
+      Object.values(skill.sourceVariants).some(v => v.ecosystem === 'claude'),
+    )
     if (ecosystemFilter) {
       result = result.filter(skill =>
         Object.values(skill.sourceVariants).some(v =>

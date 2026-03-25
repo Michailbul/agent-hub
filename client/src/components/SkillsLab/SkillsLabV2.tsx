@@ -206,26 +206,30 @@ export function SkillsLabV2({ themePrefix: p, variant }: SkillsLabV2Props) {
   const agentsSkills = useMemo(() => filterByEcosystem('agents'), [skills])
   const codexSkills = useMemo(() => filterByEcosystem('codex'), [skills])
 
-  // Mode tab counts
+  // Mode tab counts — ground truth is .claude/skills
   const modeTabCounts = useMemo(() => ({
-    all: skills.length,
+    all: claudeSkills.length,
     claude: claudeSkills.length,
-    openclaw: openclawSkills.length,
-    agents: agentsSkills.length,
-    codex: codexSkills.length,
+    openclaw: openclawSkills.filter(s => Object.values(s.sourceVariants).some(v => v.ecosystem === 'claude')).length,
+    agents: agentsSkills.filter(s => Object.values(s.sourceVariants).some(v => v.ecosystem === 'claude')).length,
+    codex: codexSkills.filter(s => Object.values(s.sourceVariants).some(v => v.ecosystem === 'claude')).length,
   }), [skills, claudeSkills, openclawSkills, agentsSkills, codexSkills])
 
+  // Ground truth: always start from claudeSkills, then narrow by mode
   const scopedSkills = useMemo(() => {
-    const pool = sidebarMode === 'claude-code' ? claudeSkills
-      : sidebarMode === 'openclaw' ? openclawSkills
-      : sidebarMode === 'agents' ? agentsSkills
-      : sidebarMode === 'codex' ? codexSkills
-      : skills
-    if (sidebarMode === 'openclaw' && activeAgentFilter) {
-      return pool.filter(s => s.installedAgentIds.includes(activeAgentFilter))
+    let pool = claudeSkills
+    if (sidebarMode === 'openclaw') {
+      pool = pool.filter(s => Object.values(s.sourceVariants).some(v => v.ecosystem === 'openclaw'))
+    } else if (sidebarMode === 'agents') {
+      pool = pool.filter(s => Object.values(s.sourceVariants).some(v => v.ecosystem === 'agents' || v.ecosystem === 'agent'))
+    } else if (sidebarMode === 'codex') {
+      pool = pool.filter(s => Object.values(s.sourceVariants).some(v => v.ecosystem === 'codex'))
+    }
+    if (activeAgentFilter) {
+      pool = pool.filter(s => s.installedAgentIds.includes(activeAgentFilter))
     }
     return pool
-  }, [skills, claudeSkills, openclawSkills, agentsSkills, codexSkills, sidebarMode, activeAgentFilter])
+  }, [claudeSkills, sidebarMode, activeAgentFilter])
 
   // Precompute counts for departments and sources to avoid inline .filter() in render
   const deptCounts = useMemo(() => {
@@ -547,7 +551,7 @@ export function SkillsLabV2({ themePrefix: p, variant }: SkillsLabV2Props) {
   }, [activeSavedView, duplicateOnly, selectedFamily, selectedAgent, activeDepartments, activePillars, pillars, setActiveSavedView, toggleDepartment, togglePillar, setActiveFamilyFilter, setActiveAgentFilter])
 
   const listedSkills = filteredSkills
-  const navSkillCount = skills.length
+  const navSkillCount = claudeSkills.length
 
   // Results panel title: show active pillar if single, else generic
   const resultsPanelTitle = useMemo(() => {
