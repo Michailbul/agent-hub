@@ -4,7 +4,7 @@ import { useHQStore } from '@/store/hq'
 export function LinkFolderDialog() {
   const {
     linkDialogOpen, linkForm, setLinkForm, submitLink, closeLinkDialog,
-    pickFolder, pickingFolder, browsePathOpen, browseCurrentPath,
+    pickFolder, pickNativeFolder, pickingFolder, browsePathOpen, browseCurrentPath,
     browseParentPath, browseEntries, browseError, browseToPath,
     chooseBrowsedPath, closePathBrowser,
   } = useHQStore()
@@ -43,14 +43,24 @@ export function LinkFolderDialog() {
               <button
                 type="button"
                 className="hq-btn-browse"
+                onClick={pickNativeFolder}
+                disabled={pickingFolder}
+                title="Open native file picker"
+              >
+                {pickingFolder ? '...' : 'Choose'}
+              </button>
+              <button
+                type="button"
+                className="hq-btn-ghost"
                 onClick={pickFolder}
                 disabled={pickingFolder}
+                title="Browse server paths"
               >
-                {pickingFolder ? '...' : 'Browse path'}
+                Browse
               </button>
             </div>
             <span className="hq-field-hint">
-              Browse server folders here, or type an absolute server path manually
+              Pick a folder with the native dialog, or browse server paths manually
             </span>
           </div>
 

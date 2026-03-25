@@ -54,6 +54,7 @@ interface HQStore {
   closeLinkDialog: () => void
   setLinkForm: (partial: Partial<HQStore['linkForm']>) => void
   pickFolder: () => Promise<void>
+  pickNativeFolder: () => Promise<void>
   browseToPath: (path?: string | null) => Promise<void>
   chooseBrowsedPath: (path: string) => void
   closePathBrowser: () => void
@@ -180,6 +181,30 @@ export const useHQStore = create<HQStore>((set, get) => ({
   pickFolder: async () => {
     const initialPath = get().linkForm.path.trim() || null
     await get().browseToPath(initialPath)
+  },
+
+  pickNativeFolder: async () => {
+    set({ pickingFolder: true })
+    try {
+      const r = await fetch('/api/hq/pick-folder')
+      if (!r.ok) {
+        set({ pickingFolder: false })
+        return
+      }
+      const data = await r.json()
+      if (data.path) {
+        const name = data.path.split('/').pop() || ''
+        set(s => ({
+          pickingFolder: false,
+          browsePathOpen: false,
+          linkForm: { ...s.linkForm, path: data.path, name: s.linkForm.name || name },
+        }))
+      } else {
+        set({ pickingFolder: false })
+      }
+    } catch {
+      set({ pickingFolder: false })
+    }
   },
 
   browseToPath: async (folderPath = null) => {
