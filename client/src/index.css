@@ -1685,16 +1685,50 @@ body{font-family:'Inter',var(--font-sans);color:var(--text-primary);
 .cv-card-docs-btn:hover{color:var(--cv-ink);border-color:var(--cv-border-strong);background:var(--cv-surface-1)}
 
 /* ── Tag Filter Bar ── */
-.cv-tag-bar{display:flex;flex-wrap:wrap;gap:3px;padding:6px 14px}
-.cv-tag-pill{
+.cv-tag-active-bar{display:flex;flex-wrap:wrap;gap:4px;padding:8px 14px 4px}
+.cv-tag-chip{
+  display:inline-flex;align-items:center;
+  border:1px solid var(--cv-coral);
+  background:var(--cv-coral-subtle);
+  border-radius:4px;
+}
+.cv-tag-chip-label,
+.cv-tag-chip-remove{
   font:500 9px/1 var(--cv-font);
-  padding:3px 7px;border-radius:3px;
-  border:1px solid var(--cv-border-default);
-  background:none;color:var(--cv-text-secondary);
+  background:none;border:none;color:var(--cv-coral);
   cursor:pointer;transition:all 80ms;
 }
+.cv-tag-chip-label{padding:4px 7px}
+.cv-tag-chip-label:hover{text-decoration:underline}
+.cv-tag-chip-remove{
+  width:18px;height:18px;
+  border-left:1px solid rgba(217,119,87,.28);
+}
+.cv-tag-chip-remove:hover{background:rgba(217,119,87,.10)}
+.cv-tag-bar{display:flex;flex-wrap:wrap;gap:6px;padding:6px 14px}
+.cv-tag-pill{
+  display:inline-flex;align-items:center;
+  border:1px solid var(--cv-border-default);
+  border-radius:4px;
+  background:none;color:var(--cv-text-secondary);
+  transition:all 80ms;
+}
 .cv-tag-pill:hover{background:var(--cv-surface-2);border-color:var(--cv-border-strong)}
-.cv-tag-pill.active{background:var(--cv-accent-subtle);border-color:var(--cv-coral);color:var(--cv-coral)}
+.cv-tag-pill.active{background:var(--cv-coral-subtle);border-color:var(--cv-coral);color:var(--cv-coral)}
+.cv-tag-pill-side,
+.cv-tag-pill-main{
+  font:500 9px/1 var(--cv-font);
+  background:none;border:none;color:inherit;cursor:pointer;
+}
+.cv-tag-pill-side{
+  width:20px;height:20px;display:flex;align-items:center;justify-content:center;
+}
+.cv-tag-pill-side:first-child{border-right:1px solid rgba(25,25,24,.12)}
+.cv-tag-pill-side:last-child{border-left:1px solid rgba(25,25,24,.12)}
+.cv-tag-pill-side:hover:not(:disabled),
+.cv-tag-pill-main:hover{background:rgba(25,25,24,.05)}
+.cv-tag-pill-side:disabled{opacity:.28;cursor:default}
+.cv-tag-pill-main{padding:0 8px;height:20px;min-width:0}
 .cv-tag-clear{
   font:400 9px/1 var(--cv-font);
   color:var(--cv-text-ghost);background:none;border:none;

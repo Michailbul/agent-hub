@@ -54,7 +54,9 @@ interface CanvasStore {
   deleteAgent: (agentId: string) => Promise<void>
   updateSkillTag: (skillId: string, department: string) => Promise<void>
   setSourceFilter: (filter: 'all' | 'own' | 'library') => void
-  toggleTag: (tag: string) => void
+  selectTag: (tag: string) => void
+  addTag: (tag: string) => void
+  removeTag: (tag: string) => void
   clearTags: () => void
   toggleBrowser: () => void
   setSidePanelMode: (mode: SidePanelMode) => void
@@ -295,10 +297,18 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
 
   setSourceFilter: (filter) => set({ sourceFilter: filter }),
 
-  toggleTag: (tag) => set(s => {
+  selectTag: (tag) => set({ activeTags: new Set([tag]) }),
+
+  addTag: (tag) => set(s => {
     const next = new Set(s.activeTags)
-    if (next.has(tag)) next.delete(tag)
-    else next.add(tag)
+    next.add(tag)
+    return { activeTags: next }
+  }),
+
+  removeTag: (tag) => set(s => {
+    if (!s.activeTags.has(tag)) return s
+    const next = new Set(s.activeTags)
+    next.delete(tag)
     return { activeTags: next }
   }),
 

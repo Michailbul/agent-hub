@@ -80,7 +80,9 @@ export function SkillBrowser() {
   const toggleBrowser = useCanvasStore(s => s.toggleBrowser)
   const allTags = useCanvasStore(s => s.allTags)
   const activeTags = useCanvasStore(s => s.activeTags)
-  const toggleTag = useCanvasStore(s => s.toggleTag)
+  const selectTag = useCanvasStore(s => s.selectTag)
+  const addTag = useCanvasStore(s => s.addTag)
+  const removeTag = useCanvasStore(s => s.removeTag)
   const clearTags = useCanvasStore(s => s.clearTags)
   const selectedAgentId = useCanvasStore(s => s.selectedAgentId)
   const assignSkill = useCanvasStore(s => s.assignSkill)
@@ -276,7 +278,9 @@ export function SkillBrowser() {
         <CategoryFilter
           tags={allTags}
           activeTags={activeTags}
-          onToggle={toggleTag}
+          onSelect={selectTag}
+          onAdd={addTag}
+          onRemove={removeTag}
           onClear={clearTags}
         />
       </div>
