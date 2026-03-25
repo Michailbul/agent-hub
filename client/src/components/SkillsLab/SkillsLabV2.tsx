@@ -652,41 +652,39 @@ export function SkillsLabV2({ themePrefix: p, variant }: SkillsLabV2Props) {
 
               <div className={`${p}-mode-switch`} onClick={e => e.stopPropagation()}>
                 <button
-                  className={`${p}-mode-pill${sidebarMode === 'all' ? ' active' : ''}`}
-                  onClick={() => setSidebarMode('all')}
+                  className={`${p}-mode-pill${sidebarMode === 'openclaw' ? ' active' : ''}`}
+                  onClick={() => setSidebarMode('openclaw')}
                 >
-                  All <span className={`${p}-mode-count`}>{modeTabCounts.all}</span>
+                  .openclaw
                 </button>
-                {modeTabCounts.openclaw > 0 && (
-                  <button
-                    className={`${p}-mode-pill${sidebarMode === 'openclaw' ? ' active' : ''}`}
-                    onClick={() => setSidebarMode('openclaw')}
-                  >
-                    OpenClaw
-                  </button>
-                )}
-                {modeTabCounts.claude > 0 && (
-                  <button
-                    className={`${p}-mode-pill${sidebarMode === 'claude-code' ? ' active' : ''}`}
-                    onClick={() => setSidebarMode('claude-code')}
-                  >
-                    Claude
-                  </button>
-                )}
-                {modeTabCounts.agents > 0 && (
+                <button
+                  className={`${p}-mode-pill${sidebarMode === 'claude-code' ? ' active' : ''}`}
+                  onClick={() => setSidebarMode('claude-code')}
+                >
+                  .claude
+                </button>
+                {(sidebarMode === 'agents' || modeTabCounts.agents > 0) && (
                   <button
                     className={`${p}-mode-pill${sidebarMode === 'agents' ? ' active' : ''}`}
                     onClick={() => setSidebarMode('agents')}
                   >
-                    Agents
+                    .agents
                   </button>
                 )}
-                {modeTabCounts.codex > 0 && (
+                {(sidebarMode === 'codex' || modeTabCounts.codex > 0) && (
                   <button
                     className={`${p}-mode-pill${sidebarMode === 'codex' ? ' active' : ''}`}
                     onClick={() => setSidebarMode('codex')}
                   >
-                    Codex
+                    .codex
+                  </button>
+                )}
+                {sidebarMode === 'all' && (
+                  <button
+                    className={`${p}-mode-pill active`}
+                    onClick={() => setSidebarMode('openclaw')}
+                  >
+                    all
                   </button>
                 )}
               </div>

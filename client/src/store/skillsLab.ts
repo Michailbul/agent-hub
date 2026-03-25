@@ -508,7 +508,7 @@ export const useSkillsLabStore = create<SkillsLabStore>((set, get) => ({
   error: null,
 
   searchQuery: '',
-  sidebarMode: 'all',
+  sidebarMode: 'openclaw',
   expandedAgentNavIds: new Set(),
   activeSavedView: 'all',
   activeSourceFilter: null,
