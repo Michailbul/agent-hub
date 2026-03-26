@@ -2118,49 +2118,66 @@ body{font-family:'Inter',var(--font-sans);color:var(--text-primary);
 }
 .cv-card-skills-chevron.open{transform:rotate(180deg)}
 
-.cv-card-skills{display:flex;flex-direction:column;gap:2px;padding-left:2px}
-.cv-card-skill{
-  display:flex;align-items:center;gap:5px;
-  padding:2px 4px;
-  border-radius:4px;
+/* Skills grid — compact 2-col chip layout */
+.cv-card-skills{
+  display:grid;grid-template-columns:1fr 1fr;
+  gap:3px;
+  max-height:108px;overflow-y:auto;
+  padding:1px 0 2px;
+  scrollbar-width:thin;scrollbar-color:var(--cv-border-subtle) transparent;
+}
+.cv-card-skills::-webkit-scrollbar{width:3px}
+.cv-card-skills::-webkit-scrollbar-track{background:transparent}
+.cv-card-skills::-webkit-scrollbar-thumb{background:var(--cv-border-subtle);border-radius:2px}
+
+.cv-card-skill-chip{
+  display:flex;align-items:center;gap:4px;
+  padding:3px 5px;
+  border-radius:5px;
   cursor:pointer;
-  transition:background 80ms, box-shadow 80ms;
+  background:var(--cv-surface-2);
+  border:1px solid transparent;
+  transition:background 80ms,border-color 80ms;
+  min-width:0;position:relative;
 }
-.cv-card-skill.active{
-  background:rgba(255,255,255,.04);
+.cv-card-skill-chip:hover{
+  background:var(--cv-surface-3);
+  border-color:var(--cv-border-subtle);
 }
-.cv-card-skill:hover .cv-card-skill-name{color:var(--cv-ink)}
-.cv-card-skill.active .cv-card-skill-name{color:var(--cv-ink)}
+.cv-card-skill-chip.active{
+  background:var(--cv-surface-3);
+  border-color:var(--cv-border-default);
+}
+.cv-card-skill-chip:hover .cv-card-skill-name{color:var(--cv-ink)}
+.cv-card-skill-chip.active .cv-card-skill-name{color:var(--cv-ink)}
+.cv-card-skill-chip:hover .cv-card-skill-remove{opacity:1}
+.cv-card-skill-chip:focus-within .cv-card-skill-remove{opacity:1}
+
 .cv-card-skill-remove{
   display:flex;align-items:center;justify-content:center;
-  margin-left:auto;
-  width:14px;height:14px;
+  position:absolute;right:2px;top:50%;transform:translateY(-50%);
+  width:12px;height:12px;
   border:none;background:none;
   color:var(--cv-text-ghost);
   font:500 10px/1 var(--cv-font);
-  border-radius:3px;
+  border-radius:2px;
   cursor:pointer;
   opacity:0;
   transition:opacity 80ms,background 80ms,color 80ms;
+  padding:0;
 }
-.cv-card-skill:hover .cv-card-skill-remove,
-.cv-card-skill:focus-within .cv-card-skill-remove{opacity:1}
 .cv-card-skill-remove:hover{
-  background:rgba(255,122,100,.15);
+  background:rgba(255,122,100,.18);
   color:var(--cv-coral);
 }
 .cv-card-skill-dot{
   width:5px;height:5px;border-radius:50%;flex-shrink:0;
 }
-.cv-card-skill.active .cv-card-skill-dot{}
 .cv-card-skill-name{
-  font:400 10.5px/1.3 var(--cv-font);color:var(--cv-text-secondary);
+  font:400 9.5px/1.2 var(--cv-font);color:var(--cv-text-secondary);
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
-  transition:color 80ms;
-}
-.cv-card-skill-more{
-  font:400 9px/1 var(--cv-font);color:var(--cv-text-ghost);
-  padding-left:10px;
+  transition:color 80ms;flex:1;min-width:0;
+  padding-right:10px; /* space for remove btn */
 }
 
 /* Card Connections */

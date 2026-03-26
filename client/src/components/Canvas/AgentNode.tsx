@@ -90,12 +90,13 @@ export const AgentNode = memo(function AgentNode({ data }: NodeProps) {
 
           {skillsExpanded && (
             <div className="cv-card-skills">
-              {visibleSkills.map(skill => (
+              {d.skills.map(skill => (
                 <div
                   key={skill.id}
-                  className={`cv-card-skill${d.activeSkillId === skill.id ? ' active' : ''}`}
+                  className={`cv-card-skill-chip${d.activeSkillId === skill.id ? ' active' : ''}`}
                   onClick={(e) => { e.stopPropagation(); d.onPreviewSkill(skill.id) }}
                   onContextMenu={(e) => d.onSkillContextMenu(e, skill.id, skill.variantPath)}
+                  title={skill.name}
                 >
                   <span
                     className="cv-card-skill-dot"
@@ -116,9 +117,6 @@ export const AgentNode = memo(function AgentNode({ data }: NodeProps) {
                   </button>
                 </div>
               ))}
-              {!skillsExpanded && remaining > 0 && (
-                <span className="cv-card-skill-more">+{remaining} more</span>
-              )}
             </div>
           )}
         </div>

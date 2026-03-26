@@ -113,21 +113,24 @@ export const AgentNode = memo(function AgentNode({ data }: NodeProps) {
             </button>
 
             {skillsExpanded && (
-              <div className="flex flex-col gap-px pb-1">
-                {visibleSkills.map(skill => (
+              <div className="grid grid-cols-2 gap-1 max-h-[108px] overflow-y-auto pb-1">
+                {d.skills.map(skill => (
                   <div
                     key={skill.id}
-                    className={`group/skill flex items-center gap-1.5 px-1.5 py-1 rounded-md cursor-pointer transition-colors ${
-                      d.activeSkillId === skill.id ? 'bg-accent' : 'hover:bg-accent/50'
+                    className={`group/skill relative flex items-center gap-1 px-1.5 py-1 rounded-md cursor-pointer transition-colors border min-w-0 ${
+                      d.activeSkillId === skill.id
+                        ? 'bg-accent border-border'
+                        : 'bg-muted/40 border-transparent hover:bg-accent/60 hover:border-border/50'
                     }`}
                     onClick={(e) => { e.stopPropagation(); d.onPreviewSkill(skill.id) }}
                     onContextMenu={(e) => d.onSkillContextMenu(e, skill.id, skill.variantPath)}
+                    title={skill.name}
                   >
                     <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: getDeptColor(skill.department) }} />
-                    <span className="text-xs text-muted-foreground truncate flex-1">{skill.name}</span>
+                    <span className="text-[9.5px] text-muted-foreground truncate flex-1 pr-2">{skill.name}</span>
                     <button
                       type="button"
-                      className="opacity-0 group-hover/skill:opacity-100 w-4 h-4 flex items-center justify-center border-none bg-transparent p-0 text-muted-foreground hover:text-destructive text-[10px] cursor-pointer transition-all shrink-0 rounded"
+                      className="opacity-0 group-hover/skill:opacity-100 absolute right-1 top-1/2 -translate-y-1/2 w-3 h-3 flex items-center justify-center border-none bg-transparent p-0 text-muted-foreground hover:text-destructive text-[9px] cursor-pointer transition-all rounded"
                       title={`Remove ${skill.name} from ${d.label}`}
                       aria-label={`Remove ${skill.name} from ${d.label}`}
                       onClick={(e) => {
@@ -139,10 +142,9 @@ export const AgentNode = memo(function AgentNode({ data }: NodeProps) {
                     </button>
                   </div>
                 ))}
-                {!skillsExpanded && remaining > 0 && (
+                {false && (
                   <span className="text-[10px] text-muted-foreground/60 px-1.5 py-0.5">
-                    +{remaining} more
-                  </span>
+                    placeholder
                 )}
               </div>
             )}

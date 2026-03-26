@@ -5,7 +5,6 @@ import {
   Background,
   BackgroundVariant,
   Controls,
-  MiniMap,
   useNodesState,
   useEdgesState,
   type Node,
