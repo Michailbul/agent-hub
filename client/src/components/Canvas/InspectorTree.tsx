@@ -81,7 +81,7 @@ function FTItem({ node, depth, isActive, onSelect, onRemove, isExpanded, onToggl
         <span className={`${p}-tree-name${isFolder ? ' folder' : ''}`}>{node.name}</span>
 
         {/* Badge */}
-        {node.sublabel && <span className="cv-ft-badge">{node.sublabel}</span>}
+        {node.sublabel && <span className="cv-ft-badge" data-dept={node.sublabel}>{node.sublabel}</span>}
 
         {/* Remove button for skills */}
         {node.removable && node.skillId && (

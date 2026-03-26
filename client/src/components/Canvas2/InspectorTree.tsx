@@ -118,7 +118,7 @@ function FTItem({ node, depth, isActive, onSelect, onRemove, isExpanded, onToggl
 
         <span className={`ft-name${isFolder ? '' : ' ft-name-file'}`}>{node.name}</span>
 
-        {node.sublabel && <span className="ft-badge">{node.sublabel}</span>}
+        {node.sublabel && <span className="ft-badge" data-dept={node.sublabel}>{node.sublabel}</span>}
         {node.removable && node.skillId && (
           <button
             type="button"
