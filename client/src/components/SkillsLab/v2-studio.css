@@ -535,8 +535,20 @@
   display: flex; align-items: center; justify-content: space-between;
   padding: 16px 16px 6px; gap: 8px;
 }
-.st-skill-group-title { font-size: 11px; font-weight: 500; color: var(--sh-text-tertiary); text-transform: uppercase; letter-spacing: 0.06em; }
+.st-skill-group-head--collapsible {
+  cursor: pointer;
+  user-select: none;
+  border-radius: 6px;
+  transition: background 0.15s;
+}
+.st-skill-group-head--collapsible:hover { background: var(--sh-surface-hover, rgba(0,0,0,0.04)); }
+.st-skill-group-title { font-size: 11px; font-weight: 500; color: var(--sh-text-tertiary); text-transform: uppercase; letter-spacing: 0.06em; flex: 1; }
 .st-skill-group-count { font-size: 11px; color: var(--sh-text-tertiary); }
+.st-skill-group-chevron {
+  font-size: 14px; color: var(--sh-text-tertiary); line-height: 1;
+  display: inline-block; transform: rotate(90deg); transition: transform 0.18s ease;
+}
+.st-skill-group-chevron--collapsed { transform: rotate(0deg); }
 .st-skill-list { display: flex; flex-direction: column; gap: 1px; padding: 0 8px; }
 .st-skill-row {
   display: flex; align-items: center; gap: 10px;

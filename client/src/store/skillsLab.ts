@@ -387,7 +387,7 @@ function mapSkills(data: SkillsIndexData, pillarLookup: Map<string, string>): Un
 
   return provisional.map(skill => {
     const candidate = getFamilyCandidate(skill.id, skill.displayName)
-    const familyKey = candidate && familyCounts[candidate] > 1 ? candidate : null
+    const familyKey = candidate && familyCounts[candidate] > 5 ? candidate : null
 
     return {
       ...skill,

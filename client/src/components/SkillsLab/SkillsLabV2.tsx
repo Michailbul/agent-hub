@@ -155,6 +155,7 @@ export function SkillsLabV2({ themePrefix: p, variant }: SkillsLabV2Props) {
   const [commandOpen, setCommandOpen] = useState(false)
   const [editorMode, setEditorMode] = useState<'preview' | 'edit'>('preview')
   const [moreMenuOpen, setMoreMenuOpen] = useState(false)
+  const [collapsedFamilies, setCollapsedFamilies] = useState<Set<string>>(new Set())
 
   // Close more-menu on any outside click
   useEffect(() => {
@@ -490,19 +491,42 @@ export function SkillsLabV2({ themePrefix: p, variant }: SkillsLabV2Props) {
     const sections = buildSkillSections(skillList)
     return (
       <div className={`${p}-skill-groups`}>
-        {sections.map(section => (
-          <div key={section.key} className={`${p}-skill-group-block`}>
-            {section.label && (
-              <div className={`${p}-skill-group-head`}>
-                <span className={`${p}-skill-group-title`}>{section.label}</span>
-                <span className={`${p}-skill-group-count`}>{section.skills.length}</span>
-              </div>
-            )}
-            <div className={`${p}-skill-list`}>
-              {section.skills.map(skill => renderSkillRow(skill))}
+        {sections.map(section => {
+          const isCollapsible = Boolean(section.label && section.key !== 'standalone')
+          const isCollapsed = isCollapsible && collapsedFamilies.has(section.key)
+          const toggleCollapse = isCollapsible
+            ? () => setCollapsedFamilies(prev => {
+                const next = new Set(prev)
+                if (next.has(section.key)) next.delete(section.key)
+                else next.add(section.key)
+                return next
+              })
+            : undefined
+          return (
+            <div key={section.key} className={`${p}-skill-group-block${isCollapsed ? ` ${p}-skill-group-collapsed` : ''}`}>
+              {section.label && (
+                <div
+                  className={`${p}-skill-group-head${isCollapsible ? ` ${p}-skill-group-head--collapsible` : ''}`}
+                  onClick={toggleCollapse}
+                  role={isCollapsible ? 'button' : undefined}
+                >
+                  <span className={`${p}-skill-group-title`}>{section.label}</span>
+                  <span className={`${p}-skill-group-count`}>{section.skills.length}</span>
+                  {isCollapsible && (
+                    <span className={`${p}-skill-group-chevron${isCollapsed ? ` ${p}-skill-group-chevron--collapsed` : ''}`}>
+                      ›
+                    </span>
+                  )}
+                </div>
+              )}
+              {!isCollapsed && (
+                <div className={`${p}-skill-list`}>
+                  {section.skills.map(skill => renderSkillRow(skill))}
+                </div>
+              )}
             </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
     )
   }
