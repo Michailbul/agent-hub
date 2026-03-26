@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, memo, useCallback } from 'react'
 import { useSkillsLabStore, type UnifiedSkill } from '@/store/skillsLab'
 import { useThemeStore } from '@/store/theme'
 import { useResizable } from '@/lib/useResizable'
@@ -59,7 +59,8 @@ export function SkillsLabV2({ themePrefix: p, variant }: SkillsLabV2Props) {
   const departments = useSkillsLabStore(s => s.departments)
   const families = useSkillsLabStore(s => s.families)
   const skills = useSkillsLabStore(s => s.skills)
-  const getFilteredSkills = useSkillsLabStore(s => s.filtered)
+  // Stable ref — filtered() is a method on the store, not a selector value
+  const getFilteredSkills = useSkillsLabStore.getState().filtered
   const loading = useSkillsLabStore(s => s.loading)
   const loaded = useSkillsLabStore(s => s.loaded)
   const error = useSkillsLabStore(s => s.error)
@@ -166,22 +167,17 @@ export function SkillsLabV2({ themePrefix: p, variant }: SkillsLabV2Props) {
   // Dark / light mode — uses global theme store
   const { theme: colorMode } = useThemeStore()
 
-  // Precompute skill counts per agent — only count skills in .claude/skills (ground truth)
-  const claudeFilteredSkills = useMemo(() =>
-    skills.filter(skill => Object.values(skill.sourceVariants).some(v => v.ecosystem === 'claude')),
-    [skills],
-  )
-
+  // Precompute skill counts per agent — from workspace installs (not .claude filtered)
   const skillsByAgentId = useMemo(() => {
     const map = new Map<string, UnifiedSkill[]>()
     for (const agent of agents) map.set(agent.id, [])
-    for (const skill of claudeFilteredSkills) {
+    for (const skill of skills) {
       for (const agentId of skill.installedAgentIds) {
         map.get(agentId)?.push(skill)
       }
     }
     return map
-  }, [claudeFilteredSkills, agents])
+  }, [skills, agents])
 
   const deptsByAgentId = useMemo(() => {
     const map = new Map<string, { dept: string; count: number }[]>()
@@ -288,7 +284,8 @@ export function SkillsLabV2({ themePrefix: p, variant }: SkillsLabV2Props) {
     : null
   const filteredSkills = useMemo(
     () => getFilteredSkills(),
-    [getFilteredSkills, skills, sources, agents, searchQuery, activeSavedView, activeAgentFilter, activeFamilyFilter, activePluginFilter, duplicateOnly, activeDepartments, activePillars, activeTagFilter, semanticResults],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [skills, sources, agents, searchQuery, activeSavedView, activeAgentFilter, activeFamilyFilter, activePluginFilter, duplicateOnly, activeDepartments, activePillars, activeTagFilter, semanticResults],
   )
   const starredCount = starredSkillIds.size
 
@@ -464,50 +461,27 @@ export function SkillsLabV2({ themePrefix: p, variant }: SkillsLabV2Props) {
     }
   }
 
-  const renderSkillRow = (skill: UnifiedSkill) => {
-    const agentWorkspaceKey = activeAgentFilter ? `workspace-${activeAgentFilter}` : null
-    // Prefer the variant matching the active sidebar mode's ecosystem
-    const ecosystemKey = sidebarMode === 'claude-code' ? 'claude'
-      : sidebarMode === 'openclaw' ? 'openclaw-library'
-      : sidebarMode === 'agents' ? 'agents'
-      : sidebarMode === 'codex' ? 'codex'
-      : null
-    const modeVariant = ecosystemKey ? skill.sourceVariants[ecosystemKey] : null
-    const variant = (agentWorkspaceKey ? skill.sourceVariants[agentWorkspaceKey] : null)
-      || modeVariant
-      || skill.sourceVariants[skill.canonicalSource] || Object.values(skill.sourceVariants)[0]
-    const sourceLabel = variant?.sourceLabel || skill.canonicalSource
-    const meta = sourceLabel
-    const relevanceScore = combinedScores.get(skill.id)
+  const ecosystemKey = sidebarMode === 'claude-code' ? 'claude'
+    : sidebarMode === 'openclaw' ? 'openclaw-library'
+    : sidebarMode === 'agents' ? 'agents'
+    : sidebarMode === 'codex' ? 'codex'
+    : null
+  const agentWorkspaceKey = activeAgentFilter ? `workspace-${activeAgentFilter}` : null
 
-    return (
-      <button
-        key={skill.id}
-        className={`${p}-skill-row${expandedSkillId === skill.id ? ' active' : ''}${relevanceScore !== undefined ? ` ${p}-skill-row-semantic` : ''}`}
-        onClick={e => { e.stopPropagation(); openSkill(skill.id) }}
-      >
-        <span className={`${p}-skill-name`}>{skill.displayName}</span>
-        {relevanceScore !== undefined && relevanceScore > 0 && (
-          <span className={`${p}-semantic-badge`} title={`Score: ${relevanceScore.toFixed(2)}`}>
-            <Sparkles size={10} strokeWidth={1.5} />
-          </span>
-        )}
-        <span className={`${p}-skill-meta`}>{meta}</span>
-        <span
-          role="button"
-          tabIndex={0}
-          className={`${p}-star-btn${starredSkillIds.has(skill.id) ? ' starred' : ''}`}
-          onClick={e => { e.stopPropagation(); void toggleStarSkill(skill.id) }}
-          onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); void toggleStarSkill(skill.id) } }}
-          title={starredSkillIds.has(skill.id) ? 'Unstar' : 'Star'}
-          aria-pressed={starredSkillIds.has(skill.id)}
-          aria-label={starredSkillIds.has(skill.id) ? `Unstar ${skill.displayName}` : `Star ${skill.displayName}`}
-        >
-          <Star size={12} strokeWidth={1.5} fill={starredSkillIds.has(skill.id) ? 'currentColor' : 'none'} />
-        </span>
-      </button>
-    )
-  }
+  const renderSkillRow = (skill: UnifiedSkill) => (
+    <SkillRowMemo
+      key={skill.id}
+      skill={skill}
+      prefix={p}
+      isActive={expandedSkillId === skill.id}
+      isStarred={starredSkillIds.has(skill.id)}
+      relevanceScore={combinedScores.get(skill.id)}
+      ecosystemKey={ecosystemKey}
+      agentWorkspaceKey={agentWorkspaceKey}
+      onOpen={openSkill}
+      onToggleStar={toggleStarSkill}
+    />
+  )
 
   const renderGroupedSkillList = (skillList: UnifiedSkill[]) => {
     const sections = buildSkillSections(skillList)
@@ -1476,3 +1450,51 @@ export function SkillsLabV2({ themePrefix: p, variant }: SkillsLabV2Props) {
     </div>
   )
 }
+
+// ── Memoized skill row — prevents re-rendering 500+ rows on every filter change ──
+const SkillRowMemo = memo(function SkillRowMemo({
+  skill, prefix: p, isActive, isStarred, relevanceScore, ecosystemKey, agentWorkspaceKey, onOpen, onToggleStar,
+}: {
+  skill: UnifiedSkill
+  prefix: string
+  isActive: boolean
+  isStarred: boolean
+  relevanceScore: number | undefined
+  ecosystemKey: string | null
+  agentWorkspaceKey: string | null
+  onOpen: (id: string) => void
+  onToggleStar: (id: string) => void
+}) {
+  const modeVariant = ecosystemKey ? skill.sourceVariants[ecosystemKey] : null
+  const variant = (agentWorkspaceKey ? skill.sourceVariants[agentWorkspaceKey] : null)
+    || modeVariant
+    || skill.sourceVariants[skill.canonicalSource] || Object.values(skill.sourceVariants)[0]
+  const meta = variant?.sourceLabel || skill.canonicalSource
+
+  return (
+    <button
+      className={`${p}-skill-row${isActive ? ' active' : ''}${relevanceScore !== undefined ? ` ${p}-skill-row-semantic` : ''}`}
+      onClick={e => { e.stopPropagation(); onOpen(skill.id) }}
+    >
+      <span className={`${p}-skill-name`}>{skill.displayName}</span>
+      {relevanceScore !== undefined && relevanceScore > 0 && (
+        <span className={`${p}-semantic-badge`} title={`Score: ${relevanceScore.toFixed(2)}`}>
+          <Sparkles size={10} strokeWidth={1.5} />
+        </span>
+      )}
+      <span className={`${p}-skill-meta`}>{meta}</span>
+      <span
+        role="button"
+        tabIndex={0}
+        className={`${p}-star-btn${isStarred ? ' starred' : ''}`}
+        onClick={e => { e.stopPropagation(); void onToggleStar(skill.id) }}
+        onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); void onToggleStar(skill.id) } }}
+        title={isStarred ? 'Unstar' : 'Star'}
+        aria-pressed={isStarred}
+        aria-label={isStarred ? `Unstar ${skill.displayName}` : `Star ${skill.displayName}`}
+      >
+        <Star size={12} strokeWidth={1.5} fill={isStarred ? 'currentColor' : 'none'} />
+      </span>
+    </button>
+  )
+})
