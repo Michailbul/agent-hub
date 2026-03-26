@@ -1752,3 +1752,61 @@
   .st-meta-badges { gap: 4px; }
   .st-meta-badge { font-size: 10px; padding: 3px 8px; }
 }
+
+/* ── Markdown Preview ─────────────────────────────────────────────────── */
+.st-md-preview {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.5rem 2rem;
+  color: var(--st-text, #e2e8f0);
+  font-size: 0.875rem;
+  line-height: 1.7;
+}
+.st-md-preview h1,.st-md-preview h2,.st-md-preview h3,
+.st-md-preview h4,.st-md-preview h5,.st-md-preview h6 {
+  color: var(--st-text-bright, #f8fafc);
+  margin: 1.2em 0 0.5em;
+  font-weight: 600;
+  line-height: 1.3;
+}
+.st-md-preview h1 { font-size: 1.4rem; }
+.st-md-preview h2 { font-size: 1.2rem; border-bottom: 1px solid var(--st-border, #334155); padding-bottom: 0.3em; }
+.st-md-preview h3 { font-size: 1rem; }
+.st-md-preview p  { margin: 0.6em 0; }
+.st-md-preview a  { color: var(--st-accent, #6366f1); text-decoration: none; }
+.st-md-preview a:hover { text-decoration: underline; }
+.st-md-preview code {
+  background: var(--st-code-bg, #0f172a);
+  color: var(--st-code-text, #a5f3fc);
+  padding: 0.15em 0.4em;
+  border-radius: 4px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.82em;
+}
+.st-md-preview pre {
+  background: var(--st-code-bg, #0f172a);
+  border: 1px solid var(--st-border, #334155);
+  border-radius: 6px;
+  padding: 1rem;
+  overflow-x: auto;
+  margin: 0.8em 0;
+}
+.st-md-preview pre code { background: none; padding: 0; color: var(--st-code-text, #a5f3fc); }
+.st-md-preview ul,.st-md-preview ol { padding-left: 1.5rem; margin: 0.5em 0; }
+.st-md-preview li { margin: 0.25em 0; }
+.st-md-preview blockquote {
+  border-left: 3px solid var(--st-accent, #6366f1);
+  margin: 0.8em 0;
+  padding: 0.4em 1em;
+  color: var(--st-text-muted, #94a3b8);
+  background: var(--st-code-bg, #0f172a);
+  border-radius: 0 4px 4px 0;
+}
+.st-md-preview table { border-collapse: collapse; width: 100%; margin: 0.8em 0; }
+.st-md-preview th,.st-md-preview td {
+  border: 1px solid var(--st-border, #334155);
+  padding: 0.4em 0.8em;
+  text-align: left;
+}
+.st-md-preview th { background: var(--st-code-bg, #0f172a); font-weight: 600; }
+.st-md-preview hr { border: none; border-top: 1px solid var(--st-border, #334155); margin: 1.2em 0; }
