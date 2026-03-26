@@ -499,7 +499,43 @@ function parseSkillDocument(content: string): ParsedSkillDoc {
   const frontmatterLines = lines.slice(1, endIndex);
   const frontmatter: SkillFrontmatter = { ...emptyFrontmatter };
 
+  // Parse frontmatter lines, handling YAML block scalars (> and |) for multi-line values
+  let blockKey: string | null = null;
+  let blockLines: string[] = [];
+  let blockStyle: '>' | '|' | null = null;
+
+  const flushBlock = () => {
+    if (!blockKey || blockLines.length === 0) { blockKey = null; blockLines = []; blockStyle = null; return; }
+    // folded (>) joins with spaces; literal (|) joins with newlines
+    const value = blockStyle === '|'
+      ? blockLines.join('\n').trim()
+      : blockLines.map(l => l.trim()).join(' ').trim();
+    if (blockKey === 'name') frontmatter.name = value;
+    if (blockKey === 'author') frontmatter.author = value;
+    if (blockKey === 'source') frontmatter.source = value;
+    if (blockKey === 'description') frontmatter.description = value;
+    if (blockKey === 'license') frontmatter.license = value;
+    if (blockKey === 'department') frontmatter.department = value;
+    blockKey = null; blockLines = []; blockStyle = null;
+  };
+
   for (const line of frontmatterLines) {
+    // If we're in a block scalar, collect indented continuation lines
+    if (blockKey !== null) {
+      if (line.match(/^\s+\S/)) { blockLines.push(line.trim()); continue; }
+      flushBlock(); // non-indented line ends the block
+    }
+
+    // Key: > or Key: | (block scalar)
+    const blockMatch = line.match(/^([A-Za-z0-9_-]+):\s*([>|])\s*$/);
+    if (blockMatch) {
+      blockKey = blockMatch[1].toLowerCase();
+      blockStyle = blockMatch[2] as '>' | '|';
+      blockLines = [];
+      continue;
+    }
+
+    // Normal single-line key: value
     const match = line.match(/^([A-Za-z0-9_-]+):\s*(.+)\s*$/);
     if (!match) continue;
     const key = match[1].toLowerCase();
@@ -511,6 +547,7 @@ function parseSkillDocument(content: string): ParsedSkillDoc {
     if (key === 'license') frontmatter.license = value;
     if (key === 'department') frontmatter.department = value;
   }
+  flushBlock(); // flush any trailing block
 
   return {
     frontmatter,
