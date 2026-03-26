@@ -62,7 +62,7 @@ export function SkillPreview() {
     <div className="cv-skill-preview">
       <div className="cv-skill-preview-header">
         <h3 className="cv-skill-preview-name">{skill.name}</h3>
-        <span className="cv-palette-row-dept">{skill.department}</span>
+        <span className="cv-palette-row-dept" data-dept={skill.department}>{skill.department}</span>
       </div>
       {skill.summary && (
         <p className="cv-skill-preview-summary">{skill.summary}</p>

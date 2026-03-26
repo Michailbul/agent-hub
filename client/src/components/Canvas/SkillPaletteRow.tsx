@@ -43,7 +43,7 @@ export function SkillPaletteRow({ skill, onAssign, onPreview, onContextMenu, exp
       <div className="cv-palette-row-body">
         <div className="cv-palette-row-main">
           <span className="cv-palette-row-name">{skill.name}</span>
-          <span className="cv-palette-row-dept">{skill.pillarName}</span>
+          <span className="cv-palette-row-dept" data-dept={skill.pillarName}>{skill.pillarName}</span>
         </div>
         {skill.summary && (
           <div className="cv-palette-row-summary">{skill.summary}</div>
