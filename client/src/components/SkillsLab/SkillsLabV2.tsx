@@ -3,6 +3,7 @@ import { useSkillsLabStore, type UnifiedSkill } from '@/store/skillsLab'
 import { useThemeStore } from '@/store/theme'
 import { useResizable } from '@/lib/useResizable'
 import { SkillCMEditor } from './SkillCMEditor'
+import { SkillMdPreview } from './SkillMdPreview'
 import { SkillFileTree } from './SkillFileTree'
 import { FacetedFilters } from './FacetedFilters'
 import { ActiveFiltersBar } from './ActiveFiltersBar'
@@ -25,6 +26,8 @@ import {
   Sparkles,
   Star,
   TerminalSquare,
+  Eye,
+  Pencil,
   Trash2,
   Upload,
 } from 'lucide-react'
@@ -149,6 +152,7 @@ export function SkillsLabV2({ themePrefix: p, variant }: SkillsLabV2Props) {
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list')
   const density = 'compact' as const
   const [commandOpen, setCommandOpen] = useState(false)
+  const [editorMode, setEditorMode] = useState<'preview' | 'edit'>('preview')
   const [moreMenuOpen, setMoreMenuOpen] = useState(false)
 
   // Close more-menu on any outside click
@@ -162,24 +166,30 @@ export function SkillsLabV2({ themePrefix: p, variant }: SkillsLabV2Props) {
   // Dark / light mode — uses global theme store
   const { theme: colorMode } = useThemeStore()
 
-  // Precompute skill counts per agent and dept-per-agent to avoid O(agents*skills) in render
+  // Precompute skill counts per agent — only count skills in .claude/skills (ground truth)
+  const claudeFilteredSkills = useMemo(() =>
+    skills.filter(skill => Object.values(skill.sourceVariants).some(v => v.ecosystem === 'claude')),
+    [skills],
+  )
+
   const skillsByAgentId = useMemo(() => {
     const map = new Map<string, UnifiedSkill[]>()
     for (const agent of agents) map.set(agent.id, [])
-    for (const skill of skills) {
+    for (const skill of claudeFilteredSkills) {
       for (const agentId of skill.installedAgentIds) {
         map.get(agentId)?.push(skill)
       }
     }
     return map
-  }, [skills, agents])
+  }, [claudeFilteredSkills, agents])
 
   const deptsByAgentId = useMemo(() => {
     const map = new Map<string, { dept: string; count: number }[]>()
     for (const [agentId, agentSkills] of skillsByAgentId) {
       const deptCounts = new Map<string, number>()
       for (const skill of agentSkills) {
-        deptCounts.set(skill.department, (deptCounts.get(skill.department) || 0) + 1)
+        const label = pillars.find(p => p.id === skill.pillar)?.name || skill.department
+        deptCounts.set(label, (deptCounts.get(label) || 0) + 1)
       }
       map.set(agentId, [...deptCounts.entries()]
         .map(([dept, count]) => ({ dept, count }))
@@ -845,7 +855,8 @@ export function SkillsLabV2({ themePrefix: p, variant }: SkillsLabV2Props) {
                           {isExpanded && agentDepts.length > 0 && (
                             <div className={`${p}-agent-dept-list`}>
                               {agentDepts.map(({ dept, count }) => {
-                                const isDeptActive = activeDepartments.has(dept)
+                                const pillarId = pillars.find(p2 => p2.name === dept)?.id
+                                const isDeptActive = pillarId ? activePillars.has(pillarId) : activeDepartments.has(dept)
                                 return (
                                   <button
                                     key={dept}
@@ -853,7 +864,8 @@ export function SkillsLabV2({ themePrefix: p, variant }: SkillsLabV2Props) {
                                     onClick={e => {
                                       e.stopPropagation()
                                       if (!isActive) setActiveAgentFilter(agent.id)
-                                      toggleDepartment(dept)
+                                      if (pillarId) togglePillar(pillarId)
+                                      else toggleDepartment(dept)
                                     }}
                                   >
                                     <span className={`${p}-agent-dept-main`}>
@@ -865,7 +877,8 @@ export function SkillsLabV2({ themePrefix: p, variant }: SkillsLabV2Props) {
                                       onClick={e => {
                                         e.stopPropagation()
                                         if (!isActive) setActiveAgentFilter(agent.id)
-                                        useSkillsLabStore.getState().selectDepartment(dept)
+                                        if (pillarId) selectPillar(pillarId)
+                                        else useSkillsLabStore.getState().selectDepartment(dept)
                                       }}
                                       role="button"
                                       tabIndex={0}
@@ -876,7 +889,8 @@ export function SkillsLabV2({ themePrefix: p, variant }: SkillsLabV2Props) {
                                           e.preventDefault()
                                           e.stopPropagation()
                                           if (!isActive) setActiveAgentFilter(agent.id)
-                                          useSkillsLabStore.getState().selectDepartment(dept)
+                                          if (pillarId) selectPillar(pillarId)
+                                          else useSkillsLabStore.getState().selectDepartment(dept)
                                         }
                                       }}
                                     >
@@ -1091,6 +1105,22 @@ export function SkillsLabV2({ themePrefix: p, variant }: SkillsLabV2Props) {
                 </div>
               </div>
               <div className={`${p}-results-header-actions`}>
+                <div className={`${p}-editor-mode-toggle`}>
+                  <button
+                    className={`${p}-editor-mode-btn${editorMode === 'preview' ? ' active' : ''}`}
+                    onClick={e => { e.stopPropagation(); setEditorMode('preview') }}
+                    title="Preview"
+                  >
+                    <Eye size={13} strokeWidth={1.5} />
+                  </button>
+                  <button
+                    className={`${p}-editor-mode-btn${editorMode === 'edit' ? ' active' : ''}`}
+                    onClick={e => { e.stopPropagation(); setEditorMode('edit') }}
+                    title="Edit"
+                  >
+                    <Pencil size={13} strokeWidth={1.5} />
+                  </button>
+                </div>
                 <button className={`${p}-editor-icon-btn`} onClick={e => e.stopPropagation()} title="Copy path">
                   <Copy size={13} strokeWidth={1.5} />
                 </button>
@@ -1120,13 +1150,21 @@ export function SkillsLabV2({ themePrefix: p, variant }: SkillsLabV2Props) {
                 <div className={`${p}-panel-resizer ${p}-filetree-resizer`} {...fileTreeHandleProps} />
                 <div className={`${p}-editor-pane`}>
                   {editorContent !== null ? (
-                    <SkillCMEditor
-                      key={`${selectedSkill.id}:${editorFilePath || 'default'}:${colorMode}`}
-                      content={editorContent}
-                      filePath={editorFilePath}
-                      theme={colorMode === 'dark' ? darkTheme : brandTheme}
-                      prefix={p}
-                    />
+                    editorMode === 'preview' ? (
+                      <SkillMdPreview
+                        key={`${selectedSkill.id}:${editorFilePath || 'default'}:preview`}
+                        content={editorContent}
+                        prefix={p}
+                      />
+                    ) : (
+                      <SkillCMEditor
+                        key={`${selectedSkill.id}:${editorFilePath || 'default'}:${colorMode}`}
+                        content={editorContent}
+                        filePath={editorFilePath}
+                        theme={colorMode === 'dark' ? darkTheme : brandTheme}
+                        prefix={p}
+                      />
+                    )
                   ) : (
                     <div className={`${p}-editor-loading`}>
                       <div className={`${p}-loading-spinner`} />
@@ -1209,22 +1247,36 @@ export function SkillsLabV2({ themePrefix: p, variant }: SkillsLabV2Props) {
 
               <div className={`${p}-meta-divider`} />
 
-              <div className={`${p}-meta-group-label`}>Pillar</div>
+              <div className={`${p}-meta-group-label`}>Pillar <span className={`${p}-meta-edit-hint`}>click to change</span></div>
               <div className={`${p}-meta-tags`}>
-                {(() => {
-                  const pl = pillars.find(p2 => p2.id === selectedSkill.pillar)
-                  return pl
-                    ? <span className={`${p}-tag`} style={{ borderColor: pl.color, color: pl.color }}>{pl.name}</span>
-                    : <span className={`${p}-tag`}>{selectedSkill.pillar}</span>
-                })()}
+                {pillars.map(pl => {
+                  const isActive = selectedSkill.pillar === pl.id
+                  return (
+                    <span
+                      key={pl.id}
+                      className={`${p}-tag ${p}-tag-clickable${isActive ? ` ${p}-tag-active` : ''}`}
+                      style={isActive ? { borderColor: pl.color, color: pl.color, background: `${pl.color}18` } : undefined}
+                      role="button"
+                      tabIndex={0}
+                      onClick={async () => {
+                        if (isActive) return
+                        try { await categorizeSkill(selectedSkill.id, pl.name) } catch {}
+                      }}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault()
+                          if (!isActive) void categorizeSkill(selectedSkill.id, pl.name)
+                        }
+                      }}
+                    >
+                      {pl.name}
+                    </span>
+                  )
+                })}
               </div>
 
               <div className={`${p}-meta-group-label`} style={{ marginTop: 8 }}>Tags</div>
               <div className={`${p}-meta-tags`}>
-                {(() => {
-                  const pl = pillars.find(p2 => p2.id === selectedSkill.pillar)
-                  return <span className={`${p}-tag`}>{pl?.name || selectedSkill.department}</span>
-                })()}
                 {selectedSkill.tags.map(tag => (
                   <span
                     key={tag}
@@ -1239,6 +1291,10 @@ export function SkillsLabV2({ themePrefix: p, variant }: SkillsLabV2Props) {
                 ))}
                 {selectedSkill.tags.length === 0 && (
                   <>
+                    {(() => {
+                      const pl = pillars.find(p2 => p2.id === selectedSkill.pillar)
+                      return <span className={`${p}-tag`}>{pl?.name || selectedSkill.department}</span>
+                    })()}
                     {selectedVariant?.sourceLabel && <span className={`${p}-tag`}>{selectedVariant.sourceLabel}</span>}
                     {selectedSkillHasClaude && <span className={`${p}-tag`}>Claude Code</span>}
                     {selectedSkill.familyLabel && <span className={`${p}-tag`}>{selectedSkill.familyLabel}</span>}
