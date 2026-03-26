@@ -291,10 +291,18 @@ function mapAgents(data: SkillsIndexData): LabAgent[] {
   }))
 }
 
+// Prefixes that are studio/agent/product names — never meaningful as family groupings
+const FAMILY_NOISE_PREFIXES = new Set([
+  'laniameda', 'parallel', 'product', 'crea', 'meda', 'desi', 'persey', 'lani',
+  'andromeda', 'runmusic', 'run',
+])
+
 function getFamilyCandidate(skillId: string, skillName: string): string | null {
   const source = `${skillId} ${skillName}`.toLowerCase()
   const match = source.match(/\b([a-z0-9]{3,})-/)
-  return match?.[1] || null
+  const candidate = match?.[1] || null
+  if (!candidate || FAMILY_NOISE_PREFIXES.has(candidate)) return null
+  return candidate
 }
 
 function formatFamilyLabel(key: string): string {
