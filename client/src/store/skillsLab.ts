@@ -1030,12 +1030,13 @@ export const useSkillsLabStore = create<SkillsLabStore>((set, get) => ({
     }
 
     // Additional ecosystem scoping for non-claude modes
+    // Skip when agent filter is active — agent workspace is ground truth, ecosystem tab irrelevant
     const ecosystemFilter = sidebarMode === 'openclaw' ? 'openclaw'
       : sidebarMode === 'agents' ? 'agents'
       : sidebarMode === 'codex' ? 'codex'
       : null // 'all' and 'claude-code' already filtered above
 
-    if (ecosystemFilter) {
+    if (ecosystemFilter && !activeAgentFilter) {
       result = result.filter(skill =>
         Object.values(skill.sourceVariants).some(v =>
           ecosystemFilter === 'agents'
@@ -1137,15 +1138,15 @@ export const useSkillsLabStore = create<SkillsLabStore>((set, get) => ({
       result = result.filter(skill =>
         Object.values(skill.sourceVariants).some(v => v.ecosystem === 'claude'),
       )
-    }
-    if (ecosystemFilter) {
-      result = result.filter(skill =>
-        Object.values(skill.sourceVariants).some(v =>
-          ecosystemFilter === 'agents'
-            ? (v.ecosystem === 'agents' || v.ecosystem === 'agent')
-            : v.ecosystem === ecosystemFilter,
-        ),
-      )
+      if (ecosystemFilter) {
+        result = result.filter(skill =>
+          Object.values(skill.sourceVariants).some(v =>
+            ecosystemFilter === 'agents'
+              ? (v.ecosystem === 'agents' || v.ecosystem === 'agent')
+              : v.ecosystem === ecosystemFilter,
+          ),
+        )
+      }
     }
 
     // ── Apply non-search filters ──
