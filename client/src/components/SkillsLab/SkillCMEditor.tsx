@@ -34,6 +34,10 @@ export function SkillCMEditor({ content, filePath, onDirtyChange, theme, prefix 
       onDirtyChange?.(false)
       setSaved(true)
       setTimeout(() => setSaved(false), 1500)
+      // If SKILL.md was saved, reload the skills index so name/description changes reflect immediately
+      if (filePath.endsWith('SKILL.md')) {
+        window.dispatchEvent(new Event('agent-hub:data-changed'))
+      }
     } catch {
       // save failed silently
     }
