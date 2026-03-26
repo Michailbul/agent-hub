@@ -223,19 +223,22 @@ export function SkillsLabV2({ themePrefix: p, variant }: SkillsLabV2Props) {
 
   // Ground truth: always start from claudeSkills, then narrow by mode
   const scopedSkills = useMemo(() => {
-    let pool = claudeSkills
-    if (sidebarMode === 'openclaw') {
-      pool = pool.filter(s => Object.values(s.sourceVariants).some(v => v.ecosystem === 'openclaw'))
-    } else if (sidebarMode === 'agents') {
-      pool = pool.filter(s => Object.values(s.sourceVariants).some(v => v.ecosystem === 'agents' || v.ecosystem === 'agent'))
-    } else if (sidebarMode === 'codex') {
-      pool = pool.filter(s => Object.values(s.sourceVariants).some(v => v.ecosystem === 'codex'))
-    }
-    if (activeAgentFilter) {
-      pool = pool.filter(s => s.installedAgentIds.includes(activeAgentFilter))
+    // When filtering by a specific agent, use all skills (agent workspace is the ground truth)
+    // Otherwise, start from claudeSkills as the ground truth
+    let pool = activeAgentFilter
+      ? skills.filter(s => s.installedAgentIds.includes(activeAgentFilter))
+      : claudeSkills
+    if (!activeAgentFilter) {
+      if (sidebarMode === 'openclaw') {
+        pool = pool.filter(s => Object.values(s.sourceVariants).some(v => v.ecosystem === 'openclaw'))
+      } else if (sidebarMode === 'agents') {
+        pool = pool.filter(s => Object.values(s.sourceVariants).some(v => v.ecosystem === 'agents' || v.ecosystem === 'agent'))
+      } else if (sidebarMode === 'codex') {
+        pool = pool.filter(s => Object.values(s.sourceVariants).some(v => v.ecosystem === 'codex'))
+      }
     }
     return pool
-  }, [claudeSkills, sidebarMode, activeAgentFilter])
+  }, [skills, claudeSkills, sidebarMode, activeAgentFilter])
 
   // Precompute counts for departments and sources to avoid inline .filter() in render
   const deptCounts = useMemo(() => {

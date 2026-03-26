@@ -1019,10 +1019,15 @@ export const useSkillsLabStore = create<SkillsLabStore>((set, get) => ({
     let result = skills
 
     // Ground truth: only show skills present in ~/.claude/skills
+    // Exception: when filtering by a specific agent, use that agent's workspace as ground truth instead
     // Other ecosystem modes (openclaw, agents, codex) further narrow within that set
-    result = result.filter(skill =>
-      Object.values(skill.sourceVariants).some(v => v.ecosystem === 'claude'),
-    )
+    if (!activeAgentFilter) {
+      result = result.filter(skill =>
+        Object.values(skill.sourceVariants).some(v => v.ecosystem === 'claude'),
+      )
+    } else {
+      result = result.filter(skill => skill.installedAgentIds.includes(activeAgentFilter))
+    }
 
     // Additional ecosystem scoping for non-claude modes
     const ecosystemFilter = sidebarMode === 'openclaw' ? 'openclaw'
@@ -1127,10 +1132,12 @@ export const useSkillsLabStore = create<SkillsLabStore>((set, get) => ({
       set({ combinedScores: new Map() })
     }
 
-    // ── Re-apply ground truth: only .claude/skills ──
-    result = result.filter(skill =>
-      Object.values(skill.sourceVariants).some(v => v.ecosystem === 'claude'),
-    )
+    // ── Re-apply ground truth: only .claude/skills (skip when agent filter is active) ──
+    if (!activeAgentFilter) {
+      result = result.filter(skill =>
+        Object.values(skill.sourceVariants).some(v => v.ecosystem === 'claude'),
+      )
+    }
     if (ecosystemFilter) {
       result = result.filter(skill =>
         Object.values(skill.sourceVariants).some(v =>
