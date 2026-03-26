@@ -1484,25 +1484,25 @@ body{font-family:'Inter',var(--font-sans);color:var(--text-primary);
   background:currentColor;opacity:0.65;flex-shrink:0;
 }
 /* dept colours — light */
-.ft-badge[data-dept="Build"]       {background:rgba(59,130,246,.12);color:#2563eb}
-.ft-badge[data-dept="Write"]       {background:rgba(139,92,246,.12);color:#7c3aed}
-.ft-badge[data-dept="Automate"]    {background:rgba(249,115,22,.12);color:#ea580c}
-.ft-badge[data-dept="Grow"]        {background:rgba(34,197,94,.12); color:#16a34a}
-.ft-badge[data-dept="Research"]    {background:rgba(6,182,212,.12); color:#0891b2}
-.ft-badge[data-dept="Design"]      {background:rgba(236,72,153,.12);color:#db2777}
-.ft-badge[data-dept="AI Creative"] {background:rgba(234,179,8,.12); color:#b45309}
-.ft-badge[data-dept="Content"]     {background:rgba(168,85,247,.12);color:#9333ea}
-.ft-badge[data-dept="Engineering"] {background:rgba(20,184,166,.12);color:#0d9488}
+.ft-badge[data-dept="Build"] {background:rgba(37,99,235,.13);color:#1d4ed8;border:1px solid rgba(37,99,235,.22);}
+.ft-badge[data-dept="Write"] {background:rgba(109,40,217,.13);color:#6d28d9;border:1px solid rgba(109,40,217,.22);}
+.ft-badge[data-dept="Automate"] {background:rgba(194,65,12,.11);color:#c2410c;border:1px solid rgba(194,65,12,.20);}
+.ft-badge[data-dept="Grow"] {background:rgba(21,128,61,.11);color:#15803d;border:1px solid rgba(21,128,61,.20);}
+.ft-badge[data-dept="Research"] {background:rgba(14,116,144,.11);color:#0e7490;border:1px solid rgba(14,116,144,.20);}
+.ft-badge[data-dept="Design"] {background:rgba(190,24,93,.11);color:#be185d;border:1px solid rgba(190,24,93,.20);}
+.ft-badge[data-dept="AI Creative"] {background:rgba(180,83,9,.11);color:#b45309;border:1px solid rgba(180,83,9,.20);}
+.ft-badge[data-dept="Content"] {background:rgba(126,34,206,.13);color:#7e22ce;border:1px solid rgba(126,34,206,.22);}
+.ft-badge[data-dept="Engineering"] {background:rgba(15,118,110,.11);color:#0f766e;border:1px solid rgba(15,118,110,.20);}
 /* dept colours — dark */
-[data-theme="dark"] .ft-badge[data-dept="Build"]       {background:rgba(59,130,246,.18);color:#93c5fd}
-[data-theme="dark"] .ft-badge[data-dept="Write"]       {background:rgba(139,92,246,.18);color:#c4b5fd}
-[data-theme="dark"] .ft-badge[data-dept="Automate"]    {background:rgba(249,115,22,.18);color:#fdba74}
-[data-theme="dark"] .ft-badge[data-dept="Grow"]        {background:rgba(34,197,94,.18); color:#86efac}
-[data-theme="dark"] .ft-badge[data-dept="Research"]    {background:rgba(6,182,212,.18); color:#67e8f9}
-[data-theme="dark"] .ft-badge[data-dept="Design"]      {background:rgba(236,72,153,.18);color:#f9a8d4}
-[data-theme="dark"] .ft-badge[data-dept="AI Creative"] {background:rgba(234,179,8,.18); color:#fde68a}
-[data-theme="dark"] .ft-badge[data-dept="Content"]     {background:rgba(168,85,247,.18);color:#d8b4fe}
-[data-theme="dark"] .ft-badge[data-dept="Engineering"] {background:rgba(20,184,166,.18);color:#5eead4}
+[data-theme="dark"] .ft-badge[data-dept="Build"] {background:rgba(37,99,235,.13);color:#1d4ed8;border:1px solid rgba(37,99,235,.22);}
+[data-theme="dark"] .ft-badge[data-dept="Write"] {background:rgba(109,40,217,.13);color:#6d28d9;border:1px solid rgba(109,40,217,.22);}
+[data-theme="dark"] .ft-badge[data-dept="Automate"] {background:rgba(194,65,12,.11);color:#c2410c;border:1px solid rgba(194,65,12,.20);}
+[data-theme="dark"] .ft-badge[data-dept="Grow"] {background:rgba(21,128,61,.11);color:#15803d;border:1px solid rgba(21,128,61,.20);}
+[data-theme="dark"] .ft-badge[data-dept="Research"] {background:rgba(14,116,144,.11);color:#0e7490;border:1px solid rgba(14,116,144,.20);}
+[data-theme="dark"] .ft-badge[data-dept="Design"] {background:rgba(190,24,93,.11);color:#be185d;border:1px solid rgba(190,24,93,.20);}
+[data-theme="dark"] .ft-badge[data-dept="AI Creative"] {background:rgba(180,83,9,.11);color:#b45309;border:1px solid rgba(180,83,9,.20);}
+[data-theme="dark"] .ft-badge[data-dept="Content"] {background:rgba(126,34,206,.13);color:#7e22ce;border:1px solid rgba(126,34,206,.22);}
+[data-theme="dark"] .ft-badge[data-dept="Engineering"] {background:rgba(15,118,110,.11);color:#0f766e;border:1px solid rgba(15,118,110,.20);}
 
 /* Remove button */
 .ft-remove{
@@ -1858,26 +1858,26 @@ body{font-family:'Inter',var(--font-sans);color:var(--text-primary);
 }
 
 /* ── Department colour tokens — light ── */
-.cv-palette-row-dept[data-dept="Build"]       { background:rgba(59,130,246,.12); color:#2563eb; }
-.cv-palette-row-dept[data-dept="Write"]       { background:rgba(139,92,246,.12); color:#7c3aed; }
-.cv-palette-row-dept[data-dept="Automate"]    { background:rgba(249,115,22,.12); color:#ea580c; }
-.cv-palette-row-dept[data-dept="Grow"]        { background:rgba(34,197,94,.12);  color:#16a34a; }
-.cv-palette-row-dept[data-dept="Research"]    { background:rgba(6,182,212,.12);  color:#0891b2; }
-.cv-palette-row-dept[data-dept="Design"]      { background:rgba(236,72,153,.12); color:#db2777; }
-.cv-palette-row-dept[data-dept="AI Creative"] { background:rgba(234,179,8,.12);  color:#b45309; }
-.cv-palette-row-dept[data-dept="Content"]     { background:rgba(168,85,247,.12); color:#9333ea; }
-.cv-palette-row-dept[data-dept="Engineering"] { background:rgba(20,184,166,.12); color:#0d9488; }
+.cv-palette-row-dept[data-dept="Build"] { background:rgba(37,99,235,.13); color:#1d4ed8; border:1px solid rgba(37,99,235,.22); }
+.cv-palette-row-dept[data-dept="Write"] { background:rgba(109,40,217,.13); color:#6d28d9; border:1px solid rgba(109,40,217,.22); }
+.cv-palette-row-dept[data-dept="Automate"] { background:rgba(194,65,12,.11); color:#c2410c; border:1px solid rgba(194,65,12,.20); }
+.cv-palette-row-dept[data-dept="Grow"] { background:rgba(21,128,61,.11); color:#15803d; border:1px solid rgba(21,128,61,.20); }
+.cv-palette-row-dept[data-dept="Research"] { background:rgba(14,116,144,.11); color:#0e7490; border:1px solid rgba(14,116,144,.20); }
+.cv-palette-row-dept[data-dept="Design"] { background:rgba(190,24,93,.11); color:#be185d; border:1px solid rgba(190,24,93,.20); }
+.cv-palette-row-dept[data-dept="AI Creative"] { background:rgba(180,83,9,.11); color:#b45309; border:1px solid rgba(180,83,9,.20); }
+.cv-palette-row-dept[data-dept="Content"] { background:rgba(126,34,206,.13); color:#7e22ce; border:1px solid rgba(126,34,206,.22); }
+.cv-palette-row-dept[data-dept="Engineering"] { background:rgba(15,118,110,.11); color:#0f766e; border:1px solid rgba(15,118,110,.20); }
 
 /* ── Department colour tokens — dark ── */
-[data-theme="dark"] .cv-palette-row-dept[data-dept="Build"]       { background:rgba(59,130,246,.18); color:#93c5fd; }
-[data-theme="dark"] .cv-palette-row-dept[data-dept="Write"]       { background:rgba(139,92,246,.18); color:#c4b5fd; }
-[data-theme="dark"] .cv-palette-row-dept[data-dept="Automate"]    { background:rgba(249,115,22,.18); color:#fdba74; }
-[data-theme="dark"] .cv-palette-row-dept[data-dept="Grow"]        { background:rgba(34,197,94,.18);  color:#86efac; }
-[data-theme="dark"] .cv-palette-row-dept[data-dept="Research"]    { background:rgba(6,182,212,.18);  color:#67e8f9; }
-[data-theme="dark"] .cv-palette-row-dept[data-dept="Design"]      { background:rgba(236,72,153,.18); color:#f9a8d4; }
-[data-theme="dark"] .cv-palette-row-dept[data-dept="AI Creative"] { background:rgba(234,179,8,.18);  color:#fde68a; }
-[data-theme="dark"] .cv-palette-row-dept[data-dept="Content"]     { background:rgba(168,85,247,.18); color:#d8b4fe; }
-[data-theme="dark"] .cv-palette-row-dept[data-dept="Engineering"] { background:rgba(20,184,166,.18); color:#5eead4; }
+[data-theme="dark"] .cv-palette-row-dept[data-dept="Build"] { background:rgba(37,99,235,.13); color:#1d4ed8; border:1px solid rgba(37,99,235,.22); }
+[data-theme="dark"] .cv-palette-row-dept[data-dept="Write"] { background:rgba(109,40,217,.13); color:#6d28d9; border:1px solid rgba(109,40,217,.22); }
+[data-theme="dark"] .cv-palette-row-dept[data-dept="Automate"] { background:rgba(194,65,12,.11); color:#c2410c; border:1px solid rgba(194,65,12,.20); }
+[data-theme="dark"] .cv-palette-row-dept[data-dept="Grow"] { background:rgba(21,128,61,.11); color:#15803d; border:1px solid rgba(21,128,61,.20); }
+[data-theme="dark"] .cv-palette-row-dept[data-dept="Research"] { background:rgba(14,116,144,.11); color:#0e7490; border:1px solid rgba(14,116,144,.20); }
+[data-theme="dark"] .cv-palette-row-dept[data-dept="Design"] { background:rgba(190,24,93,.11); color:#be185d; border:1px solid rgba(190,24,93,.20); }
+[data-theme="dark"] .cv-palette-row-dept[data-dept="AI Creative"] { background:rgba(180,83,9,.11); color:#b45309; border:1px solid rgba(180,83,9,.20); }
+[data-theme="dark"] .cv-palette-row-dept[data-dept="Content"] { background:rgba(126,34,206,.13); color:#7e22ce; border:1px solid rgba(126,34,206,.22); }
+[data-theme="dark"] .cv-palette-row-dept[data-dept="Engineering"] { background:rgba(15,118,110,.11); color:#0f766e; border:1px solid rgba(15,118,110,.20); }
 .cv-palette-row-summary{
   font:400 10px/1.3 var(--cv-font);color:var(--cv-text-tertiary);
   display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden;
