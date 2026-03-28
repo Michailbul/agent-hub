@@ -9,14 +9,9 @@ RUN npm install
 COPY client/package*.json ./client/
 RUN cd client && npm install
 
-# Copy source
+# Copy source and build (server + client in one step)
 COPY . .
-
-# Build server (TypeScript → dist/)
 RUN npm run build
-
-# Build React client (→ dist-client/)
-RUN cd client && npm run build
 
 # ── Production image ──
 FROM node:22-alpine

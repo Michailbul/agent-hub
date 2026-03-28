@@ -4,8 +4,6 @@
 
 Built for [OpenClaw](https://openclaw.ai) users — but works with any AI agent setup that uses markdown files for instructions.
 
-<!-- TODO: add a real screenshot -->
-
 ## What it does
 
 - Browse all your agents and their instruction files (SOUL.md, MISSION.md, MEMORY.md, etc.)
@@ -35,7 +33,7 @@ docker run -d \
   -v ~/.openclaw:/data/openclaw \
   -v ~/.agents:/data/agents \
   --name agent-hub \
-  ghcr.io/laniameda/agent-hub:latest
+  ghcr.io/michailbul/agent-hub:latest
 ```
 
 ## Docker Compose
@@ -49,7 +47,7 @@ docker compose up -d
 ## Running from source
 
 ```bash
-git clone https://github.com/laniameda/agent-hub
+git clone https://github.com/Michailbul/agent-hub
 cd agent-hub
 npm install
 cd client && npm install && cd ..
