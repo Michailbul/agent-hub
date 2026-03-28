@@ -679,6 +679,68 @@
 .st-cm-editor { flex: 1; overflow: auto; }
 .st-cm-editor .cm-editor { height: 100%; }
 
+/* ── Editor mode toggle ── */
+.st-editor-mode-toggle {
+  display: flex; gap: 1px; background: var(--sh-border); border-radius: 5px; padding: 1px; margin-right: 4px;
+}
+.st-editor-mode-btn {
+  display: flex; align-items: center; justify-content: center;
+  width: 26px; height: 22px; border: none; border-radius: 4px; cursor: pointer;
+  background: transparent; color: var(--sh-text-ghost); transition: all 0.15s;
+}
+.st-editor-mode-btn:hover { color: var(--sh-text-secondary); }
+.st-editor-mode-btn.active { background: var(--sh-surface); color: var(--sh-text-primary); }
+
+/* ── Markdown Preview ── */
+.st-md-preview {
+  flex: 1; overflow-y: auto; padding: 28px 32px 48px;
+  font-size: 14px; line-height: 1.7; color: var(--sh-text-primary);
+  font-family: var(--sh-font-sans);
+}
+.st-md-preview h1 { font-size: 22px; font-weight: 700; margin: 0 0 12px; line-height: 1.3; }
+.st-md-preview h2 { font-size: 18px; font-weight: 650; margin: 28px 0 10px; line-height: 1.3; }
+.st-md-preview h3 { font-size: 15px; font-weight: 600; margin: 24px 0 8px; line-height: 1.4; }
+.st-md-preview h4 { font-size: 13px; font-weight: 600; margin: 20px 0 6px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--sh-text-secondary); }
+.st-md-preview p { margin: 0 0 12px; }
+.st-md-preview strong { font-weight: 650; }
+.st-md-preview em { font-style: italic; }
+.st-md-preview a { color: var(--sh-ink); text-decoration: underline; text-underline-offset: 2px; }
+.st-md-preview ul, .st-md-preview ol { margin: 0 0 12px; padding-left: 20px; }
+.st-md-preview li { margin: 0 0 4px; }
+.st-md-preview li > ul, .st-md-preview li > ol { margin: 4px 0 0; }
+.st-md-preview hr { border: none; border-top: 1px solid var(--sh-border); margin: 24px 0; }
+.st-md-preview blockquote {
+  margin: 0 0 12px; padding: 8px 16px; border-left: 3px solid var(--sh-border);
+  color: var(--sh-text-secondary); font-style: italic;
+}
+.st-md-preview code {
+  font-family: var(--sh-font-mono); font-size: 12.5px;
+  background: var(--sh-surface); padding: 1px 5px; border-radius: 4px;
+  color: var(--sh-text-secondary);
+}
+.st-md-preview pre {
+  margin: 0 0 16px; padding: 14px 16px; border-radius: 8px;
+  background: var(--sh-surface); overflow-x: auto;
+  font-size: 12.5px; line-height: 1.6;
+}
+.st-md-preview pre code { background: none; padding: 0; border-radius: 0; color: var(--sh-text-primary); }
+
+/* ── Tables ── */
+.st-md-preview table {
+  width: 100%; border-collapse: collapse; margin: 0 0 16px; font-size: 13px;
+}
+.st-md-preview thead th {
+  text-align: left; font-weight: 600; padding: 8px 12px;
+  border-bottom: 2px solid var(--sh-border); color: var(--sh-text-secondary);
+  font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em;
+}
+.st-md-preview tbody td {
+  padding: 7px 12px; border-bottom: 1px solid var(--sh-border);
+  vertical-align: top;
+}
+.st-md-preview tbody tr:last-child td { border-bottom: none; }
+.st-md-preview tbody tr:hover { background: var(--sh-surface); }
+
 /* ── File tree — matches nav section visual language ── */
 .st-tree { padding: 4px 0; overflow-y: auto; flex: 1; }
 .st-tree-node { display: flex; flex-direction: column; }
@@ -781,7 +843,8 @@
 .st-meta-divider { height: 1px; background: var(--sh-border); }
 .st-meta-desc { font-size: 12px; color: var(--sh-text-secondary); line-height: 1.5; margin: 0; font-weight: 400; }
 .st-meta-group { padding: 16px 16px; border-top: 1px solid var(--sh-border); }
-.st-meta-group-label { font-size: 11px; font-weight: 500; color: var(--sh-text-tertiary); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 10px; }
+.st-meta-group-label { font-size: 11px; font-weight: 500; color: var(--sh-text-tertiary); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+.st-meta-edit-hint { font-size: 9px; font-weight: 400; text-transform: none; letter-spacing: 0; color: var(--sh-text-ghost); }
 .st-meta-group-head { display: flex; align-items: center; justify-content: space-between; }
 .st-meta-group-head .st-meta-group-label { margin-bottom: 0; }
 .st-meta-caption { font-size: 11px; color: var(--sh-text-tertiary); font-weight: 500; }

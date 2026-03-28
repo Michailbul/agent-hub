@@ -488,23 +488,23 @@ function getRemovableDuplicateVariants(skills: UnifiedSkill[]): Array<{ skillId:
 }
 
 /* ═══ Search index cache ═══ */
-let _searchIndexCache = new WeakMap<UnifiedSkill, string>()
-let _searchIndexSources: SkillSource[] = []
-let _searchIndexAgents: LabAgent[] = []
+let _searchIndexMap = new Map<string, string>()
+let _searchIndexSkillsRef: UnifiedSkill[] = []
 
 function getCachedSearchIndex(skill: UnifiedSkill, sources: SkillSource[], agents: LabAgent[]): string {
-  // Invalidate cache if sources/agents changed
-  if (sources !== _searchIndexSources || agents !== _searchIndexAgents) {
-    _searchIndexCache = new WeakMap()
-    _searchIndexSources = sources
-    _searchIndexAgents = agents
-  }
-  let index = _searchIndexCache.get(skill)
+  let index = _searchIndexMap.get(skill.id)
   if (!index) {
     index = buildSkillSearchIndex(skill, sources, agents)
-    _searchIndexCache.set(skill, index)
+    _searchIndexMap.set(skill.id, index)
   }
   return index
+}
+
+function invalidateSearchIndexCache(skills: UnifiedSkill[]) {
+  if (skills !== _searchIndexSkillsRef) {
+    _searchIndexMap = new Map()
+    _searchIndexSkillsRef = skills
+  }
 }
 
 /* ═══ Store ═══ */
@@ -693,6 +693,7 @@ export const useSkillsLabStore = create<SkillsLabStore>((set, get) => ({
         .map(([key, count]) => ({ key, count, label: formatFamilyLabel(key) }))
         .sort((left, right) => right.count - left.count || left.label.localeCompare(right.label))
       const starredSkillIds = new Set<string>(data.starredSkillIds || [])
+      invalidateSearchIndexCache(skills)
       set({
         sources,
         agents,

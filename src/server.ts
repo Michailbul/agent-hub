@@ -1,4 +1,5 @@
 import express from 'express';
+import compression from 'compression';
 import AdmZip from 'adm-zip';
 import cookieParser from 'cookie-parser';
 import fs from 'fs';
@@ -908,69 +909,14 @@ function buildSkillSourceDescriptors(): SkillSourceDescriptor[] {
     sources.push({ ...source, root: resolvedRoot });
   };
 
-  pushSource({
-    id: 'agents',
-    label: 'Shared Skills',
-    ecosystem: 'agents',
-    kind: 'library',
-    root: path.join(HOME_DIR, '.agents', 'skills'),
-    priority: 0,
-  });
-  pushSource({
-    id: 'agent-cli',
-    label: 'Agent Skills',
-    ecosystem: 'agent',
-    kind: 'library',
-    root: path.join(HOME_DIR, '.agent', 'skills'),
-    priority: 1,
-  });
-  pushSource({
-    id: 'agents-config',
-    label: 'Shared Skills',
-    ecosystem: 'agents',
-    kind: 'library',
-    root: AGENTS_SKILLS_ROOT,
-    priority: 0,
-  });
-  pushSource({
-    id: 'codex',
-    label: 'Codex Skills',
-    ecosystem: 'codex',
-    kind: 'library',
-    root: path.join(HOME_DIR, '.codex', 'skills'),
-    priority: 2,
-  });
-  pushSource({
-    id: 'cursor',
-    label: 'Cursor Skills',
-    ecosystem: 'cursor',
-    kind: 'library',
-    root: path.join(HOME_DIR, '.cursor', 'skills'),
-    priority: 3,
-  });
-  pushSource({
-    id: 'cursor-bootstrap',
-    label: 'Cursor Bootstrap Skills',
-    ecosystem: 'cursor',
-    kind: 'library',
-    root: path.join(HOME_DIR, '.cursor', 'skills-cursor'),
-    priority: 4,
-  });
+  // Single source of truth: ~/.claude/skills
   pushSource({
     id: 'claude',
     label: 'Claude Skills',
     ecosystem: 'claude',
     kind: 'library',
     root: path.join(HOME_DIR, '.claude', 'skills'),
-    priority: 5,
-  });
-  pushSource({
-    id: 'openclaw-library',
-    label: 'OpenClaw Skills',
-    ecosystem: 'openclaw',
-    kind: 'library',
-    root: OPENCLAW_SKILLS_ROOT,
-    priority: 6,
+    priority: 0,
   });
 
   // Linked skill repos
@@ -1113,7 +1059,7 @@ function classifySkillGrouping(text: string) {
 // Cached skills index — avoids reparsing all SKILL.md files on every request
 let _skillsIndexCache: ReturnType<typeof buildSkillsIndex> | null = null;
 let _skillsIndexCachedAt = 0;
-const SKILLS_INDEX_TTL_MS = 5000; // 5s TTL
+const SKILLS_INDEX_TTL_MS = 30000; // 30s TTL — buildSkillsIndex() does heavy sync I/O
 
 function getCachedSkillsIndex() {
   const now = Date.now();
@@ -1147,8 +1093,11 @@ function buildSkillsIndex() {
     const parsed = parseSkillDocument(content);
     const skillId = folder ? slugify(`${folder}--${dirName}`) : slugify(dirName);
     const label = parsed.frontmatter.name || dirName;
-    const summary = parsed.frontmatter.description || summarizeSkillBody(parsed.body, `${label} skill`);
-    const groupingText = [dirName, label, parsed.frontmatter.description || '', summary, parsed.body.slice(0, 400)].join('\n');
+    const rawDesc = parsed.frontmatter.description;
+    const descIsGarbage = !rawDesc || /^[>|]+[-+]?$/.test(rawDesc.trim()) || rawDesc.trim().length < 5;
+    const summary = descIsGarbage ? summarizeSkillBody(parsed.body, `${label} skill`) : rawDesc;
+    if (descIsGarbage && parsed.frontmatter.description) parsed.frontmatter.description = summary;
+    const groupingText = [dirName, label, summary, parsed.body.slice(0, 600)].join('\n');
 
     let isSymlink = false;
     try { isSymlink = fs.lstatSync(path.dirname(skillPath)).isSymbolicLink(); } catch {}
@@ -1528,7 +1477,7 @@ initAgents();
 
 let _fsRefreshTimer: ReturnType<typeof setTimeout> | null = null;
 const FS_REFRESH_DEBOUNCE_MS = 2000; // Wait 2s after last change
-const FS_PERIODIC_REFRESH_MS = 60_000; // Safety net: re-scan every 60s
+const FS_PERIODIC_REFRESH_MS = 120_000; // Safety net: re-scan every 2min
 const _watchers: fs.FSWatcher[] = [];
 
 function debouncedRefresh(reason: string) {
@@ -1575,24 +1524,12 @@ function watchDirectory(dirPath: string, label: string) {
   }
 }
 
-// Watch key directories for changes
-watchDirectory(OPENCLAW_ROOT, 'openclaw-root');         // New workspace-* dirs
-watchDirectory(OPENCLAW_SKILLS_ROOT, 'openclaw-skills'); // Skills added/removed
-watchDirectory(AGENTS_SKILLS_ROOT, 'agents-skills');     // Agent skills library
-watchDirectory(path.dirname(CONFIG_PATH), 'config');     // Config file changes
-
-// Watch each agent workspace's skills dir
-for (const agent of AGENTS) {
-  if (agent.skillsRoot && fs.existsSync(agent.skillsRoot)) {
-    watchDirectory(agent.skillsRoot, `workspace-${agent.id}/skills`);
-  }
-}
-
-// Also watch Claude skills dir if it exists
+// Watch only essential directories — .claude/skills is the single source of truth
 const claudeSkillsDir = path.join(HOME_DIR, '.claude', 'skills');
 if (fs.existsSync(claudeSkillsDir)) {
   watchDirectory(claudeSkillsDir, 'claude-skills');
 }
+watchDirectory(path.dirname(CONFIG_PATH), 'config');
 
 // Periodic safety-net refresh (catches changes the watchers might miss,
 // e.g. in deeply nested dirs, or when fs.watch is unreliable on the VPS)
@@ -1621,6 +1558,7 @@ console.log(`[fs-watch] Watching ${_watchers.length} directories for changes (pe
 
 // ── HELPERS ────────────────────────────────────────────────
 
+app.use(compression());
 app.use(express.json({ limit: '10mb' }));
 app.use(cookieParser());
 
